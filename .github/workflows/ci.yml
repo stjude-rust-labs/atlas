@@ -1,0 +1,39 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  format:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - run: cargo fmt -- --check
+
+  test:
+    runs-on: ubuntu-20.04
+
+    # https://docs.github.com/en/actions/using-containerized-services/creating-postgresql-service-containers
+    services:
+      postgres:
+        image: postgres
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_PASSWORD: dev
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:dev@localhost/altas
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup database
+        run: |
+          cargo install sqlx-cli --no-default-features --features native-tls,postgres
+          sqlx database setup
+      - run: cargo clippy -- --deny warnings
+      - run: cargo test

@@ -1,7 +1,7 @@
 use axum::{extract::Extension, extract::Path, routing::get, Json, Router};
 use serde::Serialize;
 
-use super::{Context, Error};
+use super::{types::Timestampz, Context, Error};
 
 pub fn router() -> Router {
     Router::new()
@@ -15,15 +15,20 @@ struct SamplesBody<T> {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct Sample {
     id: i32,
     name: String,
+    created_at: Timestampz,
 }
 
 async fn index(ctx: Extension<Context>) -> super::Result<Json<SamplesBody<Vec<Sample>>>> {
-    let samples = sqlx::query_as!(Sample, "select id, name from samples")
-        .fetch_all(&ctx.pool)
-        .await?;
+    let samples = sqlx::query_as!(
+        Sample,
+        r#"select id, name, created_at "created_at: Timestampz" from samples"#
+    )
+    .fetch_all(&ctx.pool)
+    .await?;
 
     Ok(Json(SamplesBody { samples }))
 }
@@ -112,9 +117,13 @@ mod tests {
 
     async fn seed(pool: &PgPool) -> sqlx::Result<()> {
         sqlx::query!(
-            "insert into samples (name) values ($1), ($2)",
-            "sample_1",
-            "sample_2"
+            "
+            insert into samples
+                (name, created_at)
+            values
+                ('sample_1', '2022-02-18T21:05:05+00:00'),
+                ('sample_2', '2022-02-18T21:05:06+00:00')
+            ",
         )
         .execute(pool)
         .await?;
@@ -170,9 +179,11 @@ mod tests {
                 "samples": [{
                     "id": 1,
                     "name": "sample_1",
+                    "createdAt": "2022-02-18T21:05:05+00:00",
                 }, {
                     "id": 2,
                     "name": "sample_2",
+                    "createdAt": "2022-02-18T21:05:06+00:00",
                 }]
             })
         );

@@ -1,5 +1,6 @@
 mod error;
 mod samples;
+pub mod types;
 
 use std::net::SocketAddr;
 

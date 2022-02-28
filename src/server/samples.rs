@@ -72,8 +72,10 @@ async fn show(
             from samples
             inner join counts
                 on counts.sample_id = samples.id
+            inner join configurations
+                on counts.configuration_id = configurations.id
             inner join annotations
-                on counts.annotation_id = annotations.id
+                on configurations.annotation_id = annotations.id
             where samples.name = $1
         ",
         name
@@ -133,10 +135,22 @@ mod tests {
         sqlx::query!(
             "
             insert into annotations
-                (name, genome_build, created_at)
+                (name, genome_build)
             values
-                ('GENCODE 39', 'GRCh38.p13', '2022-02-28T17:01:05+00:00'),
-                ('GENCODE 19', 'GRCh37.p13', '2022-02-28T17:01:06+00:00')
+                ('GENCODE 39', 'GRCh38.p13'),
+                ('GENCODE 19', 'GRCh37.p13')
+            ",
+        )
+        .execute(pool)
+        .await?;
+
+        sqlx::query!(
+            "
+            insert into configurations
+                (annotation_id, feature_type, feature_name)
+            values
+                (1, 'exon', 'gene_name'),
+                (2, 'exon', 'gene_name');
             ",
         )
         .execute(pool)
@@ -145,7 +159,7 @@ mod tests {
         sqlx::query!(
             "
             insert into counts
-                (sample_id, annotation_id, data_type)
+                (sample_id, configuration_id, data_type)
             values
                 (1, 1, 'RNA-Seq'),
                 (1, 2, 'RNA-Seq'),

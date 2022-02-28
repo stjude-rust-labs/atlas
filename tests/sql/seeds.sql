@@ -13,17 +13,19 @@ values
 insert into configurations
     (annotation_id, feature_type, feature_name)
 values
-    (1, 'exon', 'gene_name');
+    (1, 'exon', 'gene_name'),
+    (2, 'exon', 'gene_name');
 
 insert into feature_names
     (configuration_id, name)
 values
     (1, 'feature_1'),
     (1, 'feature_2'),
-    (1, 'feature_3');
+    (2, 'feature_1'),
+    (2, 'feature_2');
 
 insert into counts
-    (sample_id, annotation_id, data_type)
+    (sample_id, configuration_id, data_type)
 values
     (1, 1, 'RNA-Seq'),
     (1, 2, 'RNA-Seq'),

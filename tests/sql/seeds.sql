@@ -30,3 +30,8 @@ values
     (1, 1, 'RNA-Seq'),
     (1, 2, 'RNA-Seq'),
     (2, 1, 'RNA-Seq');
+
+insert into counts
+    (run_id, feature_name_id, value)
+values
+    (1, 1, 8);

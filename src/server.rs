@@ -1,3 +1,4 @@
+mod counts;
 mod error;
 mod samples;
 pub mod types;
@@ -39,7 +40,7 @@ pub async fn serve(config: &ServerConfig, pool: PgPool) -> anyhow::Result<()> {
 }
 
 fn router() -> Router {
-    samples::router()
+    samples::router().merge(counts::router())
 }
 
 #[cfg(test)]

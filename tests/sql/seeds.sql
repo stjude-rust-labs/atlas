@@ -15,6 +15,13 @@ insert into configurations
 values
     (1, 'exon', 'gene_name');
 
+insert into feature_names
+    (configuration_id, name)
+values
+    (1, 'feature_1'),
+    (1, 'feature_2'),
+    (1, 'feature_3');
+
 insert into counts
     (sample_id, annotation_id, data_type)
 values

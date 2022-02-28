@@ -4,9 +4,15 @@ values
     ('sample_1'),
     ('sample_2');
 
-insert into counts
-    (sample_id, genome_build, gene_model, data_type)
+insert into annotations
+    (name, genome_build)
 values
-    (1, 'GRCh38.p13', 'GENCODE 39', 'RNA-Seq'),
-    (1, 'GRCh37.p13', 'GENCODE 19', 'RNA-Seq'),
-    (2, 'GRCh38.p13', 'GENCODE 39', 'RNA-Seq');
+    ('GENCODE 39', 'GRCh38.p13'),
+    ('GENCODE 19', 'GRCh37.p13');
+
+insert into counts
+    (sample_id, annotation_id, data_type)
+values
+    (1, 1, 'RNA-Seq'),
+    (1, 2, 'RNA-Seq'),
+    (2, 1, 'RNA-Seq');

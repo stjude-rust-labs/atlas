@@ -24,7 +24,7 @@ values
     (2, 'feature_1'),
     (2, 'feature_2');
 
-insert into counts
+insert into runs
     (sample_id, configuration_id, data_type)
 values
     (1, 1, 'RNA-Seq'),

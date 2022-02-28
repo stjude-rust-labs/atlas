@@ -65,15 +65,15 @@ async fn show(
         "
             select
                 samples.name,
-                counts.id as counts_id,
+                runs.id as counts_id,
                 annotations.genome_build as counts_genome_build,
                 annotations.name as counts_gene_model,
-                counts.data_type as counts_data_type
+                runs.data_type as counts_data_type
             from samples
-            inner join counts
-                on counts.sample_id = samples.id
+            inner join runs
+                on runs.sample_id = samples.id
             inner join configurations
-                on counts.configuration_id = configurations.id
+                on runs.configuration_id = configurations.id
             inner join annotations
                 on configurations.annotation_id = annotations.id
             where samples.name = $1
@@ -158,7 +158,7 @@ mod tests {
 
         sqlx::query!(
             "
-            insert into counts
+            insert into runs
                 (sample_id, configuration_id, data_type)
             values
                 (1, 1, 'RNA-Seq'),

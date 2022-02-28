@@ -1,4 +1,4 @@
-create table counts (
+create table runs (
     id serial primary key,
 
     sample_id integer not null,

@@ -108,7 +108,6 @@ mod tests {
     use axum::{
         body::Body,
         http::{Request, StatusCode},
-        AddExtensionLayer,
     };
     use clap::Parser;
     use serde_json::{json, Value};
@@ -184,7 +183,7 @@ mod tests {
     }
 
     fn app(db: &TestPgDatabase) -> Router {
-        router().layer(AddExtensionLayer::new(Context {
+        router().layer(Extension(Context {
             pool: db.pool.clone(),
         }))
     }

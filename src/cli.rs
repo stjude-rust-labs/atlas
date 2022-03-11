@@ -9,8 +9,8 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
-    /// Loads samples into the database
-    Load,
+    /// Imports a sample into the database
+    Import,
     /// Starts an altas server and blocks indefinitely
     Run(ServerConfig),
 }

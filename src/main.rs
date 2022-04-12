@@ -10,7 +10,7 @@ async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Import => unimplemented!(),
+        Commands::Import(_) => unimplemented!(),
         Commands::Run(config) => atlas::commands::run(config).await?,
     }
 

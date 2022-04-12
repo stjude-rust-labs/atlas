@@ -10,9 +10,15 @@ pub struct Cli {
 #[derive(Debug, Subcommand)]
 pub enum Commands {
     /// Imports a sample into the database
-    Import,
+    Import(ImportConfig),
     /// Starts an altas server and blocks indefinitely
     Run(ServerConfig),
+}
+
+#[derive(Debug, Parser)]
+pub struct ImportConfig {
+    #[clap(long, env)]
+    pub database_url: String,
 }
 
 #[derive(Debug, Parser)]

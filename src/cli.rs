@@ -19,6 +19,12 @@ pub enum Commands {
 pub struct ImportConfig {
     #[clap(long, env)]
     pub database_url: String,
+
+    #[clap(long)]
+    pub annotations_name: String,
+
+    #[clap(long)]
+    pub annotations_genome_build: String,
 }
 
 #[derive(Debug, Parser)]

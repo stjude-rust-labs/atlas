@@ -1,5 +1,6 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
+use futures::TryStreamExt;
 use sqlx::{postgres::PgPoolOptions, Postgres, Transaction};
 use tokio::io::{AsyncBufRead, AsyncBufReadExt};
 use tracing::info;
@@ -39,6 +40,10 @@ pub async fn import(config: ImportConfig) -> anyhow::Result<()> {
         tx.rollback().await?;
         anyhow::bail!("run already exists for the sample and configuration");
     }
+
+    let feature_names = find_feature_names(&mut tx, configuration.id).await?;
+
+    info!("loaded {} feature names", feature_names.len());
 
     tx.commit().await?;
 
@@ -148,6 +153,25 @@ async fn run_exists(
     .await
     .map(|result| result.is_some())
     .map_err(|e| e.into())
+}
+
+async fn find_feature_names(
+    tx: &mut Transaction<'_, Postgres>,
+    configuration_id: i32,
+) -> anyhow::Result<HashSet<String>> {
+    let mut rows = sqlx::query!(
+        "select name from feature_names where configuration_id = $1",
+        configuration_id,
+    )
+    .fetch(tx);
+
+    let mut names = HashSet::new();
+
+    while let Some(row) = rows.try_next().await? {
+        names.insert(row.name);
+    }
+
+    Ok(names)
 }
 
 #[allow(dead_code)]

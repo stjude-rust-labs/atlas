@@ -25,6 +25,12 @@ pub struct ImportConfig {
 
     #[clap(long)]
     pub annotations_genome_build: String,
+
+    #[clap(long)]
+    pub feature_type: String,
+
+    #[clap(long)]
+    pub feature_name: String,
 }
 
 #[derive(Debug, Parser)]

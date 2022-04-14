@@ -21,6 +21,16 @@ pub async fn import(config: ImportConfig) -> anyhow::Result<()> {
 
     info!(id = annotations.id, "loaded annotations");
 
+    let configuration = create_configuration(
+        &mut tx,
+        annotations.id,
+        &config.feature_type,
+        &config.feature_name,
+    )
+    .await?;
+
+    info!(id = configuration.id, "loaded configuration");
+
     tx.commit().await?;
 
     Ok(())
@@ -53,6 +63,37 @@ async fn find_or_create_annotations(
     .await?;
 
     Ok(Annotations { id: annotations_id })
+}
+
+#[derive(Debug)]
+struct Configuration {
+    id: i32,
+}
+
+async fn create_configuration(
+    tx: &mut Transaction<'_, Postgres>,
+    annotations_id: i32,
+    feature_type: &str,
+    feature_name: &str,
+) -> anyhow::Result<Configuration> {
+    let configuration_id = sqlx::query_scalar!(
+        "
+        insert into configurations
+            (annotation_id, feature_type, feature_name)
+        values
+            ($1, $2, $3)
+        returning id
+        ",
+        annotations_id,
+        feature_type,
+        feature_name,
+    )
+    .fetch_one(tx)
+    .await?;
+
+    Ok(Configuration {
+        id: configuration_id,
+    })
 }
 
 #[allow(dead_code)]

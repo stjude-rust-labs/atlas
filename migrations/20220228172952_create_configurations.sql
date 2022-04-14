@@ -8,5 +8,6 @@ create table configurations (
 
     created_at timestamptz not null default now(),
 
-    foreign key (annotation_id) references annotations (id)
+    foreign key (annotation_id) references annotations (id),
+    unique (annotation_id, feature_type, feature_name)
 );

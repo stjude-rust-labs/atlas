@@ -22,7 +22,7 @@ pub async fn import(config: ImportConfig) -> anyhow::Result<()> {
 
     info!(id = annotations.id, "loaded annotations");
 
-    let configuration = create_configuration(
+    let configuration = find_or_create_configuration(
         &mut tx,
         annotations.id,
         &config.feature_type,
@@ -84,7 +84,7 @@ struct Configuration {
     id: i32,
 }
 
-async fn create_configuration(
+async fn find_or_create_configuration(
     tx: &mut Transaction<'_, Postgres>,
     annotations_id: i32,
     feature_type: &str,
@@ -96,6 +96,8 @@ async fn create_configuration(
             (annotation_id, feature_type, feature_name)
         values
             ($1, $2, $3)
+        on conflict (annotation_id, feature_type, feature_name) do update
+            set id = configurations.id
         returning id
         ",
         annotations_id,

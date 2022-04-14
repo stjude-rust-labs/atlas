@@ -35,6 +35,11 @@ pub async fn import(config: ImportConfig) -> anyhow::Result<()> {
 
     info!(id = sample.id, "loaded sample");
 
+    if run_exists(&mut tx, configuration.id, sample.id).await? {
+        tx.rollback().await?;
+        anyhow::bail!("run already exists for the sample and configuration");
+    }
+
     tx.commit().await?;
 
     Ok(())
@@ -122,6 +127,27 @@ async fn find_or_create_sample(
     .await?;
 
     Ok(Sample { id: sample_id })
+}
+
+async fn run_exists(
+    tx: &mut Transaction<'_, Postgres>,
+    configuration_id: i32,
+    sample_id: i32,
+) -> anyhow::Result<bool> {
+    sqlx::query_scalar!(
+        "
+        select 1
+        from runs
+        where configuration_id = $1 and sample_id = $2
+        limit 1
+        ",
+        configuration_id,
+        sample_id,
+    )
+    .fetch_optional(tx)
+    .await
+    .map(|result| result.is_some())
+    .map_err(|e| e.into())
 }
 
 #[allow(dead_code)]

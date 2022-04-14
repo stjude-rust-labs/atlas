@@ -31,6 +31,10 @@ pub async fn import(config: ImportConfig) -> anyhow::Result<()> {
 
     info!(id = configuration.id, "loaded configuration");
 
+    let sample = find_or_create_sample(&mut tx, &config.sample_name).await?;
+
+    info!(id = sample.id, "loaded sample");
+
     tx.commit().await?;
 
     Ok(())
@@ -94,6 +98,30 @@ async fn create_configuration(
     Ok(Configuration {
         id: configuration_id,
     })
+}
+
+#[derive(Debug)]
+struct Sample {
+    id: i32,
+}
+
+async fn find_or_create_sample(
+    tx: &mut Transaction<'_, Postgres>,
+    sample_name: &str,
+) -> anyhow::Result<Sample> {
+    let sample_id = sqlx::query_scalar!(
+        "
+        insert into samples (name) values ($1)
+        on conflict (name) do update
+            set id = samples.id
+        returning id
+        ",
+        sample_name
+    )
+    .fetch_one(tx)
+    .await?;
+
+    Ok(Sample { id: sample_id })
 }
 
 #[allow(dead_code)]

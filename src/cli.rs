@@ -31,6 +31,9 @@ pub struct ImportConfig {
 
     #[clap(long)]
     pub feature_name: String,
+
+    #[clap(long)]
+    pub sample_name: String,
 }
 
 #[derive(Debug, Parser)]

@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use futures::TryStreamExt;
 use sqlx::{postgres::PgPoolOptions, Postgres, Transaction};
-use tokio::io::{AsyncBufRead, AsyncBufReadExt};
+use tokio::{io::{AsyncBufRead, AsyncBufReadExt, BufReader}, fs::File};
 use tracing::info;
 
 use crate::cli::ImportConfig;
@@ -41,9 +41,19 @@ pub async fn import(config: ImportConfig) -> anyhow::Result<()> {
         anyhow::bail!("run already exists for the sample and configuration");
     }
 
-    let feature_names = find_feature_names(&mut tx, configuration.id).await?;
+    let mut feature_names = find_feature_names(&mut tx, configuration.id).await?;
 
     info!("loaded {} feature names", feature_names.len());
+
+    let mut reader = File::open(&config.src).await.map(BufReader::new)?;
+    let counts = read_feature_counts(&mut reader).await?;
+
+    if feature_names.is_empty() {
+        let mut names = HashSet::new();
+        names.extend(counts.keys().cloned());
+        feature_names = create_feature_names(&mut tx, configuration.id, &names).await?;
+        info!("created {} feature names", feature_names.len());
+    }
 
     tx.commit().await?;
 
@@ -176,7 +186,35 @@ async fn find_feature_names(
     Ok(names)
 }
 
-#[allow(dead_code)]
+async fn create_feature_names(
+    tx: &mut Transaction<'_, Postgres>,
+    configuration_id: i32,
+    names: &HashSet<String>,
+) -> anyhow::Result<HashSet<String>> {
+    use std::iter;
+
+    let configuration_ids: Vec<_> = iter::repeat(configuration_id).take(names.len()).collect();
+    let names: Vec<_> = names.iter().cloned().collect();
+
+    let mut rows = sqlx::query!(
+        "
+        insert into feature_names (configuration_id, name)
+        select * from unnest($1::integer[], $2::text[])
+        returning name
+        ",
+        &configuration_ids[..],
+        &names[..]
+    ).fetch(tx);
+
+    let mut names = HashSet::new();
+
+    while let Some(row) = rows.try_next().await? {
+        names.insert(row.name);
+    }
+
+    Ok(names)
+}
+
 async fn read_feature_counts<R>(reader: &mut R) -> anyhow::Result<HashMap<String, u64>>
 where
     R: AsyncBufRead + Unpin,

@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use clap::{Parser, Subcommand};
 
 #[derive(Debug, Parser)]
@@ -34,6 +36,8 @@ pub struct ImportConfig {
 
     #[clap(long)]
     pub sample_name: String,
+
+    pub src: PathBuf,
 }
 
 #[derive(Debug, Parser)]

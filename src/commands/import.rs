@@ -2,7 +2,10 @@ use std::collections::{HashMap, HashSet};
 
 use futures::TryStreamExt;
 use sqlx::{postgres::PgPoolOptions, Postgres, Transaction};
-use tokio::{io::{AsyncBufRead, AsyncBufReadExt, BufReader}, fs::File};
+use tokio::{
+    fs::File,
+    io::{AsyncBufRead, AsyncBufReadExt, BufReader},
+};
 use tracing::info;
 
 use crate::cli::ImportConfig;
@@ -170,9 +173,9 @@ async fn run_exists(
 async fn find_feature_names(
     tx: &mut Transaction<'_, Postgres>,
     configuration_id: i32,
-) -> anyhow::Result<HashSet<String>> {
+) -> anyhow::Result<HashSet<(i32, String)>> {
     let mut rows = sqlx::query!(
-        "select name from feature_names where configuration_id = $1",
+        "select id, name from feature_names where configuration_id = $1",
         configuration_id,
     )
     .fetch(tx);
@@ -180,7 +183,7 @@ async fn find_feature_names(
     let mut names = HashSet::new();
 
     while let Some(row) = rows.try_next().await? {
-        names.insert(row.name);
+        names.insert((row.id, row.name));
     }
 
     Ok(names)
@@ -190,7 +193,7 @@ async fn create_feature_names(
     tx: &mut Transaction<'_, Postgres>,
     configuration_id: i32,
     names: &HashSet<String>,
-) -> anyhow::Result<HashSet<String>> {
+) -> anyhow::Result<HashSet<(i32, String)>> {
     use std::iter;
 
     let configuration_ids: Vec<_> = iter::repeat(configuration_id).take(names.len()).collect();
@@ -200,16 +203,17 @@ async fn create_feature_names(
         "
         insert into feature_names (configuration_id, name)
         select * from unnest($1::integer[], $2::text[])
-        returning name
+        returning id, name
         ",
         &configuration_ids[..],
         &names[..]
-    ).fetch(tx);
+    )
+    .fetch(tx);
 
     let mut names = HashSet::new();
 
     while let Some(row) = rows.try_next().await? {
-        names.insert(row.name);
+        names.insert((row.id, row.name));
     }
 
     Ok(names)

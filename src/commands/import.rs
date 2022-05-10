@@ -4,7 +4,7 @@ use futures::TryStreamExt;
 use sqlx::{postgres::PgPoolOptions, Postgres, Transaction};
 use tokio::{
     fs::File,
-    io::{AsyncBufRead, AsyncBufReadExt, BufReader},
+    io::{self, AsyncBufRead, AsyncBufReadExt, BufReader},
 };
 use tracing::info;
 
@@ -59,6 +59,7 @@ pub async fn import(config: ImportConfig) -> anyhow::Result<()> {
     }
 
     let run = create_run(&mut tx, configuration.id, sample.id, &config.data_type).await?;
+    create_counts(&mut tx, run.id, &feature_names, &counts).await?;
 
     tx.commit().await?;
 
@@ -248,6 +249,46 @@ async fn create_run(
     .await?;
 
     Ok(Run { id: run_id })
+}
+
+async fn create_counts(
+    tx: &mut Transaction<'_, Postgres>,
+    run_id: i32,
+    feature_names: &HashSet<(i32, String)>,
+    counts: &HashMap<String, u64>,
+) -> anyhow::Result<()> {
+    let mut run_ids = Vec::new();
+    let mut feature_name_ids = Vec::new();
+    let mut values = Vec::new();
+
+    for (feature_name_id, name) in feature_names {
+        let count = counts
+            .get(name)
+            .copied()
+            .ok_or_else(|| io::Error::from(io::ErrorKind::InvalidData))?;
+
+        if count == 0 {
+            continue;
+        }
+
+        run_ids.push(run_id);
+        feature_name_ids.push(*feature_name_id);
+        values.push(count as i64);
+    }
+
+    sqlx::query!(
+        "
+        insert into counts (run_id, feature_name_id, value)
+        select * from unnest($1::integer[], $2::integer[], $3::bigint[])
+        ",
+        &run_ids[..],
+        &feature_name_ids[..],
+        &values[..],
+    )
+    .execute(tx)
+    .await?;
+
+    Ok(())
 }
 
 async fn read_feature_counts<R>(reader: &mut R) -> anyhow::Result<HashMap<String, u64>>

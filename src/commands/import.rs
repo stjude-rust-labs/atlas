@@ -58,6 +58,8 @@ pub async fn import(config: ImportConfig) -> anyhow::Result<()> {
         info!("created {} feature names", feature_names.len());
     }
 
+    let run = create_run(&mut tx, configuration.id, sample.id, &config.data_type).await?;
+
     tx.commit().await?;
 
     Ok(())
@@ -217,6 +219,35 @@ async fn create_feature_names(
     }
 
     Ok(names)
+}
+
+#[derive(Debug)]
+struct Run {
+    id: i32,
+}
+
+async fn create_run(
+    tx: &mut Transaction<'_, Postgres>,
+    configuration_id: i32,
+    sample_id: i32,
+    data_type: &str,
+) -> anyhow::Result<Run> {
+    let run_id = sqlx::query_scalar!(
+        "
+        insert into runs
+            (sample_id, configuration_id, data_type)
+        values
+            ($1, $2, $3)
+        returning id
+        ",
+        sample_id,
+        configuration_id,
+        data_type,
+    )
+    .fetch_one(tx)
+    .await?;
+
+    Ok(Run { id: run_id })
 }
 
 async fn read_feature_counts<R>(reader: &mut R) -> anyhow::Result<HashMap<String, u64>>

@@ -37,6 +37,9 @@ pub struct ImportConfig {
     #[clap(long)]
     pub sample_name: String,
 
+    #[clap(long)]
+    pub data_type: String,
+
     pub src: PathBuf,
 }
 

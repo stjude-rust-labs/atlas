@@ -34,9 +34,9 @@ async fn show(ctx: Extension<Context>, Path(id): Path<i32>) -> super::Result<Jso
         inner join configurations
             on runs.configuration_id = configurations.id
         inner join feature_names
-            on feature_names.configuration_id  = configurations.id
+            on runs.configuration_id = feature_names.configuration_id
         left join counts
-            on counts.feature_name_id = feature_names.id
+            on runs.id = counts.run_id and counts.feature_name_id = feature_names.id
         where runs.id = $1
         "#,
         id

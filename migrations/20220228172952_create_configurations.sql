@@ -11,3 +11,5 @@ create table configurations (
     foreign key (annotation_id) references annotations (id),
     unique (annotation_id, feature_type, feature_name)
 );
+
+create index configurations_annotation_id_idx on configurations (annotation_id);

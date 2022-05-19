@@ -9,3 +9,5 @@ create table counts (
     foreign key (run_id) references runs (id),
     foreign key (feature_name_id) references feature_names (id)
 );
+
+create index counts_run_id_feature_name_id_idx on counts(run_id, feature_name_id);

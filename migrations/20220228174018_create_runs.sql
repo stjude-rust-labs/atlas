@@ -11,3 +11,6 @@ create table runs (
     foreign key (sample_id) references samples (id),
     foreign key (configuration_id) references configurations (id)
 );
+
+create index runs_sample_id_idx on runs (sample_id);
+create index runs_configuration_id_idx on runs (configuration_id);

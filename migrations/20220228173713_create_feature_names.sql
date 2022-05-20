@@ -5,7 +5,6 @@ create table feature_names (
 
     name text not null,
 
-    foreign key (configuration_id) references configurations (id)
+    foreign key (configuration_id) references configurations (id),
+    unique (configuration_id, name)
 );
-
-create index feature_names_configuration_id_idx on feature_names (configuration_id);

@@ -56,7 +56,7 @@ pub mod tests {
 
     impl TestPgDatabase {
         pub async fn new(database_url: &str) -> sqlx::Result<TestPgDatabase> {
-            let (base_url, _) = database_url.rsplit_once("/").expect("invalid database URL");
+            let (base_url, _) = database_url.rsplit_once('/').expect("invalid database URL");
             let database_name = generate_name();
             let database_url = format!("{}/{}", base_url, database_name);
 

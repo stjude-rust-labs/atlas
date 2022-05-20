@@ -6,17 +6,17 @@ use sqlx::{Postgres, Transaction};
 pub async fn find_feature_names(
     tx: &mut Transaction<'_, Postgres>,
     configuration_id: i32,
-) -> anyhow::Result<HashSet<(i32, String)>> {
+) -> anyhow::Result<Vec<(i32, String)>> {
     let mut rows = sqlx::query!(
         "select id, name from feature_names where configuration_id = $1",
         configuration_id,
     )
     .fetch(tx);
 
-    let mut names = HashSet::new();
+    let mut names = Vec::new();
 
     while let Some(row) = rows.try_next().await? {
-        names.insert((row.id, row.name));
+        names.push((row.id, row.name));
     }
 
     Ok(names)
@@ -26,7 +26,7 @@ pub async fn create_feature_names(
     tx: &mut Transaction<'_, Postgres>,
     configuration_id: i32,
     names: &HashSet<String>,
-) -> anyhow::Result<HashSet<(i32, String)>> {
+) -> anyhow::Result<Vec<(i32, String)>> {
     use std::iter;
 
     let configuration_ids: Vec<_> = iter::repeat(configuration_id).take(names.len()).collect();
@@ -43,10 +43,10 @@ pub async fn create_feature_names(
     )
     .fetch(tx);
 
-    let mut names = HashSet::new();
+    let mut names = Vec::new();
 
     while let Some(row) = rows.try_next().await? {
-        names.insert((row.id, row.name));
+        names.push((row.id, row.name));
     }
 
     Ok(names)

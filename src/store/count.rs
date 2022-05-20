@@ -1,14 +1,11 @@
-use std::{
-    collections::{HashMap, HashSet},
-    io,
-};
+use std::{collections::HashMap, io};
 
 use sqlx::{Postgres, Transaction};
 
 pub async fn create_counts(
     tx: &mut Transaction<'_, Postgres>,
     run_id: i32,
-    feature_names: &HashSet<(i32, String)>,
+    feature_names: &Vec<(i32, String)>,
     counts: &HashMap<String, u64>,
 ) -> anyhow::Result<()> {
     let mut run_ids = Vec::new();

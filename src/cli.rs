@@ -2,6 +2,8 @@ use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
 
+use crate::store::StrandSpecification;
+
 #[derive(Debug, Parser)]
 #[clap(version)]
 pub struct Cli {
@@ -39,6 +41,10 @@ pub struct ImportConfig {
     /// The display name of the feature, e.g., "gene_name", "gene_id", etc.
     #[clap(long)]
     pub feature_name: String,
+
+    /// The strand specification used when counting features.
+    #[clap(arg_enum, long)]
+    pub strand_specification: StrandSpecification,
 
     /// The sample name.
     #[clap(long)]

@@ -146,10 +146,10 @@ mod tests {
         sqlx::query!(
             "
             insert into configurations
-                (annotation_id, feature_type, feature_name)
+                (annotation_id, feature_type, feature_name, strand_specification)
             values
-                (1, 'exon', 'gene_name'),
-                (2, 'exon', 'gene_name');
+                (1, 'exon', 'gene_name', 'reverse'),
+                (2, 'exon', 'gene_name', 'reverse');
             ",
         )
         .execute(pool)

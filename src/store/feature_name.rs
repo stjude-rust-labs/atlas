@@ -57,7 +57,7 @@ mod tests {
     use super::*;
     use crate::store::{
         annotations::find_or_create_annotations, configuration::find_or_create_configuration,
-        tests::setup,
+        tests::setup, StrandSpecification,
     };
 
     #[tokio::test]
@@ -66,8 +66,15 @@ mod tests {
         let mut tx = db.pool.begin().await?;
 
         let annotations = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
-        let configuration =
-            find_or_create_configuration(&mut tx, annotations.id, "gene", "gene_name").await?;
+
+        let configuration = find_or_create_configuration(
+            &mut tx,
+            annotations.id,
+            "gene",
+            "gene_name",
+            StrandSpecification::Reverse,
+        )
+        .await?;
 
         let feature_names = find_feature_names(&mut tx, configuration.id).await?;
         assert!(feature_names.is_empty());
@@ -89,8 +96,15 @@ mod tests {
         let mut tx = db.pool.begin().await?;
 
         let annotations = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
-        let configuration =
-            find_or_create_configuration(&mut tx, annotations.id, "gene", "gene_name").await?;
+
+        let configuration = find_or_create_configuration(
+            &mut tx,
+            annotations.id,
+            "gene",
+            "gene_name",
+            StrandSpecification::Reverse,
+        )
+        .await?;
 
         let names = [String::from("feature1"), String::from("feature2")]
             .into_iter()

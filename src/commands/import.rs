@@ -37,6 +37,7 @@ pub async fn import(config: ImportConfig) -> anyhow::Result<()> {
         annotations.id,
         &config.feature_type,
         &config.feature_name,
+        config.strand_specification,
     )
     .await?;
 

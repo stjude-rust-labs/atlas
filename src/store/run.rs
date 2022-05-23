@@ -55,7 +55,7 @@ mod tests {
     use super::*;
     use crate::store::{
         annotations::find_or_create_annotations, configuration::find_or_create_configuration,
-        sample::find_or_create_sample, tests::setup,
+        sample::find_or_create_sample, tests::setup, StrandSpecification,
     };
 
     #[tokio::test]
@@ -64,9 +64,18 @@ mod tests {
         let mut tx = db.pool.begin().await?;
 
         let annotations = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
-        let configuration =
-            find_or_create_configuration(&mut tx, annotations.id, "gene", "gene_name").await?;
+
+        let configuration = find_or_create_configuration(
+            &mut tx,
+            annotations.id,
+            "gene",
+            "gene_name",
+            StrandSpecification::Reverse,
+        )
+        .await?;
+
         let sample = find_or_create_sample(&mut tx, "sample1").await?;
+
         create_run(&mut tx, configuration.id, sample.id, "RNA-Seq").await?;
 
         assert!(run_exists(&mut tx, configuration.id, sample.id).await?);
@@ -81,8 +90,16 @@ mod tests {
         let mut tx = db.pool.begin().await?;
 
         let annotations = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
-        let configuration =
-            find_or_create_configuration(&mut tx, annotations.id, "gene", "gene_name").await?;
+
+        let configuration = find_or_create_configuration(
+            &mut tx,
+            annotations.id,
+            "gene",
+            "gene_name",
+            StrandSpecification::Reverse,
+        )
+        .await?;
+
         let sample = find_or_create_sample(&mut tx, "sample1").await?;
 
         let run = create_run(&mut tx, configuration.id, sample.id, "RNA-Seq").await?;

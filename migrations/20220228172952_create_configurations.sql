@@ -1,3 +1,5 @@
+create type strand_specification as enum ('none', 'forward', 'reverse');
+
 create table configurations (
     id serial primary key,
 
@@ -5,6 +7,7 @@ create table configurations (
 
     feature_type text not null,
     feature_name text not null,
+    strand_specification strand_specification not null,
 
     created_at timestamptz not null default now(),
 

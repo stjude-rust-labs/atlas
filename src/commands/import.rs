@@ -1,21 +1,21 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use crate::cli::ImportConfig;
 use sqlx::postgres::PgPoolOptions;
-use tokio::{
-    fs::File,
-    io::{AsyncBufRead, AsyncBufReadExt, BufReader},
-};
+use tokio::{fs::File, io::BufReader};
 use tracing::info;
 
 pub async fn import(config: ImportConfig) -> anyhow::Result<()> {
-    use crate::store::{
-        annotations::find_or_create_annotations,
-        configuration::find_or_create_configuration,
-        count::create_counts,
-        feature_name::{create_feature_names, find_feature_names},
-        run::{create_run, run_exists},
-        sample::find_or_create_sample,
+    use crate::{
+        counts::reader::read_feature_counts,
+        store::{
+            annotations::find_or_create_annotations,
+            configuration::find_or_create_configuration,
+            count::create_counts,
+            feature_name::{create_feature_names, find_feature_names},
+            run::{create_run, run_exists},
+            sample::find_or_create_sample,
+        },
     };
 
     let pool = PgPoolOptions::new().connect(&config.database_url).await?;
@@ -72,47 +72,4 @@ pub async fn import(config: ImportConfig) -> anyhow::Result<()> {
     tx.commit().await?;
 
     Ok(())
-}
-
-async fn read_feature_counts<R>(reader: &mut R) -> anyhow::Result<HashMap<String, u64>>
-where
-    R: AsyncBufRead + Unpin,
-{
-    const DELIMITER: char = '\t';
-    const HTSEQ_COUNT_META_PREFIX: &str = "__";
-
-    let mut lines = reader.lines();
-    let mut counts = HashMap::new();
-
-    while let Some(line) = lines.next_line().await? {
-        if let Some((raw_name, raw_count)) = line.split_once(DELIMITER) {
-            if raw_name.starts_with(HTSEQ_COUNT_META_PREFIX) {
-                break;
-            }
-
-            let count = raw_count.parse()?;
-            counts.insert(raw_name.into(), count);
-        }
-    }
-
-    Ok(counts)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_read_feature_counts() -> anyhow::Result<()> {
-        let data = b"feature_1\t8\nfeature_2\t13\n__no_feature\t0";
-
-        let mut reader = &data[..];
-        let counts = read_feature_counts(&mut reader).await?;
-
-        assert_eq!(counts.len(), 2);
-        assert_eq!(counts["feature_1"], 8);
-        assert_eq!(counts["feature_2"], 13);
-
-        Ok(())
-    }
 }

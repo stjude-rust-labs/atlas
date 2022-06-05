@@ -1,0 +1,202 @@
+\documentclass{article}
+
+%---------------------------------------------------------------------------------------
+% Packages
+%---------------------------------------------------------------------------------------
+
+% Handles wrapping URLs as footnotes.
+\usepackage[pdfborder={0 0 0},hyperfootnotes=false]{hyperref}
+
+% Drawing of figures
+\usepackage{tikz}
+
+% Sets page margins to 1.25 inches.
+\usepackage[margin=1.25in]{geometry}
+
+% Allows for checkmarks to be included in the progress table appendix.
+\usepackage{utfsym}
+
+% Colors fonts (used in API documentation).
+\usepackage{xcolor}
+
+% Support for custom code listings.
+\usepackage{listings}
+
+%---------------------------------------------------------------------------------------
+% Fonts
+%---------------------------------------------------------------------------------------
+
+% Set up bera package, which includes a roman and monospaced font. We really just want
+% the monospaced font, so we load bera first and then overwrite the roman font using
+% the bitstream-charter package.
+\usepackage{bera}
+
+% Set up bitstream charter as the roman font.
+% Must be included after the 'bera' package to override the roman font.
+\usepackage[bitstream-charter]{mathdesign}
+
+% Import title sections package to allow changing the behavior of the section and
+% subsection commands.
+\usepackage{titlesec}
+
+% Redefine subsection font to not be bolded.
+\titleformat{\subsection}{\large}
+{\thesubsection}{1em}{}
+
+%---------------------------------------------------------------------------------------
+% Custom listings styling
+%---------------------------------------------------------------------------------------
+% define some colors that will be used later.
+\definecolor{comment}{RGB}{34, 139, 34}
+\definecolor{string}{RGB}{164, 20, 20}
+
+% set global listings settings.
+\lstset{
+    basicstyle=\normalsize\ttfamily,
+    breaklines=true,
+    frame=trBL,
+    frameround=tttt
+}
+
+% define a custom highlighting scheme for our api code blocks. This resembles JSON but
+% allows for comments (annotated by two slashes).
+\lstdefinelanguage{api}{
+    numbers=left,
+    numberstyle=\small,
+    morestring=[b]",
+    morecomment=[l]{//},
+    stringstyle=\color{string},
+    commentstyle=\color{comment} \emph
+}
+
+%---------------------------------------------------------------------------------------
+% Frontmatter
+%---------------------------------------------------------------------------------------
+
+\title{
+    Atlas Specification \\
+    {\Large \emph{Version 1.0 (In Progress)}}
+}
+\author{
+    \begin{tabular}[t]{cc}
+        Clay McLeod$^1$ & Michael Macias$^1$ \\
+        \texttt{clay.mcleod@stjude.org} & \texttt{michael.macias@stjude.org}
+    \end{tabular}
+}
+
+\date{
+    $^1$St. Jude Children's Research Hospital \\[2ex]
+    \today
+}
+
+%---------------------------------------------------------------------------------------
+% New commands to make our lives easier
+%---------------------------------------------------------------------------------------
+\newcommand{\Sample}{\texttt{Sample}}
+\newcommand{\Samples}{\texttt{Sample}s}
+
+%---------------------------------------------------------------------------------------
+% Begin the document main body
+%---------------------------------------------------------------------------------------
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+\section{Introduction}
+Bioinformatics regularly requires storage and processing of large, numerical
+matrices representing quantitative measurements across a cohort. These matrices,
+which are often spare in nature, cannot generally be processed trivially within
+memory. Further, the number of samples being processed and visualized is growing
+rapidly, quickly exposing the limitations of existing tooling. We introduce the
+Atlas quantification specification and associated reference implementation
+(\url{https://github.com/stjude-rust-labs/atlas}) to address the unmet needs
+described above.
+
+\section{Goals}
+
+The stated goals of the Atlas project are four-fold:
+
+\begin{enumerate}
+    \item Create an API-based specification for storing, querying, manipulating,
+          and rendering of large quantitative matrices.
+    \item Support commonly used quantitative data types and associated analyses,
+          including (in this order of priority) RNA-Seq expression data, DNA and RNA
+          microarray data, and methylation data.
+    \item Create a performant reference implementation of the aforementioned
+          specification which can be used as a both a client and server.
+    \item As we can, consider and implement features requested by the broader community.
+\end{enumerate}
+
+Notably, authentication and authorization are not goals of the project. We
+recommend you investigate supplementary techniques to secure an Atlas server.
+
+\section{Samples}
+\label{section:samples}
+
+Each quantitative measurement within Atlas must belong to a \Sample. Storage and
+querying of \Samples{ }within Atlas is intended to be straightforward and flexible, not
+capturing the complexities of real-world sample collection and aggregation. \Samples{
+}are simply assigned a name at creation time; an ID number and appropriate timestamps
+are added alongside the name. \textit{Note: if you need to organize samples by cohort or
+    otherwise, consider using a sample prefix (e.g. \texttt{Cohort/Sample}).} Table
+\ref{table:sample-fields} describes the fields associated with a \Sample{ }in more
+detail.
+
+\begin{table}[ht]
+    \centering
+    \begin{tabular}{|l|r|l|}
+        \hline
+        \textbf{Field Name}  & \textbf{Field Type} & \textbf{Description}                              \\
+        \hline
+        \texttt{id}          & \texttt{i32}        & Primary assigned ID for this sample within Atlas. \\
+        \texttt{name}        & \texttt{String}     & Name of the sample.                               \\
+        \texttt{created\_at} & \texttt{Timestampz} & Time that the sample was created in Atlas.        \\
+        \hline
+    \end{tabular}
+    \label{table:sample-fields}
+    \caption{Detailed description of \Sample{ }fields.}
+\end{table}
+
+\section{API Reference}
+\subsection{\texttt{/api/samples} — Listing Samples}
+
+This API method is useful to interrogate what samples the Atlas server currently has
+data for.  You can take a look at Section \ref{section:samples} for more information
+about what is contained within a \texttt{Sample} object.
+
+\vspace{1.5em}
+\begin{lstlisting}[language=api]
+// GET /api/samples
+
+{
+    "results": Sample[], // samples currently contained in Atlas.
+    "length":  usize     // length of the results.
+}
+\end{lstlisting}
+
+
+\subsection{\texttt{/api/samples/\color{purple}:name} — Querying a Sample}
+
+This API method returns information about a particular sample stored in the Atlas
+server.
+% \subsection{\texttt{/api/counts/\color{purple}:id} — Viewing Counts}
+
+\appendix
+
+\section{Reference Implementation Status}
+
+\newcommand{\cm}{\usym{1F5F8}}
+\begin{center}
+    \begin{tabular}{|p{150pt}|l|c|c|c|}
+        \hline
+        \textbf{Feature Name} & \textbf{API Method}                       & \textbf{Completed} & \textbf{Released} & \textbf{Released Version} \\ [0.5ex]
+        \hline
+        Listing Samples       & \texttt{/api/samples}                     & \cm                &                   & \emph{N/A}                \\
+        Querying a Sample     & \texttt{/api/samples/\color{purple}:name} & \cm                &                   & \emph{N/A}                \\
+        \hline
+    \end{tabular}
+\end{center}
+
+\end{document}

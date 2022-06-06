@@ -27,6 +27,8 @@ where
             let count = raw_count.parse()?;
 
             counts.insert(raw_name.into(), count);
+        } else {
+            anyhow::bail!("invalid feature count line");
         }
     }
 
@@ -71,6 +73,14 @@ mod tests {
         assert_eq!(counts["feature_1"], 8);
         assert_eq!(counts["feature_2"], 13);
 
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_read_feature_counts_with_invalid_line() -> anyhow::Result<()> {
+        let data = b"feature_1\t8\nfeature_2  13\n";
+        let mut reader = &data[..];
+        assert!(read_feature_counts(&mut reader).await.is_err());
         Ok(())
     }
 

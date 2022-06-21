@@ -1,7 +1,7 @@
 use std::fmt;
 
-use serde::{de, Deserialize, Serialize};
-use time::{Format, OffsetDateTime};
+use serde::{de, ser, Deserialize, Serialize};
+use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 
 #[derive(sqlx::Type)]
 pub struct Timestampz(pub OffsetDateTime);
@@ -11,7 +11,7 @@ impl Serialize for Timestampz {
     where
         S: serde::Serializer,
     {
-        let s = self.0.format(Format::Rfc3339);
+        let s = self.0.format(&Rfc3339).map_err(ser::Error::custom)?;
         serializer.collect_str(&s)
     }
 }
@@ -34,7 +34,7 @@ impl<'de> Deserialize<'de> for Timestampz {
             where
                 E: de::Error,
             {
-                OffsetDateTime::parse(s, Format::Rfc3339)
+                OffsetDateTime::parse(s, &Rfc3339)
                     .map(Timestampz)
                     .map_err(E::custom)
             }

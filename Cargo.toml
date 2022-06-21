@@ -12,8 +12,8 @@ clap = { version = "3.2.6", features = ["deprecated", "derive", "env"] }
 dotenv = "0.15.0"
 futures = { version = "0.3.21", default-features = false, features = ["std"] }
 serde = { version = "1.0.136", features = ["derive"] }
-sqlx = { version = "0.5.10", features = ["runtime-tokio-native-tls", "postgres", "time"] }
-time = "0.2.27"
+sqlx = { version = "0.6.0", features = ["runtime-tokio-native-tls", "postgres", "time"] }
+time = { version = "0.3.10", features = ["formatting", "parsing"] }
 tokio = { version = "1.17.0", features = ["macros", "rt-multi-thread"] }
 tower = "0.4.12"
 tower-http = { version = "0.3.3", features = ["add-extension", "trace", "util"] }

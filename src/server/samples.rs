@@ -220,11 +220,11 @@ mod tests {
                 "samples": [{
                     "id": 1,
                     "name": "sample_1",
-                    "createdAt": "2022-02-18T21:05:05+00:00",
+                    "createdAt": "2022-02-18T21:05:05Z",
                 }, {
                     "id": 2,
                     "name": "sample_2",
-                    "createdAt": "2022-02-18T21:05:06+00:00",
+                    "createdAt": "2022-02-18T21:05:06Z",
                 }]
             })
         );

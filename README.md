@@ -4,7 +4,7 @@
 
   * [Rust](https://www.rust-lang.org/)
   * [PostgreSQL](https://www.postgresql.org/)
-  * [sqlx-cli](https://github.com/launchbadge/sqlx/tree/master/sqlx-cli) (`cargo install sqlx-cli --no-default-features --features native-tls,postgres`)
+  * [sqlx-cli](https://github.com/launchbadge/sqlx/tree/main/sqlx-cli) (`cargo install sqlx-cli --no-default-features --features native-tls,postgres`)
 
 ## Development quickstart
 

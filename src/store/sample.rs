@@ -26,13 +26,13 @@ pub async fn find_or_create_sample(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::store::tests::setup;
+    use sqlx::PgPool;
 
-    #[tokio::test]
-    async fn test_find_or_create_sample() -> anyhow::Result<()> {
-        let db = setup().await?;
-        let mut tx = db.pool.begin().await?;
+    use super::*;
+
+    #[sqlx::test]
+    async fn test_find_or_create_sample(pool: PgPool) -> anyhow::Result<()> {
+        let mut tx = pool.begin().await?;
 
         let sample = find_or_create_sample(&mut tx, "sample1").await?;
         assert_eq!(sample.id, 1);

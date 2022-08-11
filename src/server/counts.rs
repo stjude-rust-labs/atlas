@@ -59,106 +59,25 @@ mod tests {
         body::Body,
         http::{Request, StatusCode},
     };
-    use clap::Parser;
     use serde::Deserialize;
     use sqlx::PgPool;
     use tower::ServiceExt;
 
-    use crate::{cli::ServerConfig, server::tests::TestPgDatabase};
-
     use super::*;
 
-    async fn seed(pool: &PgPool) -> sqlx::Result<()> {
-        sqlx::query!("insert into samples (name) values ('sample_1'), ('sample_2')")
-            .execute(pool)
-            .await?;
-
-        sqlx::query!(
-            "
-            insert into annotations
-                (name, genome_build)
-            values
-                ('GENCODE 39', 'GRCh38.p13'),
-                ('GENCODE 19', 'GRCh37.p13')
-            ",
-        )
-        .execute(pool)
-        .await?;
-
-        sqlx::query!(
-            "
-            insert into configurations
-                (annotation_id, feature_type, feature_name, strand_specification)
-            values
-                (1, 'exon', 'gene_name', 'reverse'),
-                (2, 'exon', 'gene_name', 'reverse');
-            ",
-        )
-        .execute(pool)
-        .await?;
-
-        sqlx::query!(
-            "
-            insert into feature_names
-                (configuration_id, name)
-            values
-                (1, 'feature_1'),
-                (1, 'feature_2'),
-                (2, 'feature_1'),
-                (2, 'feature_2')
-            ",
-        )
-        .execute(pool)
-        .await?;
-
-        sqlx::query!(
-            "
-            insert into runs
-                (sample_id, configuration_id, data_type)
-            values
-                (1, 1, 'RNA-Seq'),
-                (1, 2, 'RNA-Seq'),
-                (2, 1, 'RNA-Seq')
-            "
-        )
-        .execute(pool)
-        .await?;
-
-        sqlx::query!("insert into counts (run_id, feature_name_id, value) values (1, 1, 8)")
-            .execute(pool)
-            .await?;
-
-        Ok(())
+    fn app(pool: PgPool) -> Router {
+        router().layer(Extension(Context { pool }))
     }
 
-    async fn setup() -> anyhow::Result<TestPgDatabase> {
-        dotenv::dotenv().ok();
-
-        let config = ServerConfig::parse();
-        let db = TestPgDatabase::new(&config.database_url).await?;
-
-        seed(&db.pool).await?;
-
-        Ok(db)
-    }
-
-    fn app(db: &TestPgDatabase) -> Router {
-        router().layer(Extension(Context {
-            pool: db.pool.clone(),
-        }))
-    }
-
-    #[tokio::test]
-    async fn test_show() -> anyhow::Result<()> {
+    #[sqlx::test(fixtures("counts"))]
+    async fn test_show(pool: PgPool) -> anyhow::Result<()> {
         #[derive(Deserialize)]
         struct CountsBody {
             counts: HashMap<String, i32>,
         }
 
-        let db = setup().await?;
-
         let request = Request::builder().uri("/counts/1").body(Body::empty())?;
-        let response = app(&db).oneshot(request).await?;
+        let response = app(pool).oneshot(request).await?;
 
         assert_eq!(response.status(), StatusCode::OK);
 
@@ -174,12 +93,10 @@ mod tests {
         Ok(())
     }
 
-    #[tokio::test]
-    async fn test_show_with_an_invalid_id() -> anyhow::Result<()> {
-        let db = setup().await?;
-
+    #[sqlx::test]
+    async fn test_show_with_an_invalid_id(pool: PgPool) -> anyhow::Result<()> {
         let request = Request::builder().uri("/counts/1597").body(Body::empty())?;
-        let response = app(&db).oneshot(request).await?;
+        let response = app(pool).oneshot(request).await?;
 
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
 

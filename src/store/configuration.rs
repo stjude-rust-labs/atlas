@@ -39,15 +39,15 @@ pub async fn find_or_create_configuration(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::store::tests::setup;
+    use sqlx::PgPool;
 
-    #[tokio::test]
-    async fn test_find_or_create_configuration() -> anyhow::Result<()> {
+    use super::*;
+
+    #[sqlx::test]
+    async fn test_find_or_create_configuration(pool: PgPool) -> anyhow::Result<()> {
         use crate::store::annotations::find_or_create_annotations;
 
-        let db = setup().await?;
-        let mut tx = db.pool.begin().await?;
+        let mut tx = pool.begin().await?;
 
         let gencode_21 = find_or_create_annotations(&mut tx, "GENCODE 21", "GRCh38").await?;
         let gencode_40 = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;

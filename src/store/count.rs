@@ -44,6 +44,8 @@ pub async fn create_counts(
 
 #[cfg(test)]
 mod tests {
+    use sqlx::PgPool;
+
     use super::*;
     use crate::store::{
         annotations::find_or_create_annotations,
@@ -51,14 +53,12 @@ mod tests {
         feature_name::{create_feature_names, find_feature_names},
         run::create_run,
         sample::find_or_create_sample,
-        tests::setup,
         StrandSpecification,
     };
 
-    #[tokio::test]
-    async fn test_create_counts() -> anyhow::Result<()> {
-        let db = setup().await?;
-        let mut tx = db.pool.begin().await?;
+    #[sqlx::test]
+    async fn test_create_counts(pool: PgPool) -> anyhow::Result<()> {
+        let mut tx = pool.begin().await?;
 
         let annotations = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
 

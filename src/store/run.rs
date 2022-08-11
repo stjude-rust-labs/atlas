@@ -52,16 +52,17 @@ pub async fn create_run(
 
 #[cfg(test)]
 mod tests {
+    use sqlx::PgPool;
+
     use super::*;
     use crate::store::{
         annotations::find_or_create_annotations, configuration::find_or_create_configuration,
-        sample::find_or_create_sample, tests::setup, StrandSpecification,
+        sample::find_or_create_sample, StrandSpecification,
     };
 
-    #[tokio::test]
-    async fn test_run_exists() -> anyhow::Result<()> {
-        let db = setup().await?;
-        let mut tx = db.pool.begin().await?;
+    #[sqlx::test]
+    async fn test_run_exists(pool: PgPool) -> anyhow::Result<()> {
+        let mut tx = pool.begin().await?;
 
         let annotations = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
 
@@ -84,10 +85,9 @@ mod tests {
         Ok(())
     }
 
-    #[tokio::test]
-    async fn test_create_run() -> anyhow::Result<()> {
-        let db = setup().await?;
-        let mut tx = db.pool.begin().await?;
+    #[sqlx::test]
+    async fn test_create_run(pool: PgPool) -> anyhow::Result<()> {
+        let mut tx = pool.begin().await?;
 
         let annotations = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
 

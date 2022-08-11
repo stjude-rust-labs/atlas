@@ -54,16 +54,17 @@ pub async fn create_feature_names(
 
 #[cfg(test)]
 mod tests {
+    use sqlx::PgPool;
+
     use super::*;
     use crate::store::{
         annotations::find_or_create_annotations, configuration::find_or_create_configuration,
-        tests::setup, StrandSpecification,
+        StrandSpecification,
     };
 
-    #[tokio::test]
-    async fn test_find_feature_names() -> anyhow::Result<()> {
-        let db = setup().await?;
-        let mut tx = db.pool.begin().await?;
+    #[sqlx::test]
+    async fn test_find_feature_names(pool: PgPool) -> anyhow::Result<()> {
+        let mut tx = pool.begin().await?;
 
         let annotations = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
 
@@ -90,10 +91,9 @@ mod tests {
         Ok(())
     }
 
-    #[tokio::test]
-    async fn test_create_feature_names() -> anyhow::Result<()> {
-        let db = setup().await?;
-        let mut tx = db.pool.begin().await?;
+    #[sqlx::test]
+    async fn test_create_feature_names(pool: PgPool) -> anyhow::Result<()> {
+        let mut tx = pool.begin().await?;
 
         let annotations = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
 

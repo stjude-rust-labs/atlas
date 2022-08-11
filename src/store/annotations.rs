@@ -31,13 +31,13 @@ pub async fn find_or_create_annotations(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::store::tests::setup;
+    use sqlx::PgPool;
 
-    #[tokio::test]
-    async fn test_find_or_create_annotations() -> anyhow::Result<()> {
-        let db = setup().await?;
-        let mut tx = db.pool.begin().await?;
+    use super::*;
+
+    #[sqlx::test]
+    async fn test_find_or_create_annotations(pool: PgPool) -> anyhow::Result<()> {
+        let mut tx = pool.begin().await?;
 
         let annotations = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
         assert_eq!(annotations.id, 1);

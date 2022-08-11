@@ -14,9 +14,9 @@ cd atlas
 
 cp .env.example .env
 
-docker container run --detach --rm --name atlas_postgres --publish 5432:5432 --env POSTGRES_PASSWORD=dev postgres:14.4
+docker compose up --detach
 sqlx database setup
-docker container exec --interactive atlas_postgres psql --username postgres atlas < tests/sql/seeds.sql
+docker container exec --interactive atlas-db-1 psql --username postgres atlas < tests/sql/seeds.sql
 
 cargo run -- run
 

@@ -3,7 +3,7 @@ mod error;
 mod samples;
 pub mod types;
 
-use std::net::SocketAddr;
+use std::net::{Ipv4Addr, SocketAddr};
 
 use axum::Router;
 use sqlx::PgPool;
@@ -22,7 +22,7 @@ pub struct Context {
 }
 
 pub async fn serve(config: &ServerConfig, pool: PgPool) -> anyhow::Result<()> {
-    let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
+    let addr = SocketAddr::from((Ipv4Addr::UNSPECIFIED, config.port));
 
     let service = ServiceBuilder::new()
         .add_extension(Context { pool })

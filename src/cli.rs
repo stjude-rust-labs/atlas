@@ -43,7 +43,7 @@ pub struct ImportConfig {
     pub feature_name: String,
 
     /// The strand specification used when counting features.
-    #[clap(arg_enum, long)]
+    #[clap(value_enum, long)]
     pub strand_specification: StrandSpecification,
 
     /// The sample name.

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use axum::{
-    extract::{Extension, Path},
+    extract::{Path, State},
     routing::get,
     Json, Router,
 };
@@ -9,7 +9,7 @@ use serde::Serialize;
 
 use super::{Context, Error};
 
-pub fn router() -> Router {
+pub fn router() -> Router<Context> {
     Router::new().route("/counts/:id", get(show))
 }
 
@@ -23,7 +23,7 @@ struct Count {
     value: i32,
 }
 
-async fn show(ctx: Extension<Context>, Path(id): Path<i32>) -> super::Result<Json<CountsBody>> {
+async fn show(State(ctx): State<Context>, Path(id): Path<i32>) -> super::Result<Json<CountsBody>> {
     let rows = sqlx::query_as!(
         Count,
         r#"
@@ -66,7 +66,7 @@ mod tests {
     use super::*;
 
     fn app(pool: PgPool) -> Router {
-        router().layer(Extension(Context { pool }))
+        router().with_state(Context { pool })
     }
 
     #[sqlx::test(fixtures("counts"))]

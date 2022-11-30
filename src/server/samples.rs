@@ -1,11 +1,15 @@
-use axum::{extract::Extension, extract::Path, routing::get, Json, Router};
+use axum::{
+    extract::{Path, State},
+    routing::get,
+    Json, Router,
+};
 use serde::Serialize;
 
 use crate::store::StrandSpecification;
 
 use super::{types::Timestampz, Context, Error};
 
-pub fn router() -> Router {
+pub fn router() -> Router<Context> {
     Router::new()
         .route("/samples", get(index))
         .route("/samples/:name", get(show))
@@ -24,7 +28,7 @@ struct Sample {
     created_at: Timestampz,
 }
 
-async fn index(ctx: Extension<Context>) -> super::Result<Json<SamplesBody<Vec<Sample>>>> {
+async fn index(State(ctx): State<Context>) -> super::Result<Json<SamplesBody<Vec<Sample>>>> {
     let samples = sqlx::query_as!(
         Sample,
         r#"select id, name, created_at "created_at: Timestampz" from samples"#
@@ -65,7 +69,7 @@ struct SampleWithCounts {
 }
 
 async fn show(
-    ctx: Extension<Context>,
+    State(ctx): State<Context>,
     Path(name): Path<String>,
 ) -> super::Result<Json<SampleWithCounts>> {
     let rows = sqlx::query_as!(
@@ -130,7 +134,7 @@ mod tests {
     use super::*;
 
     fn app(pool: PgPool) -> Router {
-        router().layer(Extension(Context { pool }))
+        router().with_state(Context { pool })
     }
 
     #[sqlx::test(fixtures("samples"))]

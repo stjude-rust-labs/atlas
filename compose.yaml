@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   db:
     image: "postgres:14.4"
@@ -7,4 +5,3 @@ services:
       POSTGRES_PASSWORD: "dev"
     ports:
       - "5432:5432"
-

@@ -9,7 +9,7 @@ rust-version = "1.64.0"
 anyhow = "1.0.55"
 axum = "0.6.1"
 clap = { version = "4.0.27", features = ["derive", "env"] }
-dotenv = "0.15.0"
+dotenvy = "0.15.0"
 futures = { version = "0.3.21", default-features = false, features = ["std"] }
 serde = { version = "1.0.136", features = ["derive"] }
 sqlx = { version = "0.6.0", features = ["runtime-tokio-native-tls", "postgres", "time"] }

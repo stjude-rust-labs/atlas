@@ -1,7 +1,27 @@
 pub mod htseq_count;
 pub mod star;
 
+use std::collections::HashMap;
+
 use tokio::io::{self, AsyncBufRead, AsyncBufReadExt};
+
+use super::Format;
+use crate::store::StrandSpecification;
+
+pub async fn read_counts<R>(
+    format: Format,
+    feature_name: &str,
+    strand_specification: StrandSpecification,
+    reader: &mut R,
+) -> anyhow::Result<HashMap<String, u64>>
+where
+    R: AsyncBufRead + Unpin,
+{
+    match format {
+        Format::HtseqCount => htseq_count::read_counts(reader).await,
+        Format::Star => star::read_counts(feature_name, strand_specification, reader).await,
+    }
+}
 
 async fn read_line<R>(reader: &mut R, buf: &mut String) -> io::Result<usize>
 where

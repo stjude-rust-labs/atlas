@@ -7,7 +7,7 @@ use tracing::info;
 
 pub async fn import(config: ImportConfig) -> anyhow::Result<()> {
     use crate::{
-        counts::reader::htseq_count,
+        counts::reader::read_counts,
         store::{
             annotations::find_or_create_annotations,
             configuration::find_or_create_configuration,
@@ -57,7 +57,13 @@ pub async fn import(config: ImportConfig) -> anyhow::Result<()> {
     info!("loaded {} feature names", feature_names.len());
 
     let mut reader = File::open(&config.src).await.map(BufReader::new)?;
-    let counts = htseq_count::read_counts(&mut reader).await?;
+    let counts = read_counts(
+        config.format,
+        &config.feature_name,
+        config.strand_specification,
+        &mut reader,
+    )
+    .await?;
 
     if feature_names.is_empty() {
         let mut names = HashSet::new();

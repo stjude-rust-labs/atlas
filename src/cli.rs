@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
 
-use crate::store::StrandSpecification;
+use crate::{counts, store::StrandSpecification};
 
 #[derive(Debug, Parser)]
 #[clap(version)]
@@ -53,6 +53,10 @@ pub struct ImportConfig {
     /// The technique process used to sequence the given sample, e.g., "RNA-Seq", etc.
     #[clap(long)]
     pub data_type: String,
+
+    /// The input format.
+    #[clap(long)]
+    pub format: counts::Format,
 
     /// The input source.
     ///

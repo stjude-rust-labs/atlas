@@ -1,4 +1,5 @@
 pub mod htseq_count;
+pub mod star;
 
 use tokio::io::{self, AsyncBufRead, AsyncBufReadExt};
 

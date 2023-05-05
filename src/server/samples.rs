@@ -28,6 +28,14 @@ struct Sample {
     created_at: Timestampz,
 }
 
+/// Lists all samples with runs.
+#[utoipa::path(
+    get,
+    path = "/samples",
+    responses(
+        (status = OK, description = "Samples with runs"),
+    )
+)]
 async fn index(State(ctx): State<Context>) -> super::Result<Json<SamplesBody<Vec<Sample>>>> {
     let samples = sqlx::query_as!(
         Sample,
@@ -68,6 +76,18 @@ struct SampleWithCounts {
     counts: Vec<Counts>,
 }
 
+/// Shows associated runs for a given sample name.
+#[utoipa::path(
+    get,
+    path = "/samples/{name}",
+    params(
+        ("name" = String, Path, description = "Sample name"),
+    ),
+    responses(
+        (status = OK, description = "The sample name has runs"),
+        (status = NOT_FOUND, description = "The sample name does not exist")
+    ),
+)]
 async fn show(
     State(ctx): State<Context>,
     Path(name): Path<String>,

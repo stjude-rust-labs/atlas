@@ -23,6 +23,18 @@ struct Count {
     value: i32,
 }
 
+/// Shows counts for a given run.
+#[utoipa::path(
+    get,
+    path = "/counts/{id}",
+    params(
+        ("id" = i32, Path, description = "Run ID"),
+    ),
+    responses(
+        (status = OK, description = "Counts associated with the given run"),
+        (status = NOT_FOUND, description = "The run ID does not exist")
+    )
+)]
 async fn show(State(ctx): State<Context>, Path(id): Path<i32>) -> super::Result<Json<CountsBody>> {
     let rows = sqlx::query_as!(
         Count,

@@ -6,7 +6,6 @@ use tokio::io::{self, AsyncBufRead};
 use super::read_line;
 use crate::store::StrandSpecification;
 
-#[allow(dead_code)]
 pub async fn read_counts<R>(
     feature_name: &str,
     strand_specification: StrandSpecification,

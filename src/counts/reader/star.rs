@@ -1,7 +1,7 @@
 use std::{collections::HashMap, num};
 
 use thiserror::Error;
-use tokio::io::AsyncBufRead;
+use tokio::io::{self, AsyncBufRead};
 
 use super::read_line;
 use crate::store::StrandSpecification;
@@ -16,7 +16,6 @@ where
     R: AsyncBufRead + Unpin,
 {
     const COMMENT_PREFIX: char = '#';
-    const META_LINE_COUNT: usize = 6;
 
     let name_index = match feature_name {
         "gene_id" => 0,
@@ -33,10 +32,7 @@ where
     let mut line = String::new();
     let mut counts = HashMap::new();
 
-    for _ in 0..META_LINE_COUNT {
-        line.clear();
-        read_line(reader, &mut line).await?;
-    }
+    consume_meta(reader, &mut line).await?;
 
     loop {
         line.clear();
@@ -50,6 +46,20 @@ where
     }
 
     Ok(counts)
+}
+
+async fn consume_meta<R>(reader: &mut R, buf: &mut String) -> io::Result<()>
+where
+    R: AsyncBufRead + Unpin,
+{
+    const META_LINE_COUNT: usize = 6;
+
+    for _ in 0..META_LINE_COUNT {
+        buf.clear();
+        read_line(reader, buf).await?;
+    }
+
+    Ok(())
 }
 
 #[derive(Debug, Error, Eq, PartialEq)]

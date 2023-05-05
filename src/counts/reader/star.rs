@@ -15,8 +15,6 @@ pub async fn read_counts<R>(
 where
     R: AsyncBufRead + Unpin,
 {
-    const COMMENT_PREFIX: char = '#';
-
     let name_index = match feature_name {
         "gene_id" => 0,
         "gene_name" => 1,

@@ -22,7 +22,7 @@ sqlx database setup
 psql --host localhost --username postgres atlas < tests/sql/seeds.sql
 cargo run -- run
 
-curl http://localhost:3000/samples
+# open <local-address>/openapi
 ```
 
 [GitHub Codespaces]: https://github.com/features/codespaces
@@ -43,5 +43,5 @@ docker container exec --interactive atlas-db-1 psql --username postgres atlas < 
 
 cargo run -- run
 
-curl http://localhost:3000/samples
+# open http://localhost:3000/openapi
 ```

@@ -8,6 +8,29 @@
 
 ## Development quickstart
 
+###  Dev container
+
+atlas defines a development container manifest to quickly build an environment
+for development and testing. This is compatible with, e.g., [GitHub Codespaces]
+and [Visual Studio Code] with the [Dev Container extension] installed.
+
+After opening the project in the dev container,
+
+```sh
+cp .env.example .env
+sqlx database setup
+psql --host localhost --username postgres atlas < tests/sql/seeds.sql
+cargo run -- run
+
+curl http://localhost:3000/samples
+```
+
+[GitHub Codespaces]: https://github.com/features/codespaces
+[Visual Studio Code]: https://code.visualstudio.com/
+[Dev Containers extension]: https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers
+
+### Manual
+
 ```sh
 git clone https://github.com/stjude-rust-labs/atlas.git
 cd atlas

@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.4
 
-FROM mcr.microsoft.com/devcontainers/base:bullseye
+FROM mcr.microsoft.com/devcontainers/base:debian-12
 
 ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse \
     PATH=/home/vscode/.cargo/bin:${PATH}

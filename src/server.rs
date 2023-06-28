@@ -1,3 +1,4 @@
+mod analyses;
 mod counts;
 mod error;
 mod samples;
@@ -19,7 +20,7 @@ use super::cli::ServerConfig;
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(OpenApi)]
-#[openapi(paths(counts::show, samples::index, samples::show))]
+#[openapi(paths(analyses::plot, counts::show, samples::index, samples::show))]
 struct ApiDoc;
 
 #[derive(Clone)]
@@ -46,6 +47,7 @@ pub async fn serve(config: &ServerConfig, pool: PgPool) -> anyhow::Result<()> {
 fn router() -> Router<Context> {
     samples::router()
         .merge(counts::router())
+        .merge(analyses::router())
         .merge(api_doc_router())
 }
 

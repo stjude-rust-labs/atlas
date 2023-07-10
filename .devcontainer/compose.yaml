@@ -3,7 +3,7 @@ services:
     build: .
     volumes:
       - ..:/workspaces/atlas:cached
-      - target:/workspaces/atlas/target:cached
+      - ../target:/workspaces/atlas/target:cached
     network_mode: service:db
     command: sleep infinity
 

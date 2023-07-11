@@ -11,7 +11,7 @@ pub async fn find_feature_names(
         "select id, name from feature_names where configuration_id = $1",
         configuration_id,
     )
-    .fetch(tx);
+    .fetch(&mut **tx);
 
     let mut names = Vec::new();
 
@@ -41,7 +41,7 @@ pub async fn create_feature_names(
         &configuration_ids[..],
         &names[..]
     )
-    .fetch(tx);
+    .fetch(&mut **tx);
 
     let mut names = Vec::new();
 

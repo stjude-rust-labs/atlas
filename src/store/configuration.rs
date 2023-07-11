@@ -29,7 +29,7 @@ pub async fn find_or_create_configuration(
         feature_name,
         strand_specification as _,
     )
-    .fetch_one(tx)
+    .fetch_one(&mut **tx)
     .await?;
 
     Ok(Configuration {

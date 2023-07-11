@@ -23,7 +23,7 @@ pub async fn find_or_create_annotations(
         name,
         genome_build,
     )
-    .fetch_one(tx)
+    .fetch_one(&mut **tx)
     .await?;
 
     Ok(Annotations { id: annotations_id })

@@ -36,7 +36,7 @@ pub async fn create_counts(
         &feature_name_ids[..],
         &values[..],
     )
-    .execute(tx)
+    .execute(&mut **tx)
     .await?;
 
     Ok(())

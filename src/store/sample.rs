@@ -18,7 +18,7 @@ pub async fn find_or_create_sample(
         ",
         sample_name
     )
-    .fetch_one(tx)
+    .fetch_one(&mut **tx)
     .await?;
 
     Ok(Sample { id: sample_id })

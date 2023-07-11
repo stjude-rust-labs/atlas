@@ -15,7 +15,7 @@ pub async fn run_exists(
         configuration_id,
         sample_id,
     )
-    .fetch_optional(tx)
+    .fetch_optional(&mut **tx)
     .await
     .map(|result| result.is_some())
     .map_err(|e| e.into())
@@ -44,7 +44,7 @@ pub async fn create_run(
         configuration_id,
         data_type,
     )
-    .fetch_one(tx)
+    .fetch_one(&mut **tx)
     .await?;
 
     Ok(Run { id: run_id })

@@ -133,6 +133,7 @@ dependencies = [
  "tracing-subscriber",
  "utoipa",
  "utoipa-swagger-ui",
+ "uuid",
 ]
 
 [[package]]
@@ -1871,6 +1872,7 @@ dependencies = [
  "tokio-stream",
  "tracing",
  "url",
+ "uuid",
 ]
 
 [[package]]
@@ -1952,6 +1954,7 @@ dependencies = [
  "thiserror",
  "time",
  "tracing",
+ "uuid",
  "whoami",
 ]
 
@@ -1992,6 +1995,7 @@ dependencies = [
  "thiserror",
  "time",
  "tracing",
+ "uuid",
  "whoami",
 ]
 
@@ -2016,6 +2020,7 @@ dependencies = [
  "time",
  "tracing",
  "url",
+ "uuid",
 ]
 
 [[package]]
@@ -2410,6 +2415,15 @@ dependencies = [
  "serde_json",
  "utoipa",
  "zip",
+]
+
+[[package]]
+name = "uuid"
+version = "1.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d023da39d1fde5a8a3fe1f3e01ca9632ada0a63e9797de55a879d6e2236277be"
+dependencies = [
+ "getrandom",
 ]
 
 [[package]]

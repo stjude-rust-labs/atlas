@@ -15,7 +15,7 @@ pub struct Cli {
 pub enum Commands {
     /// Imports a sample into the database
     Import(ImportConfig),
-    /// Starts an altas server and blocks indefinitely
+    /// Starts an atlas server and blocks indefinitely
     Run(ServerConfig),
 }
 

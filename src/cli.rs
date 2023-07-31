@@ -17,6 +17,8 @@ pub enum Commands {
     Import(ImportConfig),
     /// Starts an atlas server and blocks indefinitely
     Run(ServerConfig),
+    /// Starts an atlas worker.
+    Worker(WorkerConfig),
 }
 
 #[derive(Debug, Parser)]
@@ -73,4 +75,11 @@ pub struct ServerConfig {
     /// The port for the server to use.
     #[clap(long, env, default_value_t = 3000)]
     pub port: u16,
+}
+
+#[derive(Debug, Parser)]
+pub struct WorkerConfig {
+    /// The PostgreSQL database connection URL.
+    #[clap(long, env)]
+    pub database_url: String,
 }

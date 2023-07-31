@@ -12,6 +12,7 @@ async fn main() -> anyhow::Result<()> {
     match cli.command {
         Commands::Import(config) => atlas::commands::import(config).await?,
         Commands::Run(config) => atlas::commands::run(config).await?,
+        Commands::Worker(config) => atlas::commands::worker(config).await?,
     }
 
     Ok(())

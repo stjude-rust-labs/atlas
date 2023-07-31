@@ -1,4 +1,5 @@
 mod import;
 mod run;
+mod worker;
 
-pub use self::{import::import, run::run};
+pub use self::{import::import, run::run, worker::worker};

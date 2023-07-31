@@ -19,6 +19,7 @@ pub async fn worker(config: WorkerConfig) -> anyhow::Result<()> {
         if let Some(task) = queue.pull_front().await? {
             info!(id = ?task.id, "received task");
             dbg!(task.id);
+            queue.success(task.id).await?;
         }
 
         tokio::time::sleep(POLL_INTERVAL).await;

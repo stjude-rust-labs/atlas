@@ -33,7 +33,7 @@ impl Queue {
         Queue { pool }
     }
 
-    pub async fn pop_front(&self) -> sqlx::Result<Option<Task>> {
+    pub async fn pull_front(&self) -> sqlx::Result<Option<Task>> {
         sqlx::query_as!(
             Task,
             r#"
@@ -86,8 +86,8 @@ mod tests {
 
         queue.push_back(Message::Noop).await?;
 
-        assert!(queue.pop_front().await?.is_some());
-        assert!(queue.pop_front().await?.is_none());
+        assert!(queue.pull_front().await?.is_some());
+        assert!(queue.pull_front().await?.is_none());
 
         Ok(())
     }

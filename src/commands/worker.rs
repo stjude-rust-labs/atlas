@@ -16,7 +16,7 @@ pub async fn worker(config: WorkerConfig) -> anyhow::Result<()> {
     info!("worker initialized");
 
     loop {
-        if let Some(task) = queue.pop_front().await? {
+        if let Some(task) = queue.pull_front().await? {
             info!(id = ?task.id, "received task");
             dbg!(task.id);
         }

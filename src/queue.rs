@@ -1,3 +1,5 @@
+pub mod task;
+
 use serde::{Deserialize, Serialize};
 use sqlx::{types::Json, PgPool};
 use uuid::Uuid;

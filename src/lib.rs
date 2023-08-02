@@ -5,4 +5,4 @@ pub mod queue;
 pub mod server;
 pub(crate) mod store;
 
-pub use self::cli::Cli;
+pub use self::{cli::Cli, queue::Queue};

@@ -30,6 +30,7 @@ pub struct Task {
 #[derive(Deserialize, Serialize)]
 pub enum Message {
     Noop,
+    Plot(i32),
 }
 
 impl Queue {

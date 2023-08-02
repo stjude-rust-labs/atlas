@@ -76,9 +76,11 @@ mod tests {
     use tower::ServiceExt;
 
     use super::*;
+    use crate::Queue;
 
     fn app(pool: PgPool) -> Router {
-        router().with_state(Context { pool })
+        let queue = Queue::new(pool.clone());
+        router().with_state(Context { pool, queue })
     }
 
     #[sqlx::test(fixtures("counts"))]

@@ -65,7 +65,7 @@ impl Queue {
         .await
     }
 
-    pub async fn push_back(&self, message: Message) -> sqlx::Result<()> {
+    pub async fn push_back(&self, message: Message) -> sqlx::Result<Uuid> {
         let id = Uuid::new_v4();
         let message = Json(message);
 
@@ -77,7 +77,7 @@ impl Queue {
         )
         .execute(&self.pool)
         .await
-        .map(|_| ())
+        .map(|_| id)
     }
 
     pub async fn success(&self, id: Uuid) -> sqlx::Result<()> {

@@ -12,7 +12,7 @@
 
 atlas defines a development container manifest to quickly build an environment
 for development and testing. This is compatible with, e.g., [GitHub Codespaces]
-and [Visual Studio Code] with the [Dev Container extension] installed.
+and [Visual Studio Code] with the [Dev Containers extension] installed.
 
 After opening the project in the dev container,
 

@@ -6,6 +6,7 @@ use uuid::Uuid;
 
 use crate::server::types::Timestampz;
 
+#[derive(Clone)]
 pub struct Queue {
     pool: PgPool,
 }

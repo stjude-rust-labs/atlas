@@ -4,7 +4,7 @@ pub async fn run_exists(
     tx: &mut Transaction<'_, Postgres>,
     configuration_id: i32,
     sample_id: i32,
-) -> anyhow::Result<bool> {
+) -> sqlx::Result<bool> {
     sqlx::query_scalar!(
         "
         select 1
@@ -18,7 +18,6 @@ pub async fn run_exists(
     .fetch_optional(&mut **tx)
     .await
     .map(|result| result.is_some())
-    .map_err(|e| e.into())
 }
 
 #[derive(Debug)]
@@ -31,7 +30,7 @@ pub async fn create_run(
     configuration_id: i32,
     sample_id: i32,
     data_type: &str,
-) -> anyhow::Result<Run> {
+) -> sqlx::Result<Run> {
     let run_id = sqlx::query_scalar!(
         "
         insert into runs
@@ -61,7 +60,7 @@ mod tests {
     };
 
     #[sqlx::test]
-    async fn test_run_exists(pool: PgPool) -> anyhow::Result<()> {
+    async fn test_run_exists(pool: PgPool) -> sqlx::Result<()> {
         let mut tx = pool.begin().await?;
 
         let annotations = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
@@ -86,7 +85,7 @@ mod tests {
     }
 
     #[sqlx::test]
-    async fn test_create_run(pool: PgPool) -> anyhow::Result<()> {
+    async fn test_create_run(pool: PgPool) -> sqlx::Result<()> {
         let mut tx = pool.begin().await?;
 
         let annotations = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;

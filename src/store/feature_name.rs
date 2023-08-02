@@ -6,7 +6,7 @@ use sqlx::{Postgres, Transaction};
 pub async fn find_feature_names(
     tx: &mut Transaction<'_, Postgres>,
     configuration_id: i32,
-) -> anyhow::Result<Vec<(i32, String)>> {
+) -> sqlx::Result<Vec<(i32, String)>> {
     let mut rows = sqlx::query!(
         "select id, name from feature_names where configuration_id = $1",
         configuration_id,
@@ -26,7 +26,7 @@ pub async fn create_feature_names(
     tx: &mut Transaction<'_, Postgres>,
     configuration_id: i32,
     names: &HashSet<String>,
-) -> anyhow::Result<Vec<(i32, String)>> {
+) -> sqlx::Result<Vec<(i32, String)>> {
     use std::iter;
 
     let configuration_ids: Vec<_> = iter::repeat(configuration_id).take(names.len()).collect();

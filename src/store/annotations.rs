@@ -9,7 +9,7 @@ pub async fn find_or_create_annotations(
     tx: &mut Transaction<'_, Postgres>,
     name: &str,
     genome_build: &str,
-) -> anyhow::Result<Annotations> {
+) -> sqlx::Result<Annotations> {
     let annotations_id = sqlx::query_scalar!(
         "
         insert into annotations
@@ -36,7 +36,7 @@ mod tests {
     use super::*;
 
     #[sqlx::test]
-    async fn test_find_or_create_annotations(pool: PgPool) -> anyhow::Result<()> {
+    async fn test_find_or_create_annotations(pool: PgPool) -> sqlx::Result<()> {
         let mut tx = pool.begin().await?;
 
         let annotations = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;

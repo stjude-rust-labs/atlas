@@ -8,7 +8,7 @@ pub struct Sample {
 pub async fn find_or_create_sample(
     tx: &mut Transaction<'_, Postgres>,
     sample_name: &str,
-) -> anyhow::Result<Sample> {
+) -> sqlx::Result<Sample> {
     let sample_id = sqlx::query_scalar!(
         "
         insert into samples (name) values ($1)
@@ -31,7 +31,7 @@ mod tests {
     use super::*;
 
     #[sqlx::test]
-    async fn test_find_or_create_sample(pool: PgPool) -> anyhow::Result<()> {
+    async fn test_find_or_create_sample(pool: PgPool) -> sqlx::Result<()> {
         let mut tx = pool.begin().await?;
 
         let sample = find_or_create_sample(&mut tx, "sample1").await?;

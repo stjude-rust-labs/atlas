@@ -22,7 +22,7 @@ pub async fn find_or_create_configuration(
     feature_type: &str,
     feature_name: &str,
     strand_specification: StrandSpecification,
-) -> anyhow::Result<Configuration> {
+) -> sqlx::Result<Configuration> {
     let configuration_id = sqlx::query_scalar!(
         "
         insert into configurations
@@ -54,7 +54,7 @@ mod tests {
     use crate::store::annotations::find_or_create_annotations;
 
     #[sqlx::test]
-    async fn test_exists(pool: PgPool) -> anyhow::Result<()> {
+    async fn test_exists(pool: PgPool) -> sqlx::Result<()> {
         assert!(!exists(&pool, 1).await?);
 
         let mut tx = pool.begin().await?;
@@ -75,7 +75,7 @@ mod tests {
     }
 
     #[sqlx::test]
-    async fn test_find_or_create_configuration(pool: PgPool) -> anyhow::Result<()> {
+    async fn test_find_or_create_configuration(pool: PgPool) -> sqlx::Result<()> {
         let mut tx = pool.begin().await?;
 
         let gencode_21 = find_or_create_annotations(&mut tx, "GENCODE 21", "GRCh38").await?;

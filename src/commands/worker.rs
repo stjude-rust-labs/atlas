@@ -25,7 +25,10 @@ pub async fn worker(config: WorkerConfig) -> anyhow::Result<()> {
             match task.message.0 {
                 Message::Noop => {}
                 Message::Plot(configuration_id) => {
-                    plot(&pool, configuration_id).await?;
+                    if plot(&pool, configuration_id).await.is_err() {
+                        queue.failed(task.id).await?;
+                        continue;
+                    }
                 }
             }
 

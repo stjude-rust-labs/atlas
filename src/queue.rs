@@ -90,6 +90,17 @@ impl Queue {
         .await
         .map(|_| ())
     }
+
+    pub async fn failed(&self, id: Uuid) -> sqlx::Result<()> {
+        sqlx::query!(
+            "update tasks set status = $1 where id = $2",
+            Status::Failed as Status,
+            id,
+        )
+        .execute(&self.pool)
+        .await
+        .map(|_| ())
+    }
 }
 
 #[cfg(test)]

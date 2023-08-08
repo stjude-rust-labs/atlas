@@ -1,6 +1,6 @@
 use axum::{
     extract::{Path, State},
-    routing::get,
+    routing::post,
     Json, Router,
 };
 use serde::Serialize;
@@ -9,7 +9,7 @@ use uuid::Uuid;
 use super::{Context, Error};
 
 pub fn router() -> Router<Context> {
-    Router::new().route("/analyses/plot/:configuration_id", get(plot))
+    Router::new().route("/analyses/plot/:configuration_id", post(plot))
 }
 
 #[derive(Serialize)]
@@ -19,7 +19,7 @@ struct PlotResponse {
 
 /// Submits a task to perform dimension reduction on all samples in a configuation.
 #[utoipa::path(
-    get,
+    post,
     path = "/analyses/plot/{configuration-id}",
     params(
         ("configuration-id" = i32, Path, description = "Configuration ID"),
@@ -62,14 +62,9 @@ mod tests {
 
     #[sqlx::test]
     async fn test_plot_with_invalid_configuration_id(pool: PgPool) -> anyhow::Result<()> {
-        let request = Request::builder()
-            .uri("/analyses/plot/-1")
-            .body(Body::empty())?;
-
+        let request = Request::post("/analyses/plot/-1").body(Body::empty())?;
         let response = app(pool).oneshot(request).await?;
-
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
-
         Ok(())
     }
 }

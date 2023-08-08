@@ -1,11 +1,20 @@
-use axum::{extract::State, routing::post, Json, Router};
+use axum::{
+    extract::{Path, State},
+    routing::{get, post},
+    Json, Router,
+};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::server::{self, Context, Error};
+use crate::{
+    queue,
+    server::{self, Context, Error},
+};
 
 pub fn router() -> Router<Context> {
-    Router::new().route("/analyses/plot", post(create))
+    Router::new()
+        .route("/analyses/plot", post(create))
+        .route("/analyses/plot/:id", get(show))
 }
 
 #[derive(Deserialize)]
@@ -48,6 +57,36 @@ async fn create(
     Ok(Json(CreateResponse { id }))
 }
 
+#[derive(Serialize)]
+struct Task {
+    id: Uuid,
+    status: queue::Status,
+}
+
+/// Returns the status of a plot task.
+#[utoipa::path(
+    post,
+    path = "/analyses/plot/{id}",
+    params(
+        ("id" = Uuid, Path, description = "Task ID"),
+    ),
+    responses(
+        (status = OK, description = "Plot task status"),
+        (status = INTERNAL_SERVER_ERROR, description = "The task ID does not exist"),
+    ),
+)]
+async fn show(State(ctx): State<Context>, Path(task_id): Path<Uuid>) -> server::Result<Json<Task>> {
+    let task = sqlx::query_as!(
+        Task,
+        r#"select id, status as "status: queue::Status" from tasks where id = $1"#,
+        task_id
+    )
+    .fetch_one(&ctx.pool)
+    .await?;
+
+    Ok(Json(task))
+}
+
 #[cfg(test)]
 mod tests {
     use hyper::{header, Body, Request, StatusCode};
@@ -71,6 +110,17 @@ mod tests {
 
         let response = app(pool).oneshot(request).await?;
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn test_show_with_invalid_task_id(pool: PgPool) -> anyhow::Result<()> {
+        let request = Request::get("/analyses/plot/5970136c-f1bf-405a-aa79-a81595101864")
+            .body(Body::empty())?;
+
+        let response = app(pool).oneshot(request).await?;
+        assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
 
         Ok(())
     }

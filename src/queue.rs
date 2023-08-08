@@ -11,7 +11,7 @@ pub struct Queue {
     pool: PgPool,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, sqlx::Type)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, sqlx::Type)]
 #[repr(i16)]
 pub enum Status {
     Queued,

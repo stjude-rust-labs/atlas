@@ -20,7 +20,7 @@ use super::{cli::ServerConfig, Queue};
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(OpenApi)]
-#[openapi(paths(analyses::plot, counts::show, samples::index, samples::show))]
+#[openapi(paths(analyses::plot::create, counts::show, samples::index, samples::show))]
 struct ApiDoc;
 
 #[derive(Clone)]
@@ -51,7 +51,7 @@ pub async fn serve(config: &ServerConfig, pool: PgPool) -> anyhow::Result<()> {
 fn router() -> Router<Context> {
     samples::router()
         .merge(counts::router())
-        .merge(analyses::router())
+        .merge(analyses::plot::router())
         .merge(api_doc_router())
 }
 

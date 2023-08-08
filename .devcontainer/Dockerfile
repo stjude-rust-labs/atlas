@@ -23,5 +23,5 @@ EOS
 RUN cargo install \
     --no-default-features \
     --features native-tls,postgres \
-    --version 0.7.0 \
+    --version 0.7.1 \
     sqlx-cli

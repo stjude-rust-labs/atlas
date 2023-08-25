@@ -8,7 +8,7 @@ services:
     command: sleep infinity
 
   db:
-    image: postgres:15.3
+    image: postgres:15.4
     restart: unless-stopped
     volumes:
       - db:/var/lib/postgresql/data

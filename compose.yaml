@@ -1,6 +1,6 @@
 services:
   db:
-    image: "postgres:15.3"
+    image: "postgres:15.4"
     environment:
       POSTGRES_PASSWORD: "dev"
     ports:

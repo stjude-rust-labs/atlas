@@ -80,15 +80,27 @@ impl Queue {
         .map(|_| id)
     }
 
-    pub async fn success(&self, id: Uuid) -> sqlx::Result<()> {
+    pub async fn success<S>(&self, id: Uuid, body: S) -> sqlx::Result<()>
+    where
+        S: Serialize + Send + Sync,
+    {
         sqlx::query!(
             "update tasks set status = $1 where id = $2",
             Status::Success as Status,
             id,
         )
         .execute(&self.pool)
-        .await
-        .map(|_| ())
+        .await?;
+
+        sqlx::query!(
+            "insert into results (id, body) values ($1, $2)",
+            id,
+            Json(body) as _,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
     }
 
     pub async fn failed(&self, id: Uuid) -> sqlx::Result<()> {
@@ -124,7 +136,7 @@ mod tests {
         let queue = Queue::new(pool.clone());
         queue.push_back(Message::Noop).await?;
         let task = queue.pull_front().await?.unwrap();
-        queue.success(task.id).await?;
+        queue.success(task.id, Option::<()>::None).await?;
 
         let actual_task = sqlx::query_as!(
             Task,

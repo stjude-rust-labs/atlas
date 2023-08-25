@@ -23,16 +23,19 @@ pub async fn worker(config: WorkerConfig) -> anyhow::Result<()> {
             info!(id = ?task.id, "received task");
 
             match task.message.0 {
-                Message::Noop => {}
-                Message::Plot(configuration_id) => {
-                    if plot(&pool, configuration_id).await.is_err() {
+                Message::Noop => {
+                    queue.success(task.id, Option::<()>::None).await?;
+                }
+                Message::Plot(configuration_id) => match plot(&pool, configuration_id).await {
+                    Ok(coordinates) => {
+                        queue.success(task.id, coordinates).await?;
+                    }
+                    Err(_) => {
                         queue.failed(task.id).await?;
                         continue;
                     }
-                }
+                },
             }
-
-            queue.success(task.id).await?;
         }
 
         tokio::time::sleep(POLL_INTERVAL).await;

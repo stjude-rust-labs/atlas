@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, time::Duration};
 
 use clap::{Parser, Subcommand};
 
@@ -82,4 +82,14 @@ pub struct WorkerConfig {
     /// The PostgreSQL database connection URL.
     #[clap(long, env)]
     pub database_url: String,
+
+    /// The poll interval to task lookups in seconds.
+    #[clap(long, env, default_value = "1", value_parser = parse_duration)]
+    pub poll_interval: Duration,
+}
+
+fn parse_duration(s: &str) -> Result<Duration, String> {
+    s.parse()
+        .map(Duration::from_secs)
+        .map_err(|e| e.to_string())
 }

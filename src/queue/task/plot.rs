@@ -1,10 +1,21 @@
 use sqlx::PgPool;
+use thiserror::Error;
 
 struct Count {
     count: i32,
 }
 
-pub async fn plot(pool: &PgPool, configuration_id: i32) -> sqlx::Result<Vec<f32>> {
+#[derive(Debug, Error)]
+pub enum PlotError {
+    #[error("database error")]
+    Database(#[from] sqlx::Error),
+    #[error("insufficient number of samples: got {0}, expected > 3 * {PERPLEXITY}")]
+    InsufficientSampleCount(usize),
+}
+
+const PERPLEXITY: usize = 3;
+
+pub async fn plot(pool: &PgPool, configuration_id: i32) -> Result<Vec<f32>, PlotError> {
     let feature_count = sqlx::query!(
         r#"
         select
@@ -38,6 +49,12 @@ pub async fn plot(pool: &PgPool, configuration_id: i32) -> sqlx::Result<Vec<f32>
     .await?;
 
     let raw_counts: Vec<_> = rows.into_iter().map(|count| count.count).collect();
+    let sample_count = raw_counts.len();
+
+    if sample_count - 1 < 3 * PERPLEXITY {
+        return Err(PlotError::InsufficientSampleCount(sample_count));
+    }
+
     let embedding = transform(raw_counts, feature_count);
 
     Ok(embedding)

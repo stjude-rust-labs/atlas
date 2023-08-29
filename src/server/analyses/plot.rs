@@ -61,6 +61,7 @@ async fn create(
 struct Task {
     id: Uuid,
     status: queue::Status,
+    body: Option<sqlx::types::Json<Vec<f32>>>,
 }
 
 /// Returns the status of a plot task.
@@ -78,7 +79,16 @@ struct Task {
 async fn show(State(ctx): State<Context>, Path(task_id): Path<Uuid>) -> server::Result<Json<Task>> {
     let task = sqlx::query_as!(
         Task,
-        r#"select id, status as "status: queue::Status" from tasks where id = $1"#,
+        r#"
+        select
+            tasks.id,
+            status as "status: queue::Status",
+            results.body as "body: Option<sqlx::types::Json<Vec<f32>>>"
+        from tasks
+        left join results
+            on tasks.id  = results.id
+        where tasks.id = $1
+        "#,
         task_id
     )
     .fetch_one(&ctx.pool)

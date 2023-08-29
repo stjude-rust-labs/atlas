@@ -20,7 +20,7 @@ After opening the project in the dev container,
 cp .env.example .env
 sqlx database setup
 psql --host localhost --username postgres atlas < tests/sql/seeds.sql
-cargo run -- run
+cargo run -- server
 
 # open <local-address>/openapi
 ```
@@ -41,7 +41,7 @@ docker compose up --detach
 sqlx database setup
 docker container exec --interactive atlas-db-1 psql --username postgres atlas < tests/sql/seeds.sql
 
-cargo run -- run
+cargo run -- server
 
 # open http://localhost:3000/openapi
 ```

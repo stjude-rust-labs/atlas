@@ -1,5 +1,5 @@
 use sqlx::postgres::PgPoolOptions;
-use tracing::info;
+use tracing::{info, info_span};
 
 use crate::{
     cli::WorkerConfig,
@@ -16,22 +16,20 @@ pub async fn worker(config: WorkerConfig) -> anyhow::Result<()> {
 
     loop {
         if let Some(task) = queue.pull_front().await? {
-            info!(id = ?task.id, "received task");
+            let span = info_span!("task", id = ?task.id);
+            let _guard = span.enter();
+
+            info!("started processing task");
 
             match task.message.0 {
-                Message::Noop => {
-                    queue.success(task.id, Option::<()>::None).await?;
-                }
+                Message::Noop => queue.success(task.id, Option::<()>::None).await?,
                 Message::Plot(configuration_id) => match plot(&pool, configuration_id).await {
-                    Ok(coordinates) => {
-                        queue.success(task.id, coordinates).await?;
-                    }
-                    Err(_) => {
-                        queue.failed(task.id).await?;
-                        continue;
-                    }
+                    Ok(coordinates) => queue.success(task.id, coordinates).await?,
+                    Err(_) => queue.failed(task.id).await?,
                 },
             }
+
+            info!("finished processing task");
         }
 
         tokio::time::sleep(config.poll_interval).await;

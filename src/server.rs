@@ -20,7 +20,13 @@ use super::{cli::ServerConfig, Queue};
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(OpenApi)]
-#[openapi(paths(analyses::plot::create, counts::show, samples::index, samples::show))]
+#[openapi(paths(
+    analyses::plot::create,
+    analyses::plot::show,
+    counts::show,
+    samples::index,
+    samples::show,
+))]
 struct ApiDoc;
 
 #[derive(Clone)]

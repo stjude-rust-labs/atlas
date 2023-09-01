@@ -4,6 +4,7 @@ use axum::{
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::{
@@ -17,7 +18,7 @@ pub fn router() -> Router<Context> {
         .route("/analyses/plot/:id", get(show))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 struct CreateRequest {
     configuration_id: i32,
 }
@@ -31,9 +32,7 @@ struct CreateResponse {
 #[utoipa::path(
     post,
     path = "/analyses/plot",
-    params(
-        ("configuration-id" = i32, Path, description = "Configuration ID"),
-    ),
+    request_body = inline(CreateRequest),
     responses(
         (status = OK, description = "The ID of the task submitted"),
         (status = NOT_FOUND, description = "The configuration ID does not exist"),

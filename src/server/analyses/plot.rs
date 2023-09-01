@@ -46,7 +46,7 @@ async fn create(
 
     let configuration_id = body.configuration_id;
 
-    if !dbg!(configuration::exists(&ctx.pool, configuration_id).await?) {
+    if !configuration::exists(&ctx.pool, configuration_id).await? {
         return Err(Error::NotFound);
     }
 

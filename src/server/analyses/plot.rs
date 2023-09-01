@@ -66,7 +66,7 @@ struct Task {
 
 /// Returns the status of a plot task.
 #[utoipa::path(
-    post,
+    get,
     path = "/analyses/plot/{id}",
     params(
         ("id" = Uuid, Path, description = "Task ID"),

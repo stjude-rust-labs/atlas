@@ -2,12 +2,11 @@
 
 FROM mcr.microsoft.com/devcontainers/base:debian-12
 
-ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse \
-    PATH=/home/vscode/.cargo/bin:${PATH}
+ENV PATH=/home/vscode/.cargo/bin:${PATH}
 
 RUN <<EOS
 apt-get update
-apt-get install --yes libssl-dev pkg-config postgresql-client
+apt-get install --yes ca-certificates libssl-dev pkg-config postgresql-client
 rm -rf /var/lib/apt/lists/*
 EOS
 

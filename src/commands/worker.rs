@@ -1,5 +1,5 @@
 use serde::Serialize;
-use sqlx::postgres::PgPoolOptions;
+use sqlx::postgres::{PgListener, PgPoolOptions};
 use tracing::{info, info_span};
 
 use crate::{
@@ -17,11 +17,16 @@ pub async fn worker(config: WorkerConfig) -> anyhow::Result<()> {
     let pool = PgPoolOptions::new().connect(&config.database_url).await?;
     sqlx::migrate!().run(&pool).await?;
 
+    let mut rx = PgListener::connect_with(&pool).await?;
+    rx.listen("queue").await?;
+
     let queue = Queue::new(pool.clone());
 
     info!("worker initialized");
 
     loop {
+        let _notification = rx.recv().await?;
+
         if let Some(task) = queue.pull_front().await? {
             let span = info_span!("task", id = ?task.id);
             let _guard = span.enter();
@@ -41,8 +46,6 @@ pub async fn worker(config: WorkerConfig) -> anyhow::Result<()> {
 
             info!("finished processing task");
         }
-
-        tokio::time::sleep(config.poll_interval).await;
     }
 
     #[allow(unreachable_code)]

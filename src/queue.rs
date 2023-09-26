@@ -77,8 +77,11 @@ impl Queue {
             message as Json<Message>,
         )
         .execute(&self.pool)
-        .await
-        .map(|_| id)
+        .await?;
+
+        sqlx::query!("notify queue").execute(&self.pool).await?;
+
+        Ok(id)
     }
 
     pub async fn success<S>(&self, id: Uuid, body: S) -> sqlx::Result<()>

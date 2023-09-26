@@ -56,11 +56,17 @@ async fn create(
     Ok(Json(CreateResponse { id }))
 }
 
+#[derive(Deserialize, Serialize)]
+struct Body {
+    x: Vec<f32>,
+    y: Vec<f32>,
+}
+
 #[derive(Serialize)]
 struct Task {
     id: Uuid,
     status: queue::Status,
-    body: Option<sqlx::types::Json<Vec<f32>>>,
+    body: Option<sqlx::types::Json<Body>>,
 }
 
 /// Returns the status of a plot task.
@@ -82,7 +88,7 @@ async fn show(State(ctx): State<Context>, Path(task_id): Path<Uuid>) -> server::
         select
             tasks.id,
             status as "status: queue::Status",
-            results.body as "body: Option<sqlx::types::Json<Vec<f32>>>"
+            results.body as "body: Option<sqlx::types::Json<Body>>"
         from tasks
         left join results
             on tasks.id  = results.id

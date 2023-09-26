@@ -15,7 +15,7 @@ pub enum PlotError {
 
 const PERPLEXITY: usize = 3;
 
-pub async fn plot(pool: &PgPool, configuration_id: i32) -> Result<Vec<f32>, PlotError> {
+pub async fn plot(pool: &PgPool, configuration_id: i32) -> Result<(Vec<f32>, Vec<f32>), PlotError> {
     let feature_count = sqlx::query!(
         r#"
         select
@@ -57,7 +57,15 @@ pub async fn plot(pool: &PgPool, configuration_id: i32) -> Result<Vec<f32>, Plot
 
     let embedding = transform(raw_counts, feature_count);
 
-    Ok(embedding)
+    let mut xs = Vec::with_capacity(sample_count);
+    let mut ys = Vec::with_capacity(sample_count);
+
+    for chunk in embedding.chunks_exact(2) {
+        xs.push(chunk[0]);
+        ys.push(chunk[1]);
+    }
+
+    Ok((xs, ys))
 }
 
 fn transform(counts: Vec<i32>, feature_count: usize) -> Vec<f32> {

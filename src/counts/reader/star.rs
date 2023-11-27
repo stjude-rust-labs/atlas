@@ -7,9 +7,9 @@ use super::read_line;
 use crate::store::StrandSpecification;
 
 pub async fn read_counts<R>(
+    reader: &mut R,
     feature_name: &str,
     strand_specification: StrandSpecification,
-    reader: &mut R,
 ) -> anyhow::Result<HashMap<String, u64>>
 where
     R: AsyncBufRead + Unpin,
@@ -111,19 +111,19 @@ ATLAS2.1\tfeature_2\tprotein_coding\t89\t55\t34\t0.0\t0.0\t0.0
 ";
 
         let mut reader = &data[..];
-        let counts = read_counts("gene_name", StrandSpecification::None, &mut reader).await?;
+        let counts = read_counts(&mut reader, "gene_name", StrandSpecification::None).await?;
         assert_eq!(counts.len(), 2);
         assert_eq!(counts["feature_1"], 21);
         assert_eq!(counts["feature_2"], 89);
 
         let mut reader = &data[..];
-        let counts = read_counts("gene_name", StrandSpecification::Forward, &mut reader).await?;
+        let counts = read_counts(&mut reader, "gene_name", StrandSpecification::Forward).await?;
         assert_eq!(counts.len(), 2);
         assert_eq!(counts["feature_1"], 13);
         assert_eq!(counts["feature_2"], 55);
 
         let mut reader = &data[..];
-        let counts = read_counts("gene_id", StrandSpecification::Reverse, &mut reader).await?;
+        let counts = read_counts(&mut reader, "gene_id", StrandSpecification::Reverse).await?;
         assert_eq!(counts.len(), 2);
         assert_eq!(counts["ATLAS1.1"], 8);
         assert_eq!(counts["ATLAS2.1"], 34);

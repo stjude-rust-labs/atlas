@@ -59,10 +59,10 @@ pub async fn import(config: ImportConfig) -> anyhow::Result<()> {
 
     let mut reader = File::open(&config.src).await.map(BufReader::new)?;
     let counts = read_counts(
+        &mut reader,
         config.format,
         &config.feature_name,
         config.strand_specification,
-        &mut reader,
     )
     .await?;
 

@@ -5,6 +5,13 @@
   "service": "devcontainer",
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
 
+  "forwardPorts": [5432],
+  "portsAttributes": {
+    "5432": {
+      "label": "PostgreSQL"
+    }
+  },
+
   "customizations": {
     "vscode": {
       "extensions": [
@@ -17,7 +24,5 @@
         }
       }
     }
-  },
-
-  "forwardPorts": [5432]
+  }
 }

@@ -64,7 +64,7 @@ pub struct ImportConfig {
 
     /// The input source.
     ///
-    /// It is assumed to be the output of htseq-count, i.e., a tab-delimited text file.
+    /// The input can be either from htseq-count or STAR.
     pub src: PathBuf,
 }
 

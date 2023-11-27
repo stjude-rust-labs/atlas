@@ -1,9 +1,10 @@
 use std::collections::HashSet;
 
-use crate::cli::ImportConfig;
 use sqlx::postgres::PgPoolOptions;
 use tokio::{fs::File, io::BufReader};
 use tracing::info;
+
+use crate::cli::ImportConfig;
 
 pub async fn import(config: ImportConfig) -> anyhow::Result<()> {
     use crate::{

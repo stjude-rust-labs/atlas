@@ -57,8 +57,10 @@ pub struct ImportConfig {
     pub data_type: String,
 
     /// The input format.
+    ///
+    /// By default, the format is autodetected.
     #[clap(long)]
-    pub format: counts::Format,
+    pub format: Option<counts::Format>,
 
     /// The input source.
     ///

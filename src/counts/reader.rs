@@ -4,22 +4,52 @@ pub mod star;
 use std::collections::HashMap;
 
 use tokio::io::{self, AsyncBufRead, AsyncBufReadExt};
+use tracing::warn;
 
 use super::Format;
 use crate::store::StrandSpecification;
 
 pub async fn read_counts<R>(
     reader: &mut R,
-    format: Format,
+    format: Option<Format>,
     feature_name: &str,
     strand_specification: StrandSpecification,
 ) -> anyhow::Result<HashMap<String, u64>>
 where
     R: AsyncBufRead + Unpin,
 {
+    let detected_format = detect_format(reader).await?;
+
+    if let Some(format) = format {
+        if format != detected_format {
+            warn!(
+                expected = ?detected_format,
+                actual = ?format,
+                "format mismatch"
+            );
+        }
+    }
+
+    let format = format.unwrap_or(detected_format);
+
     match format {
         Format::HtseqCount => htseq_count::read_counts(reader).await,
         Format::Star => star::read_counts(reader, feature_name, strand_specification).await,
+    }
+}
+
+async fn detect_format<R>(reader: &mut R) -> io::Result<Format>
+where
+    R: AsyncBufRead + Unpin,
+{
+    const STAR_FORMAT_PREFIX: &[u8] = b"# gene-model:";
+
+    let src = reader.fill_buf().await?;
+
+    if src.starts_with(STAR_FORMAT_PREFIX) {
+        Ok(Format::Star)
+    } else {
+        Ok(Format::HtseqCount)
     }
 }
 
@@ -49,6 +79,23 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn test_detect_format() -> io::Result<()> {
+        let src = b"# gene-model: GENCODE v43\n";
+        let mut reader = &src[..];
+        assert_eq!(detect_format(&mut reader).await?, Format::Star);
+
+        let src = b"feature_1\t8\n";
+        let mut reader = &src[..];
+        assert_eq!(detect_format(&mut reader).await?, Format::HtseqCount);
+
+        let src = b"atlas\n";
+        let mut reader = &src[..];
+        assert_eq!(detect_format(&mut reader).await?, Format::HtseqCount);
+
+        Ok(())
+    }
 
     #[tokio::test]
     async fn test_read_line() -> io::Result<()> {

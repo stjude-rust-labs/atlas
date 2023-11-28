@@ -8,6 +8,7 @@ use std::net::{Ipv4Addr, SocketAddr};
 
 use axum::Router;
 use sqlx::PgPool;
+use tokio::net::TcpListener;
 use tower::ServiceBuilder;
 use tower_http::ServiceBuilderExt;
 use tracing::info;
@@ -36,8 +37,6 @@ pub struct Context {
 }
 
 pub async fn serve(config: &ServerConfig, pool: PgPool) -> anyhow::Result<()> {
-    let addr = SocketAddr::from((Ipv4Addr::UNSPECIFIED, config.port));
-
     let service = ServiceBuilder::new().trace_for_http();
 
     let queue = Queue::new(pool.clone());
@@ -45,11 +44,12 @@ pub async fn serve(config: &ServerConfig, pool: PgPool) -> anyhow::Result<()> {
 
     let app = router().layer(service).with_state(ctx);
 
+    let addr = SocketAddr::from((Ipv4Addr::UNSPECIFIED, config.port));
+    let listener = TcpListener::bind(addr).await?;
+
     info!("listening on {addr}");
 
-    axum::Server::bind(&addr)
-        .serve(app.into_make_service())
-        .await?;
+    axum::serve(listener, app).await?;
 
     Ok(())
 }

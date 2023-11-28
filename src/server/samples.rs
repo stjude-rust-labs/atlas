@@ -147,6 +147,7 @@ mod tests {
         body::Body,
         http::{Request, StatusCode},
     };
+    use http_body_util::BodyExt;
     use serde_json::{json, Value};
     use sqlx::PgPool;
     use tower::ServiceExt;
@@ -166,7 +167,7 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await?;
+        let body = response.into_body().collect().await?.to_bytes();
         let actual: Value = serde_json::from_slice(&body)?;
 
         assert_eq!(
@@ -195,7 +196,7 @@ mod tests {
 
         let response = app(pool).oneshot(request).await?;
 
-        let body = hyper::body::to_bytes(response.into_body()).await?;
+        let body = response.into_body().collect().await?.to_bytes();
         let actual: Value = serde_json::from_slice(&body)?;
 
         assert_eq!(

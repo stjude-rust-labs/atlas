@@ -104,7 +104,8 @@ async fn show(State(ctx): State<Context>, Path(task_id): Path<Uuid>) -> server::
 
 #[cfg(test)]
 mod tests {
-    use hyper::{header, Body, Request, StatusCode};
+    use axum::body::Body;
+    use hyper::{header, Request, StatusCode};
     use sqlx::PgPool;
     use tower::ServiceExt;
 

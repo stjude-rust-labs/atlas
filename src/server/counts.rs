@@ -71,6 +71,7 @@ mod tests {
         body::Body,
         http::{Request, StatusCode},
     };
+    use http_body_util::BodyExt;
     use serde::Deserialize;
     use sqlx::PgPool;
     use tower::ServiceExt;
@@ -95,7 +96,7 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await?;
+        let body = response.into_body().collect().await?.to_bytes();
         let actual: CountsBody = serde_json::from_slice(&body)?;
 
         let expected = [("feature_1".into(), 8), ("feature_2".into(), 0)]

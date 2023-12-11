@@ -12,7 +12,7 @@ values
   (1, 'exon', 'gene_name', 'reverse'),
   (2, 'exon', 'gene_name', 'reverse');
 
-insert into feature_names
+insert into features
   (configuration_id, name)
 values
   (1, 'feature_1'),
@@ -27,4 +27,4 @@ values
   (1, 2, 'RNA-Seq'),
   (2, 1, 'RNA-Seq');
 
-insert into counts (run_id, feature_name_id, value) values (1, 1, 8);
+insert into counts (run_id, feature_id, value) values (1, 1, 8);

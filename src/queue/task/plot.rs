@@ -21,7 +21,7 @@ pub async fn plot(pool: &PgPool, configuration_id: i32) -> Result<(Vec<f32>, Vec
         select
             count(*) as "count!"
         from
-            feature_names
+            features
         where
             configuration_id = $1
         "#,

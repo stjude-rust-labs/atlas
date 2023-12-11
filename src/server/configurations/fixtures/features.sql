@@ -10,7 +10,7 @@ values
   (1, 'exon', 'gene_name', 'reverse'),
   (2, 'exon', 'gene_name', 'reverse');
 
-insert into feature_names
+insert into features
   (configuration_id, name)
 values
   (1, '39_feature_1'),

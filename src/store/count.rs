@@ -5,14 +5,14 @@ use sqlx::{Postgres, Transaction};
 pub async fn create_counts(
     tx: &mut Transaction<'_, Postgres>,
     run_id: i32,
-    feature_names: &Vec<(i32, String)>,
+    features: &Vec<(i32, String)>,
     counts: &HashMap<String, u64>,
 ) -> anyhow::Result<()> {
     let mut run_ids = Vec::new();
-    let mut feature_name_ids = Vec::new();
+    let mut feature_ids = Vec::new();
     let mut values = Vec::new();
 
-    for (feature_name_id, name) in feature_names {
+    for (feature_id, name) in features {
         let count = counts
             .get(name)
             .copied()
@@ -23,17 +23,17 @@ pub async fn create_counts(
         }
 
         run_ids.push(run_id);
-        feature_name_ids.push(*feature_name_id);
+        feature_ids.push(*feature_id);
         values.push(count as i64);
     }
 
     sqlx::query!(
         "
-        insert into counts (run_id, feature_name_id, value)
+        insert into counts (run_id, feature_id, value)
         select * from unnest($1::integer[], $2::integer[], $3::bigint[])
         ",
         &run_ids[..],
-        &feature_name_ids[..],
+        &feature_ids[..],
         &values[..],
     )
     .execute(&mut **tx)
@@ -50,7 +50,7 @@ mod tests {
     use crate::store::{
         annotations::find_or_create_annotations,
         configuration::find_or_create_configuration,
-        feature_name::{create_feature_names, find_feature_names},
+        feature::{create_features, find_features},
         run::create_run,
         sample::find_or_create_sample,
         StrandSpecification,
@@ -77,13 +77,13 @@ mod tests {
         let names = [String::from("feature1"), String::from("feature2")]
             .into_iter()
             .collect();
-        create_feature_names(&mut tx, configuration.id, &names).await?;
+        create_features(&mut tx, configuration.id, &names).await?;
 
-        let feature_names = find_feature_names(&mut tx, configuration.id).await?;
+        let features = find_features(&mut tx, configuration.id).await?;
         let counts = [(String::from("feature1"), 8), (String::from("feature2"), 0)]
             .into_iter()
             .collect();
-        create_counts(&mut tx, run.id, &feature_names, &counts).await?;
+        create_counts(&mut tx, run.id, &features, &counts).await?;
 
         Ok(())
     }

@@ -1,4 +1,4 @@
-create table feature_names (
+create table features (
     id serial primary key,
 
     configuration_id integer not null,

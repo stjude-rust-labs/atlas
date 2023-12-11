@@ -49,7 +49,7 @@ async fn index(
         select
             id,
             name
-        from feature_names
+        from features
         where configuration_id = $1
         "#,
     )

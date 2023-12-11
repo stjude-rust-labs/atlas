@@ -13,7 +13,7 @@ pub async fn import(config: ImportConfig) -> anyhow::Result<()> {
             annotations::find_or_create_annotations,
             configuration::find_or_create_configuration,
             count::create_counts,
-            feature_name::{create_feature_names, find_feature_names},
+            feature::{create_features, find_features},
             run::{create_run, run_exists},
             sample::find_or_create_sample,
         },
@@ -53,9 +53,9 @@ pub async fn import(config: ImportConfig) -> anyhow::Result<()> {
         anyhow::bail!("run already exists for the sample and configuration");
     }
 
-    let mut feature_names = find_feature_names(&mut tx, configuration.id).await?;
+    let mut features = find_features(&mut tx, configuration.id).await?;
 
-    info!("loaded {} feature names", feature_names.len());
+    info!("loaded {} feature", features.len());
 
     let mut reader = File::open(&config.src).await.map(BufReader::new)?;
     let counts = read_counts(
@@ -66,15 +66,15 @@ pub async fn import(config: ImportConfig) -> anyhow::Result<()> {
     )
     .await?;
 
-    if feature_names.is_empty() {
+    if features.is_empty() {
         let mut names = HashSet::new();
         names.extend(counts.keys().cloned());
-        feature_names = create_feature_names(&mut tx, configuration.id, &names).await?;
-        info!("created {} feature names", feature_names.len());
+        features = create_features(&mut tx, configuration.id, &names).await?;
+        info!("created {} features", features.len());
     }
 
     let run = create_run(&mut tx, configuration.id, sample.id, &config.data_type).await?;
-    create_counts(&mut tx, run.id, &feature_names, &counts).await?;
+    create_counts(&mut tx, run.id, &features, &counts).await?;
 
     tx.commit().await?;
 

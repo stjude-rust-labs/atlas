@@ -3,12 +3,12 @@ use std::collections::HashSet;
 use futures::TryStreamExt;
 use sqlx::{Postgres, Transaction};
 
-pub async fn find_feature_names(
+pub async fn find_features(
     tx: &mut Transaction<'_, Postgres>,
     configuration_id: i32,
 ) -> sqlx::Result<Vec<(i32, String)>> {
     let mut rows = sqlx::query!(
-        "select id, name from feature_names where configuration_id = $1",
+        "select id, name from features where configuration_id = $1",
         configuration_id,
     )
     .fetch(&mut **tx);
@@ -22,7 +22,7 @@ pub async fn find_feature_names(
     Ok(names)
 }
 
-pub async fn create_feature_names(
+pub async fn create_features(
     tx: &mut Transaction<'_, Postgres>,
     configuration_id: i32,
     names: &HashSet<String>,
@@ -34,7 +34,7 @@ pub async fn create_feature_names(
 
     let mut rows = sqlx::query!(
         "
-        insert into feature_names (configuration_id, name)
+        insert into features (configuration_id, name)
         select * from unnest($1::integer[], $2::text[])
         returning id, name
         ",
@@ -63,7 +63,7 @@ mod tests {
     };
 
     #[sqlx::test]
-    async fn test_find_feature_names(pool: PgPool) -> anyhow::Result<()> {
+    async fn test_find_features(pool: PgPool) -> anyhow::Result<()> {
         let mut tx = pool.begin().await?;
 
         let annotations = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
@@ -77,22 +77,22 @@ mod tests {
         )
         .await?;
 
-        let feature_names = find_feature_names(&mut tx, configuration.id).await?;
-        assert!(feature_names.is_empty());
+        let features = find_features(&mut tx, configuration.id).await?;
+        assert!(features.is_empty());
 
         let names = [String::from("feature1"), String::from("feature2")]
             .into_iter()
             .collect();
-        create_feature_names(&mut tx, configuration.id, &names).await?;
+        create_features(&mut tx, configuration.id, &names).await?;
 
-        let feature_names = find_feature_names(&mut tx, configuration.id).await?;
-        assert_eq!(feature_names.len(), names.len());
+        let features = find_features(&mut tx, configuration.id).await?;
+        assert_eq!(features.len(), names.len());
 
         Ok(())
     }
 
     #[sqlx::test]
-    async fn test_create_feature_names(pool: PgPool) -> anyhow::Result<()> {
+    async fn test_create_features(pool: PgPool) -> anyhow::Result<()> {
         let mut tx = pool.begin().await?;
 
         let annotations = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
@@ -109,10 +109,10 @@ mod tests {
         let names = [String::from("feature1"), String::from("feature2")]
             .into_iter()
             .collect();
-        create_feature_names(&mut tx, configuration.id, &names).await?;
+        create_features(&mut tx, configuration.id, &names).await?;
 
-        let feature_names = find_feature_names(&mut tx, configuration.id).await?;
-        assert_eq!(feature_names.len(), names.len());
+        let features = find_features(&mut tx, configuration.id).await?;
+        assert_eq!(features.len(), names.len());
 
         Ok(())
     }

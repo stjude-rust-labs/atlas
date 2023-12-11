@@ -1,4 +1,5 @@
 mod analyses;
+mod configurations;
 mod counts;
 mod error;
 mod samples;
@@ -24,6 +25,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[openapi(paths(
     analyses::plot::create,
     analyses::plot::show,
+    configurations::index,
     counts::show,
     samples::index,
     samples::show,
@@ -57,6 +59,7 @@ pub async fn serve(config: &ServerConfig, pool: PgPool) -> anyhow::Result<()> {
 fn router() -> Router<Context> {
     samples::router()
         .merge(counts::router())
+        .merge(configurations::router())
         .merge(analyses::plot::router())
         .merge(api_doc_router())
 }

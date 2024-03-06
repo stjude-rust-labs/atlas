@@ -7,14 +7,16 @@ pub mod types;
 
 use std::net::{Ipv4Addr, SocketAddr};
 
+use axum::routing::get;
+use axum::Json;
 use axum::Router;
 use sqlx::PgPool;
 use tokio::net::TcpListener;
 use tower::ServiceBuilder;
+use tower_http::services::ServeFile;
 use tower_http::ServiceBuilderExt;
 use tracing::info;
 use utoipa::OpenApi;
-use utoipa_swagger_ui::SwaggerUi;
 
 pub use self::error::Error;
 use super::{cli::ServerConfig, Queue};
@@ -66,6 +68,8 @@ fn router() -> Router<Context> {
         .merge(api_doc_router())
 }
 
-pub fn api_doc_router() -> SwaggerUi {
-    SwaggerUi::new("/openapi").url("/openapi.json", ApiDoc::openapi())
+pub fn api_doc_router() -> Router<Context> {
+    Router::new()
+        .route("/openapi.json", get(Json(ApiDoc::openapi())))
+        .nest_service("/docs", ServeFile::new("static/docs.html"))
 }

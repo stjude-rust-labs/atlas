@@ -3,7 +3,7 @@ name = "atlas"
 version = "0.1.0"
 authors = ["Michael Macias <michael.macias@stjude.org>"]
 edition = "2021"
-rust-version = "1.70.0"
+rust-version = "1.74.0"
 description = "Enables storing, querying, transforming, and visualizing of multidimensional count data"
 homepage = "https://github.com/stjude-rust-labs/atlas"
 repository = "https://github.com/stjude-rust-labs/atlas"
@@ -12,7 +12,7 @@ repository = "https://github.com/stjude-rust-labs/atlas"
 anyhow = "1.0.55"
 axum = "0.7.1"
 bhtsne = { version = "0.5.2", default-features = false }
-clap = { version = "4.0.27", features = ["derive", "env"] }
+clap = { version = "4.4.0", features = ["derive", "env"] }
 dotenvy = "0.15.0"
 futures = { version = "0.3.21", default-features = false, features = ["std"] }
 serde = { version = "1.0.136", features = ["derive"] }

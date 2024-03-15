@@ -13,6 +13,10 @@ pub enum PlotError {
     InsufficientSampleCount(usize),
 }
 
+#[cfg(not(test))]
+const PERPLEXITY: usize = 30;
+
+#[cfg(test)]
 const PERPLEXITY: usize = 3;
 
 pub async fn plot(pool: &PgPool, configuration_id: i32) -> Result<(Vec<f32>, Vec<f32>), PlotError> {
@@ -69,7 +73,12 @@ pub async fn plot(pool: &PgPool, configuration_id: i32) -> Result<(Vec<f32>, Vec
 }
 
 fn transform(counts: Vec<i32>, feature_count: usize) -> Vec<f32> {
+    #[cfg(not(test))]
+    const PERPLEXITY: f32 = 30.0;
+
+    #[cfg(test)]
     const PERPLEXITY: f32 = 3.0;
+
     const THETA: f32 = 0.5;
 
     fn euclidean_distance(a: &&[f32], b: &&[f32]) -> f32 {

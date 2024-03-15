@@ -108,7 +108,7 @@ where
 
     let mut features = find_features(tx, configuration_id).await?;
 
-    info!("loaded {} feature", features.len());
+    info!("loaded {} features", features.len());
 
     let mut reader = File::open(src).await.map(BufReader::new)?;
     let counts = read_counts(&mut reader, format, feature_name, strand_specification).await?;

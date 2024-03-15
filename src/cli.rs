@@ -62,6 +62,14 @@ pub struct ImportConfig {
     #[clap(long)]
     pub format: Option<counts::Format>,
 
+    /// Set whether the input is a sample sheet.
+    ///
+    /// This is used to bulk import many samples with the same annotation and
+    /// configuration. The input format is tab-separated plain text (no header)
+    /// with two columns: sample name and source path.
+    #[clap(long)]
+    pub sample_sheet: bool,
+
     /// The input source.
     ///
     /// The input can be either from htseq-count or STAR.

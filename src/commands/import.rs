@@ -1,7 +1,10 @@
-use std::{collections::HashSet, path::Path};
+use std::{collections::HashSet, io, path::Path};
 
 use sqlx::{postgres::PgPoolOptions, Postgres, Transaction};
-use tokio::{fs::File, io::BufReader};
+use tokio::{
+    fs::File,
+    io::{AsyncBufReadExt, BufReader},
+};
 use tracing::info;
 
 use crate::{cli::ImportConfig, counts::Format, store::StrandSpecification};
@@ -36,17 +39,30 @@ pub async fn import(config: ImportConfig) -> anyhow::Result<()> {
 
     info!(id = configuration.id, "loaded configuration");
 
-    let result = import_one(
-        &mut tx,
-        &config.src,
-        configuration.id,
-        &config.sample_name,
-        config.format,
-        &config.feature_name,
-        config.strand_specification,
-        &config.data_type,
-    )
-    .await;
+    let result = if config.sample_sheet {
+        import_many(
+            &mut tx,
+            &config.src,
+            configuration.id,
+            config.format,
+            &config.feature_name,
+            config.strand_specification,
+            &config.data_type,
+        )
+        .await
+    } else {
+        import_one(
+            &mut tx,
+            &config.src,
+            configuration.id,
+            &config.sample_name,
+            config.format,
+            &config.feature_name,
+            config.strand_specification,
+            &config.data_type,
+        )
+        .await
+    };
 
     match result {
         Ok(()) => tx.commit().await?,
@@ -106,6 +122,45 @@ where
 
     let run = create_run(tx, configuration_id, sample.id, data_type).await?;
     create_counts(tx, run.id, &features, &counts).await?;
+
+    Ok(())
+}
+
+async fn import_many<P>(
+    tx: &mut Transaction<'_, Postgres>,
+    sample_sheet_src: P,
+    configuration_id: i32,
+    format: Option<Format>,
+    feature_name: &str,
+    strand_specification: StrandSpecification,
+    data_type: &str,
+) -> anyhow::Result<()>
+where
+    P: AsRef<Path>,
+{
+    const DELIMITER: char = '\t';
+
+    let f = File::open(sample_sheet_src).await.map(BufReader::new)?;
+
+    let mut lines = f.lines();
+
+    while let Some(line) = lines.next_line().await? {
+        let (sample_name, src) = line
+            .split_once(DELIMITER)
+            .ok_or_else(|| io::Error::from(io::ErrorKind::InvalidData))?;
+
+        import_one(
+            tx,
+            src,
+            configuration_id,
+            sample_name,
+            format,
+            feature_name,
+            strand_specification,
+            data_type,
+        )
+        .await?;
+    }
 
     Ok(())
 }

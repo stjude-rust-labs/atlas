@@ -75,6 +75,7 @@ pub async fn import(config: ImportConfig) -> anyhow::Result<()> {
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn import_one<P>(
     tx: &mut Transaction<'_, Postgres>,
     src: P,

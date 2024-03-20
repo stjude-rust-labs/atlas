@@ -39,13 +39,16 @@ pub async fn plot(pool: &PgPool, configuration_id: i32) -> Result<(Vec<f32>, Vec
         Count,
         r#"
         select
-            counts.value as count
-        from
-            counts
-        inner join runs
-            on counts.run_id = runs.id
-        where
-            runs.configuration_id = $1
+            coalesce(counts.value, 0) as "count!"
+        from runs
+        inner join configurations
+            on runs.configuration_id = configurations.id
+        inner join features
+            on runs.configuration_id = features.configuration_id
+        left join counts
+            on runs.id = counts.run_id and counts.feature_id = features.id
+        where configurations.id = $1
+        order by runs.id, features.name
         "#,
         configuration_id,
     )

@@ -9,8 +9,8 @@ use crate::{
 
 #[derive(Serialize)]
 struct PlotBody {
-    x: Vec<f32>,
-    y: Vec<f32>,
+    x: Vec<f64>,
+    y: Vec<f64>,
 }
 
 pub async fn worker(config: WorkerConfig) -> anyhow::Result<()> {

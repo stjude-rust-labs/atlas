@@ -19,7 +19,7 @@ const PERPLEXITY: usize = 30;
 #[cfg(test)]
 const PERPLEXITY: usize = 3;
 
-pub async fn plot(pool: &PgPool, configuration_id: i32) -> Result<(Vec<f32>, Vec<f32>), PlotError> {
+pub async fn plot(pool: &PgPool, configuration_id: i32) -> Result<(Vec<f64>, Vec<f64>), PlotError> {
     let feature_count = sqlx::query!(
         r#"
         select
@@ -75,28 +75,28 @@ pub async fn plot(pool: &PgPool, configuration_id: i32) -> Result<(Vec<f32>, Vec
     Ok((xs, ys))
 }
 
-fn transform(counts: Vec<i32>, feature_count: usize) -> Vec<f32> {
+fn transform(counts: Vec<i32>, feature_count: usize) -> Vec<f64> {
     #[cfg(not(test))]
-    const PERPLEXITY: f32 = 30.0;
+    const PERPLEXITY: f64 = 30.0;
 
     #[cfg(test)]
-    const PERPLEXITY: f32 = 3.0;
+    const PERPLEXITY: f64 = 3.0;
 
-    const THETA: f32 = 0.5;
+    const THETA: f64 = 0.5;
 
-    fn euclidean_distance(a: &&[f32], b: &&[f32]) -> f32 {
+    fn euclidean_distance(a: &&[f64], b: &&[f64]) -> f64 {
         a.iter()
             .zip(b.iter())
             .map(|(p, q)| (p - q).powi(2))
-            .sum::<f32>()
+            .sum::<f64>()
             .sqrt()
     }
 
-    let sum: i32 = counts.iter().sum();
+    let sum: u64 = counts.iter().map(|n| *n as u64).sum();
 
     let normalized_counts: Vec<_> = counts
         .into_iter()
-        .map(|count| (count as f32) / (sum as f32))
+        .map(|count| (count as f64) / (sum as f64))
         .collect();
 
     let data: Vec<_> = normalized_counts.chunks(feature_count).collect();

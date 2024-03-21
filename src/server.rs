@@ -24,15 +24,24 @@ use super::{cli::ServerConfig, Queue};
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(OpenApi)]
-#[openapi(paths(
-    analyses::plot::create,
-    analyses::plot::show,
-    configurations::index,
-    configurations::features::index,
-    counts::show,
-    samples::index,
-    samples::show,
-))]
+#[openapi(
+    servers((
+        url = "http://localhost:{port}",
+        description = "Local development server",
+        variables(
+            ("port" = (default = "3000", description = "Port")),
+        ),
+    )),
+    paths(
+        analyses::plot::create,
+        analyses::plot::show,
+        configurations::index,
+        configurations::features::index,
+        counts::show,
+        samples::index,
+        samples::show,
+    )
+)]
 struct ApiDoc;
 
 #[derive(Clone)]

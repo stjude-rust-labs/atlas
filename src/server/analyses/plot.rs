@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use axum::{
     extract::{Path, State},
     routing::{get, post},
@@ -18,9 +20,16 @@ pub fn router() -> Router<Context> {
         .route("/analyses/plot/:id", get(show))
 }
 
+#[derive(Deserialize)]
+pub(crate) struct CreateRequestRun {
+    sample_name: String,
+    counts: HashMap<String, i32>,
+}
+
 #[derive(Deserialize, ToSchema)]
 struct CreateRequest {
     configuration_id: i32,
+    additional_runs: Option<Vec<CreateRequestRun>>,
 }
 
 #[derive(Serialize)]
@@ -44,13 +53,24 @@ async fn create(
 ) -> server::Result<Json<CreateResponse>> {
     use crate::{queue::Message, store::configuration};
 
-    let configuration_id = body.configuration_id;
+    let CreateRequest {
+        configuration_id,
+        additional_runs,
+    } = body;
 
     if !configuration::exists(&ctx.pool, configuration_id).await? {
         return Err(Error::NotFound);
     }
 
-    let message = Message::Plot(configuration_id);
+    let additional_runs = additional_runs
+        .map(|runs| {
+            runs.into_iter()
+                .map(|run| (run.sample_name, run.counts))
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let message = Message::Plot(configuration_id, additional_runs);
     let id = ctx.queue.push_back(message).await?;
 
     Ok(Json(CreateResponse { id }))

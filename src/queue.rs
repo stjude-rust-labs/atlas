@@ -1,5 +1,7 @@
 pub mod task;
 
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 use sqlx::{types::Json, PgPool};
 use uuid::Uuid;
@@ -31,7 +33,7 @@ pub struct Task {
 #[derive(Deserialize, Serialize)]
 pub enum Message {
     Noop,
-    Plot(i32),
+    Plot(i32, Vec<(String, HashMap<String, i32>)>),
 }
 
 impl Queue {

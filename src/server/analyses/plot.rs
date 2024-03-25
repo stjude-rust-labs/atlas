@@ -126,6 +126,7 @@ async fn show(State(ctx): State<Context>, Path(task_id): Path<Uuid>) -> server::
 mod tests {
     use axum::body::Body;
     use hyper::{header, Request, StatusCode};
+    use serde_json::json;
     use sqlx::PgPool;
     use tower::ServiceExt;
 
@@ -139,7 +140,8 @@ mod tests {
 
     #[sqlx::test]
     async fn test_plot_with_invalid_configuration_id(pool: PgPool) -> anyhow::Result<()> {
-        let body = Body::from(r#"{"configuration_id":-1}"#);
+        let payload = json!({ "configuration_id": -1 });
+        let body = Body::from(payload.to_string());
         let request = Request::post("/analyses/plot")
             .header(header::CONTENT_TYPE, "application/json")
             .body(body)?;

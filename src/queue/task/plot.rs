@@ -2,6 +2,7 @@ use sqlx::PgPool;
 use thiserror::Error;
 
 struct Count {
+    sample_name: String,
     count: i32,
 }
 
@@ -19,7 +20,10 @@ const PERPLEXITY: usize = 30;
 #[cfg(test)]
 const PERPLEXITY: usize = 3;
 
-pub async fn plot(pool: &PgPool, configuration_id: i32) -> Result<(Vec<f64>, Vec<f64>), PlotError> {
+pub async fn plot(
+    pool: &PgPool,
+    configuration_id: i32,
+) -> Result<(Vec<String>, Vec<f64>, Vec<f64>), PlotError> {
     let feature_count = sqlx::query!(
         r#"
         select
@@ -39,12 +43,15 @@ pub async fn plot(pool: &PgPool, configuration_id: i32) -> Result<(Vec<f64>, Vec
         Count,
         r#"
         select
+            samples.name as sample_name,
             coalesce(counts.value, 0) as "count!"
         from runs
         inner join configurations
             on runs.configuration_id = configurations.id
         inner join features
             on runs.configuration_id = features.configuration_id
+        inner join samples
+            on runs.sample_id = samples.id
         left join counts
             on runs.id = counts.run_id and counts.feature_id = features.id
         where configurations.id = $1
@@ -54,6 +61,13 @@ pub async fn plot(pool: &PgPool, configuration_id: i32) -> Result<(Vec<f64>, Vec
     )
     .fetch_all(pool)
     .await?;
+
+    let mut sample_names = Vec::new();
+
+    for chunk in rows.chunks_exact(feature_count) {
+        let Count { sample_name, .. } = &chunk[0];
+        sample_names.push(sample_name.into());
+    }
 
     let raw_counts: Vec<_> = rows.into_iter().map(|count| count.count).collect();
     let sample_count = raw_counts.len();
@@ -72,7 +86,7 @@ pub async fn plot(pool: &PgPool, configuration_id: i32) -> Result<(Vec<f64>, Vec
         ys.push(chunk[1]);
     }
 
-    Ok((xs, ys))
+    Ok((sample_names, xs, ys))
 }
 
 fn transform(counts: Vec<i32>, feature_count: usize) -> Vec<f64> {

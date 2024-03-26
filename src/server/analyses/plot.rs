@@ -91,6 +91,7 @@ async fn create(
 
 #[derive(Deserialize, Serialize)]
 struct Body {
+    sample_names: Vec<String>,
     x: Vec<f32>,
     y: Vec<f32>,
 }

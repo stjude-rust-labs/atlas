@@ -9,6 +9,7 @@ use crate::{
 
 #[derive(Serialize)]
 struct PlotBody {
+    sample_names: Vec<String>,
     x: Vec<f64>,
     y: Vec<f64>,
 }
@@ -36,8 +37,12 @@ pub async fn worker(config: WorkerConfig) -> anyhow::Result<()> {
             match task.message.0 {
                 Message::Noop => queue.success(task.id, Option::<()>::None).await?,
                 Message::Plot(configuration_id, _) => match plot(&pool, configuration_id).await {
-                    Ok((xs, ys)) => {
-                        let body = PlotBody { x: xs, y: ys };
+                    Ok((sample_names, xs, ys)) => {
+                        let body = PlotBody {
+                            sample_names,
+                            x: xs,
+                            y: ys,
+                        };
                         queue.success(task.id, body).await?;
                     }
                     Err(_) => queue.failed(task.id).await?,

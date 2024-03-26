@@ -1,4 +1,6 @@
-use std::collections::HashMap;
+mod create;
+
+use std::collections::{HashMap, HashSet};
 
 use axum::{
     extract::{Path, State},
@@ -12,6 +14,7 @@ use uuid::Uuid;
 use crate::{
     queue,
     server::{self, Context, Error},
+    store::feature::find_features,
 };
 
 pub fn router() -> Router<Context> {
@@ -45,12 +48,14 @@ struct CreateResponse {
     responses(
         (status = OK, description = "The ID of the task submitted"),
         (status = NOT_FOUND, description = "The configuration ID does not exist"),
+        (status = INTERNAL_SERVER_ERROR, description = "The additional runs input is invalid"),
     ),
 )]
 async fn create(
     State(ctx): State<Context>,
     Json(body): Json<CreateRequest>,
 ) -> server::Result<Json<CreateResponse>> {
+    use self::create::validate_run;
     use crate::{queue::Message, store::configuration};
 
     let CreateRequest {
@@ -62,13 +67,21 @@ async fn create(
         return Err(Error::NotFound);
     }
 
-    let additional_runs = additional_runs
+    let additional_runs: Vec<_> = additional_runs
         .map(|runs| {
             runs.into_iter()
                 .map(|run| (run.sample_name, run.counts))
                 .collect()
         })
         .unwrap_or_default();
+
+    let mut tx = ctx.pool.begin().await?;
+    let features = find_features(&mut tx, configuration_id).await?;
+    let feature_names: HashSet<_> = features.into_iter().map(|(_, name)| name).collect();
+
+    for (_, run) in &additional_runs {
+        validate_run(&feature_names, run).map_err(anyhow::Error::new)?;
+    }
 
     let message = Message::Plot(configuration_id, additional_runs);
     let id = ctx.queue.push_back(message).await?;

@@ -7,14 +7,11 @@ pub mod types;
 
 use std::net::{Ipv4Addr, SocketAddr};
 
-use axum::routing::get;
-use axum::Json;
-use axum::Router;
+use axum::{routing::get, Json, Router};
 use sqlx::PgPool;
 use tokio::net::TcpListener;
 use tower::ServiceBuilder;
-use tower_http::services::ServeFile;
-use tower_http::ServiceBuilderExt;
+use tower_http::{services::ServeFile, ServiceBuilderExt};
 use tracing::info;
 use utoipa::OpenApi;
 

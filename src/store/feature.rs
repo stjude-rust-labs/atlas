@@ -1,7 +1,20 @@
 use std::collections::HashSet;
 
 use futures::TryStreamExt;
-use sqlx::{Postgres, Transaction};
+use sqlx::{PgExecutor, Postgres, Transaction};
+
+pub async fn count<'a, E>(executor: E, configuration_id: i32) -> sqlx::Result<i64>
+where
+    E: PgExecutor<'a>,
+{
+    sqlx::query!(
+        r#"select count(*) as "count!" from features where configuration_id = $1"#,
+        configuration_id
+    )
+    .fetch_one(executor)
+    .await
+    .map(|record| record.count)
+}
 
 pub async fn find_features(
     tx: &mut Transaction<'_, Postgres>,
@@ -61,6 +74,35 @@ mod tests {
         annotations::find_or_create_annotations, configuration::find_or_create_configuration,
         StrandSpecification,
     };
+
+    #[sqlx::test]
+    async fn test_count(pool: PgPool) -> sqlx::Result<()> {
+        assert_eq!(count(&pool, 1).await?, 0);
+
+        let mut tx = pool.begin().await?;
+
+        let annotations = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
+
+        let configuration = find_or_create_configuration(
+            &mut tx,
+            annotations.id,
+            "gene",
+            "gene_name",
+            StrandSpecification::Reverse,
+        )
+        .await?;
+
+        let names = [String::from("feature1"), String::from("feature2")]
+            .into_iter()
+            .collect();
+        create_features(&mut tx, configuration.id, &names).await?;
+
+        tx.commit().await?;
+
+        assert_eq!(count(&pool, configuration.id).await?, 2);
+
+        Ok(())
+    }
 
     #[sqlx::test]
     async fn test_find_features(pool: PgPool) -> anyhow::Result<()> {

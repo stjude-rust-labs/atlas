@@ -28,20 +28,9 @@ pub async fn plot(
     configuration_id: i32,
     additional_runs: &[(String, HashMap<String, i32>)],
 ) -> Result<(Vec<String>, Vec<f64>, Vec<f64>), PlotError> {
-    let feature_count = sqlx::query!(
-        r#"
-        select
-            count(*) as "count!"
-        from
-            features
-        where
-            configuration_id = $1
-        "#,
-        configuration_id
-    )
-    .fetch_one(pool)
-    .await
-    .map(|record| record.count as usize)?;
+    use crate::store::feature;
+
+    let feature_count = feature::count(pool, configuration_id).await? as usize;
 
     let rows = sqlx::query_as!(
         Count,

@@ -69,13 +69,13 @@ pub async fn plot(
         sample_names.push(sample_name.into());
     }
 
-    let raw_counts: Vec<_> = rows.into_iter().map(|count| count.count).collect();
-    let sample_count = raw_counts.len();
+    let sample_count = sample_names.len();
 
     if sample_count - 1 < 3 * PERPLEXITY {
         return Err(PlotError::InsufficientSampleCount(sample_count));
     }
 
+    let raw_counts: Vec<_> = rows.into_iter().map(|count| count.count).collect();
     let embedding = transform(raw_counts, feature_count);
 
     let mut xs = Vec::with_capacity(sample_count);

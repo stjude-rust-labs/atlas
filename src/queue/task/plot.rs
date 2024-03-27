@@ -1,8 +1,11 @@
+use std::collections::HashMap;
+
 use sqlx::PgPool;
 use thiserror::Error;
 
 struct Count {
     sample_name: String,
+    feature_name: String,
     count: i32,
 }
 
@@ -23,6 +26,7 @@ const PERPLEXITY: usize = 3;
 pub async fn plot(
     pool: &PgPool,
     configuration_id: i32,
+    additional_runs: &[(String, HashMap<String, i32>)],
 ) -> Result<(Vec<String>, Vec<f64>, Vec<f64>), PlotError> {
     let feature_count = sqlx::query!(
         r#"
@@ -44,6 +48,7 @@ pub async fn plot(
         r#"
         select
             samples.name as sample_name,
+            features.name as feature_name,
             coalesce(counts.value, 0) as "count!"
         from runs
         inner join configurations
@@ -69,13 +74,24 @@ pub async fn plot(
         sample_names.push(sample_name.into());
     }
 
+    let feature_names: Vec<_> = rows[..feature_count]
+        .iter()
+        .map(|count| count.feature_name.clone())
+        .collect();
+
+    let mut raw_counts: Vec<_> = rows.into_iter().map(|count| count.count).collect();
+
+    for (sample_name, counts) in additional_runs {
+        raw_counts.extend(feature_names.iter().map(|name| counts[name]));
+        sample_names.push(sample_name.into());
+    }
+
     let sample_count = sample_names.len();
 
     if sample_count - 1 < 3 * PERPLEXITY {
         return Err(PlotError::InsufficientSampleCount(sample_count));
     }
 
-    let raw_counts: Vec<_> = rows.into_iter().map(|count| count.count).collect();
     let embedding = transform(raw_counts, feature_count);
 
     let mut xs = Vec::with_capacity(sample_count);

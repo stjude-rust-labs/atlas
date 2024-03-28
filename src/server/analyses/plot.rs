@@ -66,8 +66,7 @@ async fn create(
         .map(|runs| runs.into_iter().collect())
         .unwrap_or_default();
 
-    let mut tx = ctx.pool.begin().await?;
-    let features = find_features(&mut tx, configuration_id).await?;
+    let features = find_features(&ctx.pool, configuration_id).await?;
     let feature_names: HashSet<_> = features.into_iter().map(|(_, name)| name).collect();
 
     for (_, run) in &additional_runs {

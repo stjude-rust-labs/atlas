@@ -107,7 +107,7 @@ where
         anyhow::bail!("run already exists for the sample and configuration");
     }
 
-    let mut features = find_features(tx, configuration_id).await?;
+    let mut features = find_features(&mut **tx, configuration_id).await?;
 
     info!("loaded {} features", features.len());
 

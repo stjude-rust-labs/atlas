@@ -79,7 +79,7 @@ mod tests {
             .collect();
         create_features(&mut tx, configuration.id, &names).await?;
 
-        let features = find_features(&mut tx, configuration.id).await?;
+        let features = find_features(&mut *tx, configuration.id).await?;
         let counts = [(String::from("feature1"), 8), (String::from("feature2"), 0)]
             .into_iter()
             .collect();

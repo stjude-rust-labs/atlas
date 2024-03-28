@@ -16,15 +16,18 @@ where
     .map(|record| record.count)
 }
 
-pub async fn find_features(
-    tx: &mut Transaction<'_, Postgres>,
+pub async fn find_features<'a, E>(
+    executor: E,
     configuration_id: i32,
-) -> sqlx::Result<Vec<(i32, String)>> {
+) -> sqlx::Result<Vec<(i32, String)>>
+where
+    E: PgExecutor<'a>,
+{
     let mut rows = sqlx::query!(
         "select id, name from features where configuration_id = $1",
         configuration_id,
     )
-    .fetch(&mut **tx);
+    .fetch(executor);
 
     let mut names = Vec::new();
 
@@ -119,7 +122,7 @@ mod tests {
         )
         .await?;
 
-        let features = find_features(&mut tx, configuration.id).await?;
+        let features = find_features(&mut *tx, configuration.id).await?;
         assert!(features.is_empty());
 
         let names = [String::from("feature1"), String::from("feature2")]
@@ -127,7 +130,7 @@ mod tests {
             .collect();
         create_features(&mut tx, configuration.id, &names).await?;
 
-        let features = find_features(&mut tx, configuration.id).await?;
+        let features = find_features(&mut *tx, configuration.id).await?;
         assert_eq!(features.len(), names.len());
 
         Ok(())
@@ -153,7 +156,7 @@ mod tests {
             .collect();
         create_features(&mut tx, configuration.id, &names).await?;
 
-        let features = find_features(&mut tx, configuration.id).await?;
+        let features = find_features(&mut *tx, configuration.id).await?;
         assert_eq!(features.len(), names.len());
 
         Ok(())

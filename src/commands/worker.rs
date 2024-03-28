@@ -8,6 +8,7 @@ use crate::{
 };
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct PlotBody {
     sample_names: Vec<String>,
     x: Vec<f64>,

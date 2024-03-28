@@ -24,6 +24,7 @@ pub fn router() -> Router<Context> {
 }
 
 #[derive(Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 struct CreateRequest {
     configuration_id: i32,
     additional_runs: Option<HashMap<String, HashMap<String, i32>>>,
@@ -80,6 +81,7 @@ async fn create(
 }
 
 #[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 struct Body {
     sample_names: Vec<String>,
     x: Vec<f32>,
@@ -144,7 +146,7 @@ mod tests {
 
     #[sqlx::test]
     async fn test_plot_with_invalid_configuration_id(pool: PgPool) -> anyhow::Result<()> {
-        let payload = json!({ "configuration_id": -1 });
+        let payload = json!({ "configurationId": -1 });
         let body = Body::from(payload.to_string());
         let request = Request::post("/analyses/plot")
             .header(header::CONTENT_TYPE, "application/json")

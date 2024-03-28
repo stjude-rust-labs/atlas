@@ -23,16 +23,10 @@ pub fn router() -> Router<Context> {
         .route("/analyses/plot/:id", get(show))
 }
 
-#[derive(Deserialize)]
-pub(crate) struct CreateRequestRun {
-    sample_name: String,
-    counts: HashMap<String, i32>,
-}
-
 #[derive(Deserialize, ToSchema)]
 struct CreateRequest {
     configuration_id: i32,
-    additional_runs: Option<Vec<CreateRequestRun>>,
+    additional_runs: Option<HashMap<String, HashMap<String, i32>>>,
 }
 
 #[derive(Serialize)]
@@ -68,11 +62,7 @@ async fn create(
     }
 
     let additional_runs: Vec<_> = additional_runs
-        .map(|runs| {
-            runs.into_iter()
-                .map(|run| (run.sample_name, run.counts))
-                .collect()
-        })
+        .map(|runs| runs.into_iter().collect())
         .unwrap_or_default();
 
     let mut tx = ctx.pool.begin().await?;

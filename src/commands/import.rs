@@ -1,4 +1,8 @@
-use std::{collections::HashSet, io, path::Path};
+use std::{
+    collections::{HashMap, HashSet},
+    io,
+    path::Path,
+};
 
 use sqlx::{postgres::PgPoolOptions, Postgres, Transaction};
 use tokio::{
@@ -9,7 +13,7 @@ use tracing::info;
 
 use crate::{
     cli::ImportConfig,
-    counts::{feature_names_eq, Format},
+    counts::{feature_names_eq, reader::read_counts, Format},
     store::StrandSpecification,
 };
 
@@ -44,7 +48,7 @@ pub async fn import(config: ImportConfig) -> anyhow::Result<()> {
     info!(id = configuration.id, "loaded configuration");
 
     let result = if config.sample_sheet {
-        import_many(
+        import_from_sample_sheet(
             &mut tx,
             &config.src,
             configuration.id,
@@ -55,7 +59,7 @@ pub async fn import(config: ImportConfig) -> anyhow::Result<()> {
         )
         .await
     } else {
-        import_one(
+        import_from_path(
             &mut tx,
             &config.src,
             configuration.id,
@@ -80,7 +84,7 @@ pub async fn import(config: ImportConfig) -> anyhow::Result<()> {
 }
 
 #[allow(clippy::too_many_arguments)]
-async fn import_one<P>(
+async fn import_from_path<P>(
     tx: &mut Transaction<'_, Postgres>,
     src: P,
     configuration_id: i32,
@@ -93,47 +97,16 @@ async fn import_one<P>(
 where
     P: AsRef<Path>,
 {
-    use crate::{
-        counts::reader::read_counts,
-        store::{
-            count::create_counts,
-            feature::{create_features, find_features},
-            run::{create_run, run_exists},
-            sample::find_or_create_sample,
-        },
-    };
-
-    let sample = find_or_create_sample(tx, sample_name).await?;
-
-    info!(id = sample.id, "loaded sample");
-
-    if run_exists(tx, configuration_id, sample.id).await? {
-        anyhow::bail!("run already exists for the sample and configuration");
-    }
-
-    let mut features = find_features(&mut **tx, configuration_id).await?;
-
-    info!("loaded {} features", features.len());
-
     let mut reader = File::open(src).await.map(BufReader::new)?;
     let counts = read_counts(&mut reader, format, feature_name, strand_specification).await?;
 
-    if features.is_empty() {
-        let mut names = HashSet::new();
-        names.extend(counts.keys().cloned());
-        features = create_features(tx, configuration_id, &names).await?;
-        info!("created {} features", features.len());
-    } else if !feature_names_eq(&features, &counts) {
-        anyhow::bail!("feature name set mismatch");
-    }
-
-    let run = create_run(tx, configuration_id, sample.id, data_type).await?;
-    create_counts(tx, run.id, &features, &counts).await?;
+    let chunk = [(sample_name.into(), counts)];
+    import_batch(tx, configuration_id, data_type, &chunk).await?;
 
     Ok(())
 }
 
-async fn import_many<P>(
+async fn import_from_sample_sheet<P>(
     tx: &mut Transaction<'_, Postgres>,
     sample_sheet_src: P,
     configuration_id: i32,
@@ -149,6 +122,7 @@ where
 
     let f = File::open(sample_sheet_src).await.map(BufReader::new)?;
 
+    let mut chunk = Vec::new();
     let mut lines = f.lines();
 
     while let Some(line) = lines.next_line().await? {
@@ -156,17 +130,58 @@ where
             .split_once(DELIMITER)
             .ok_or_else(|| io::Error::from(io::ErrorKind::InvalidData))?;
 
-        import_one(
-            tx,
-            src,
-            configuration_id,
-            sample_name,
-            format,
-            feature_name,
-            strand_specification,
-            data_type,
-        )
-        .await?;
+        let mut reader = File::open(src).await.map(BufReader::new)?;
+        let counts = read_counts(&mut reader, format, feature_name, strand_specification).await?;
+
+        chunk.push((sample_name.into(), counts));
+    }
+
+    import_batch(tx, configuration_id, data_type, &chunk).await?;
+
+    Ok(())
+}
+
+async fn import_batch(
+    tx: &mut Transaction<'_, Postgres>,
+    configuration_id: i32,
+    data_type: &str,
+    chunk: &[(String, HashMap<String, u64>)],
+) -> anyhow::Result<()> {
+    use crate::store::{
+        count::create_counts,
+        feature::{create_features, find_features},
+        run::{create_run, run_exists},
+        sample::find_or_create_sample,
+    };
+
+    assert!(!chunk.is_empty());
+
+    let mut features = find_features(&mut **tx, configuration_id).await?;
+
+    info!("loaded {} features", features.len());
+
+    if features.is_empty() {
+        let mut names = HashSet::new();
+        // SAFETY: `chunk` is non-empty.
+        let (_, counts) = &chunk[0];
+        names.extend(counts.keys().cloned());
+        features = create_features(tx, configuration_id, &names).await?;
+        info!("created {} features", features.len());
+    }
+
+    for (sample_name, counts) in chunk {
+        let sample = find_or_create_sample(tx, sample_name).await?;
+
+        info!(id = sample.id, "loaded sample");
+
+        if run_exists(tx, configuration_id, sample.id).await? {
+            anyhow::bail!("run already exists for the sample and configuration");
+        } else if !feature_names_eq(&features, counts) {
+            anyhow::bail!("feature name set mismatch");
+        }
+
+        let run = create_run(tx, configuration_id, sample.id, data_type).await?;
+        create_counts(tx, run.id, &features, counts).await?;
     }
 
     Ok(())

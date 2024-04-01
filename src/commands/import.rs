@@ -151,7 +151,7 @@ async fn import_batch(
         count::create_counts,
         feature::{create_features, find_features},
         run::{create_run, run_exists},
-        sample::find_or_create_sample,
+        sample::find_or_create_samples,
     };
 
     assert!(!chunk.is_empty());
@@ -169,18 +169,22 @@ async fn import_batch(
         info!("created {} features", features.len());
     }
 
-    for (sample_name, counts) in chunk {
-        let sample = find_or_create_sample(tx, sample_name).await?;
+    let sample_names: Vec<_> = chunk
+        .iter()
+        .map(|(sample_name, _)| sample_name.into())
+        .collect();
+    let sample_ids = find_or_create_samples(&mut **tx, &sample_names).await?;
 
-        info!(id = sample.id, "loaded sample");
+    for ((sample_name, counts), &sample_id) in chunk.iter().zip(sample_ids.iter()) {
+        info!(id = sample_id, name = sample_name, "loaded sample");
 
-        if run_exists(tx, configuration_id, sample.id).await? {
+        if run_exists(tx, configuration_id, sample_id).await? {
             anyhow::bail!("run already exists for the sample and configuration");
         } else if !feature_names_eq(&features, counts) {
             anyhow::bail!("feature name set mismatch");
         }
 
-        let run = create_run(tx, configuration_id, sample.id, data_type).await?;
+        let run = create_run(tx, configuration_id, sample_id, data_type).await?;
         create_counts(tx, run.id, &features, counts).await?;
     }
 

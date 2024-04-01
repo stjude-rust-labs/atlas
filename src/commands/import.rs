@@ -7,7 +7,11 @@ use tokio::{
 };
 use tracing::info;
 
-use crate::{cli::ImportConfig, counts::Format, store::StrandSpecification};
+use crate::{
+    cli::ImportConfig,
+    counts::{feature_names_eq, Format},
+    store::StrandSpecification,
+};
 
 pub async fn import(config: ImportConfig) -> anyhow::Result<()> {
     use crate::store::{
@@ -119,6 +123,8 @@ where
         names.extend(counts.keys().cloned());
         features = create_features(tx, configuration_id, &names).await?;
         info!("created {} features", features.len());
+    } else if !feature_names_eq(&features, &counts) {
+        anyhow::bail!("feature name set mismatch");
     }
 
     let run = create_run(tx, configuration_id, sample.id, data_type).await?;

@@ -46,6 +46,7 @@ pub async fn import(config: ImportConfig) -> anyhow::Result<()> {
     .await?;
 
     info!(id = configuration.id, "loaded configuration");
+    info!(src_count = config.srcs.len(), "reading srcs");
 
     let result = if config.sample_sheet {
         import_from_sample_sheets(
@@ -208,6 +209,8 @@ async fn import_batch(
 
         create_counts(tx, run_id, &features, counts).await?;
     }
+
+    info!(sample_count = sample_ids.len(), "imported samples");
 
     Ok(())
 }

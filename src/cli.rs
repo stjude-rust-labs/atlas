@@ -48,9 +48,11 @@ pub struct ImportConfig {
     #[clap(value_enum, long)]
     pub strand_specification: StrandSpecification,
 
-    /// The sample name.
-    #[clap(long)]
-    pub sample_name: String,
+    /// The sample name delimiter.
+    ///
+    /// This is used to split the source input's filename to use as the sample's name.
+    #[clap(long, default_value = ".")]
+    pub sample_name_delimiter: String,
 
     /// The technique process used to sequence the given sample, e.g., "RNA-Seq", etc.
     #[clap(long)]

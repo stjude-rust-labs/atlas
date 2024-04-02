@@ -63,7 +63,7 @@ pub async fn import(config: ImportConfig) -> anyhow::Result<()> {
             &mut tx,
             &config.src,
             configuration.id,
-            &config.sample_name,
+            &config.sample_name_delimiter,
             config.format,
             &config.feature_name,
             config.strand_specification,
@@ -88,7 +88,7 @@ async fn import_from_path<P>(
     tx: &mut Transaction<'_, Postgres>,
     src: P,
     configuration_id: i32,
-    sample_name: &str,
+    sample_name_delimiter: &str,
     format: Option<Format>,
     feature_name: &str,
     strand_specification: StrandSpecification,
@@ -97,7 +97,16 @@ async fn import_from_path<P>(
 where
     P: AsRef<Path>,
 {
-    let mut reader = File::open(src).await.map(BufReader::new)?;
+    let path = src.as_ref();
+
+    let filename = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| anyhow::anyhow!("invalid filename"))?;
+    // SAFETY: `str::Split` always has at least one item.
+    let sample_name = filename.split(sample_name_delimiter).next().unwrap();
+
+    let mut reader = File::open(path).await.map(BufReader::new)?;
     let counts = read_counts(&mut reader, format, feature_name, strand_specification).await?;
 
     let chunk = [(sample_name.into(), counts)];

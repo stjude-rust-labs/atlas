@@ -72,7 +72,7 @@ mod tests {
         .await?;
 
         let sample = find_or_create_sample(&mut tx, "sample1").await?;
-        let run = create_run(&mut tx, configuration.id, sample.id, "RNA-Seq").await?;
+        let run_id = create_run(&mut tx, configuration.id, sample.id, "RNA-Seq").await?;
 
         let names = [String::from("feature1"), String::from("feature2")]
             .into_iter()
@@ -83,7 +83,7 @@ mod tests {
         let counts = [(String::from("feature1"), 8), (String::from("feature2"), 0)]
             .into_iter()
             .collect();
-        create_counts(&mut tx, run.id, &features, &counts).await?;
+        create_counts(&mut tx, run_id, &features, &counts).await?;
 
         Ok(())
     }

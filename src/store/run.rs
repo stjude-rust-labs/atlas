@@ -23,18 +23,14 @@ where
     .map(|n| n > 0)
 }
 
-#[derive(Debug)]
-pub struct Run {
-    pub id: i32,
-}
-
+#[cfg(test)]
 pub async fn create_run(
     tx: &mut Transaction<'_, Postgres>,
     configuration_id: i32,
     sample_id: i32,
     data_type: &str,
-) -> sqlx::Result<Run> {
-    let run_id = sqlx::query_scalar!(
+) -> sqlx::Result<i32> {
+    sqlx::query_scalar!(
         "
         insert into runs
             (sample_id, configuration_id, data_type)
@@ -47,9 +43,38 @@ pub async fn create_run(
         data_type,
     )
     .fetch_one(&mut **tx)
+    .await
+}
+
+pub async fn create_runs(
+    tx: &mut Transaction<'_, Postgres>,
+    configuration_id: i32,
+    sample_ids: &[i32],
+    data_type: &str,
+) -> sqlx::Result<Vec<i32>> {
+    use std::iter;
+
+    let sample_count = sample_ids.len();
+    let configuration_ids: Vec<_> = iter::repeat(configuration_id).take(sample_count).collect();
+    let data_types: Vec<_> = iter::repeat(data_type)
+        .map(String::from)
+        .take(sample_count)
+        .collect();
+
+    let records = sqlx::query!(
+        "
+        insert into runs (sample_id, configuration_id, data_type)
+        select * from unnest($1::integer[], $2::integer[], $3::text[])
+        returning id
+        ",
+        sample_ids,
+        &configuration_ids[..],
+        &data_types[..],
+    )
+    .fetch_all(&mut **tx)
     .await?;
 
-    Ok(Run { id: run_id })
+    Ok(records.into_iter().map(|record| record.id).collect())
 }
 
 #[cfg(test)]
@@ -90,7 +115,7 @@ mod tests {
     }
 
     #[sqlx::test]
-    async fn test_create_run(pool: PgPool) -> sqlx::Result<()> {
+    async fn test_create_runs(pool: PgPool) -> sqlx::Result<()> {
         let mut tx = pool.begin().await?;
 
         let annotations = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
@@ -105,9 +130,10 @@ mod tests {
         .await?;
 
         let sample = find_or_create_sample(&mut tx, "sample1").await?;
+        let sample_ids = [sample.id];
 
-        let run = create_run(&mut tx, configuration.id, sample.id, "RNA-Seq").await?;
-        assert_eq!(run.id, 1);
+        let run_ids = create_runs(&mut tx, configuration.id, &sample_ids, "RNA-Seq").await?;
+        assert_eq!(run_ids, [1]);
 
         Ok(())
     }

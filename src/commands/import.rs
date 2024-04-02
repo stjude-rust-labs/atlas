@@ -150,7 +150,7 @@ async fn import_batch(
     use crate::store::{
         count::create_counts,
         feature::{create_features, find_features},
-        run::{create_run, runs_exists},
+        run::{create_runs, runs_exists},
         sample::find_or_create_samples,
     };
 
@@ -179,15 +179,16 @@ async fn import_batch(
         anyhow::bail!("run already exists for the sample and configuration");
     }
 
-    for ((sample_name, counts), &sample_id) in chunk.iter().zip(sample_ids.iter()) {
-        info!(id = sample_id, name = sample_name, "loaded sample");
+    let run_ids = create_runs(tx, configuration_id, &sample_ids, data_type).await?;
+
+    for ((sample_name, counts), &run_id) in chunk.iter().zip(run_ids.iter()) {
+        info!(name = sample_name, "loaded sample");
 
         if !feature_names_eq(&features, counts) {
             anyhow::bail!("feature name set mismatch");
         }
 
-        let run = create_run(tx, configuration_id, sample_id, data_type).await?;
-        create_counts(tx, run.id, &features, counts).await?;
+        create_counts(tx, run_id, &features, counts).await?;
     }
 
     Ok(())

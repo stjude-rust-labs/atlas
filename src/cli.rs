@@ -72,10 +72,13 @@ pub struct ImportConfig {
     #[clap(long)]
     pub sample_sheet: bool,
 
-    /// The input source.
+    /// The input sources.
     ///
-    /// The input can be either from htseq-count or STAR.
-    pub src: PathBuf,
+    /// The inputs can be feature count outputs from either htseq-count or STAR.
+    /// If the `--sample-sheet` flag is set, the inputs must be tab-separated
+    /// plain text files.
+    #[clap(required = true)]
+    pub srcs: Vec<PathBuf>,
 }
 
 #[derive(Debug, Parser)]

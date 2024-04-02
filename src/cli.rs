@@ -54,7 +54,7 @@ pub struct ImportConfig {
     #[clap(long, default_value = ".")]
     pub sample_name_delimiter: String,
 
-    /// The technique process used to sequence the given sample, e.g., "RNA-Seq", etc.
+    /// The technique/process used to sequence the given sample, e.g., "RNA-Seq", etc.
     #[clap(long)]
     pub data_type: String,
 

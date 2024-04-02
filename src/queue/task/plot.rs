@@ -49,7 +49,7 @@ pub async fn plot(
         left join counts
             on runs.id = counts.run_id and counts.feature_id = features.id
         where configurations.id = $1
-        order by runs.id, features.name
+        order by runs.id, features.id
         "#,
         configuration_id,
     )

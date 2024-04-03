@@ -106,24 +106,10 @@ mod tests {
         Ok(())
     }
 
-    #[sqlx::test]
+    #[sqlx::test(fixtures("configuration_exists"))]
     async fn test_exists(pool: PgPool) -> sqlx::Result<()> {
-        assert!(!exists(&pool, 1).await?);
-
-        let mut tx = pool.begin().await?;
-
-        let gencode_40 = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
-        let configuration = find_or_create_configuration(
-            &mut tx,
-            gencode_40.id,
-            "gene",
-            "gene_name",
-            StrandSpecification::Reverse,
-        )
-        .await?;
-
-        assert!(!exists(&pool, configuration.id).await?);
-
+        assert!(exists(&pool, 1).await?);
+        assert!(!exists(&pool, 2).await?);
         Ok(())
     }
 

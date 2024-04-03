@@ -20,7 +20,7 @@ sqlx database setup
 psql --host localhost --username postgres atlas < tests/sql/seeds.sql
 cargo run -- server
 
-# open <local-address>/openapi
+# open <local-address>/docs
 ```
 
 [GitHub Codespaces]: https://github.com/features/codespaces

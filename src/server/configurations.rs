@@ -4,7 +4,7 @@ use axum::{extract::State, routing::get, Json, Router};
 use serde::Serialize;
 
 use super::Context;
-use crate::store::StrandSpecification;
+use crate::store::{configuration, StrandSpecification};
 
 pub fn router() -> Router<Context> {
     Router::new().route("/configurations", get(index))
@@ -34,23 +34,10 @@ struct Configuration {
         (status = OK, description = "Configurations")
     ),
 )]
-async fn index(State(ctx): State<Context>) -> super::Result<Json<IndexBody<Vec<Configuration>>>> {
-    let configurations = sqlx::query_as(
-        r#"
-        select
-            configurations.id,
-            annotations.name as annotation_name,
-            annotations.genome_build as annotation_genome_build,
-            configurations.feature_type,
-            configurations.feature_name,
-            configurations.strand_specification
-        from configurations
-        inner join annotations on configurations.annotation_id = annotations.id
-        "#,
-    )
-    .fetch_all(&ctx.pool)
-    .await?;
-
+async fn index(
+    State(ctx): State<Context>,
+) -> super::Result<Json<IndexBody<Vec<configuration::AllResult>>>> {
+    let configurations = configuration::all(&ctx.pool).await?;
     Ok(Json(IndexBody { configurations }))
 }
 

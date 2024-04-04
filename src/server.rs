@@ -16,7 +16,7 @@ use tracing::info;
 use utoipa::OpenApi;
 
 pub use self::error::Error;
-use super::{cli::ServerConfig, Queue};
+use super::{cli::ServerConfig, store, Queue};
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -37,7 +37,8 @@ pub type Result<T> = std::result::Result<T, Error>;
         counts::show,
         samples::index,
         samples::show,
-    )
+    ),
+    components(schemas(store::StrandSpecification)),
 )]
 struct ApiDoc;
 

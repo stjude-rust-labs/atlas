@@ -3,7 +3,7 @@ use sqlx::{PgExecutor, PgPool, Postgres, Transaction};
 
 use super::StrandSpecification;
 
-#[derive(Debug, Serialize, Eq, PartialEq)]
+#[derive(Debug, Serialize, Eq, PartialEq, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AllResult {
     id: i32,

@@ -10,9 +10,10 @@ pub fn router() -> Router<Context> {
     Router::new().route("/configurations", get(index))
 }
 
-#[derive(Serialize)]
-struct IndexBody<T> {
-    configurations: T,
+#[derive(Serialize, utoipa::ToSchema)]
+struct IndexResponse {
+    #[schema(inline)]
+    configurations: Vec<configuration::AllResult>,
 }
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
@@ -32,14 +33,12 @@ struct Configuration {
     path = "/configurations",
     operation_id = "configurations-index",
     responses(
-        (status = OK, description = "Configurations")
+        (status = OK, description = "A list of configurations", body = inline(IndexResponse)),
     ),
 )]
-async fn index(
-    State(ctx): State<Context>,
-) -> super::Result<Json<IndexBody<Vec<configuration::AllResult>>>> {
+async fn index(State(ctx): State<Context>) -> super::Result<Json<IndexResponse>> {
     let configurations = configuration::all(&ctx.pool).await?;
-    Ok(Json(IndexBody { configurations }))
+    Ok(Json(IndexResponse { configurations }))
 }
 
 #[cfg(test)]

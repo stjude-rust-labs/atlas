@@ -1,7 +1,7 @@
 use clap::ValueEnum;
 use serde::Serialize;
 
-#[derive(ValueEnum, Clone, Serialize, Copy, Debug, Eq, PartialEq, sqlx::Type)]
+#[derive(ValueEnum, Clone, Serialize, Copy, Debug, Eq, PartialEq, sqlx::Type, utoipa::ToSchema)]
 #[serde(rename_all = "lowercase")]
 #[sqlx(type_name = "strand_specification", rename_all = "lowercase")]
 pub enum StrandSpecification {

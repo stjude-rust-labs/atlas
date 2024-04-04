@@ -39,6 +39,7 @@ struct CreateResponse {
 #[utoipa::path(
     post,
     path = "/analyses/plot",
+    operation_id = "analyses-plot-create",
     request_body = inline(CreateRequest),
     responses(
         (status = OK, description = "The ID of the task submitted"),
@@ -98,6 +99,7 @@ struct Task {
 #[utoipa::path(
     get,
     path = "/analyses/plot/{id}",
+    operation_id = "analyses-plot-show",
     params(
         ("id" = Uuid, Path, description = "Task ID"),
     ),

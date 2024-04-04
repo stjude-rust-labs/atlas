@@ -27,6 +27,7 @@ struct Count {
 #[utoipa::path(
     get,
     path = "/counts/{id}",
+    operation_id = "counts-show",
     params(
         ("id" = i32, Path, description = "Run ID"),
     ),

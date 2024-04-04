@@ -32,6 +32,7 @@ struct Sample {
 #[utoipa::path(
     get,
     path = "/samples",
+    operation_id = "samples-index",
     responses(
         (status = OK, description = "Samples with runs"),
     )
@@ -80,6 +81,7 @@ struct SampleWithCounts {
 #[utoipa::path(
     get,
     path = "/samples/{name}",
+    operation_id = "samples-show",
     params(
         ("name" = String, Path, description = "Sample name"),
     ),

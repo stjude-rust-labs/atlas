@@ -26,6 +26,7 @@ struct Feature {
 #[utoipa::path(
     get,
     path = "/configurations/{configuration_id}/features",
+    operation_id = "configurations-features-index",
     params(
         ("configuration_id" = i32, Path, description = "Configuration ID"),
     ),

@@ -30,6 +30,7 @@ struct Configuration {
 #[utoipa::path(
     get,
     path = "/configurations",
+    operation_id = "configurations-index",
     responses(
         (status = OK, description = "Configurations")
     ),

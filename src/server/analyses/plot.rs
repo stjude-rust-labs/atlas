@@ -52,7 +52,10 @@ async fn create(
     Json(body): Json<CreateRequest>,
 ) -> server::Result<Json<CreateResponse>> {
     use self::create::validate_run;
-    use crate::{queue::Message, store::configuration};
+    use crate::{
+        queue::{Message, PlotMessage},
+        store::configuration,
+    };
 
     let CreateRequest {
         configuration_id,
@@ -74,7 +77,11 @@ async fn create(
         validate_run(&feature_names, run).map_err(anyhow::Error::new)?;
     }
 
-    let message = Message::Plot(configuration_id, additional_runs);
+    let message = Message::Plot(PlotMessage {
+        configuration_id,
+        additional_runs,
+    });
+
     let id = ctx.queue.push_back(message).await?;
 
     Ok(Json(CreateResponse { id }))

@@ -31,9 +31,15 @@ pub struct Task {
 }
 
 #[derive(Deserialize, Serialize)]
+pub struct PlotMessage {
+    pub configuration_id: i32,
+    pub additional_runs: Vec<(String, HashMap<String, i32>)>,
+}
+
+#[derive(Deserialize, Serialize)]
 pub enum Message {
     Noop,
-    Plot(i32, Vec<(String, HashMap<String, i32>)>),
+    Plot(PlotMessage),
 }
 
 impl Queue {

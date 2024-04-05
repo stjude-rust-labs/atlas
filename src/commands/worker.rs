@@ -26,8 +26,12 @@ pub async fn worker(config: WorkerConfig) -> anyhow::Result<()> {
 
     info!("worker initialized");
 
+    let mut wait_for_notification = false;
+
     loop {
-        let _notification = rx.recv().await?;
+        if wait_for_notification {
+            let _notification = rx.recv().await?;
+        }
 
         if let Some(task) = queue.pull_front().await? {
             let span = info_span!("task", id = ?task.id);
@@ -55,6 +59,8 @@ pub async fn worker(config: WorkerConfig) -> anyhow::Result<()> {
             }
 
             info!("finished processing task");
+        } else {
+            wait_for_notification = true;
         }
     }
 

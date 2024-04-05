@@ -19,7 +19,14 @@
         "tamasfe.even-better-toml"
       ],
       "settings": {
-        "rust-analyzer.check.command": "clippy",
+        "rust-analyzer": {
+          "cargo": {
+            "targetDir": "/tmp/atlas/target"
+          },
+          "check": {
+            "command": "clippy"
+          }
+        },
         "files.watcherExclude": {
           "**/target/**": true
         }

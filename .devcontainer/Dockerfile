@@ -2,7 +2,8 @@
 
 FROM mcr.microsoft.com/devcontainers/base:debian-12
 
-ENV PATH=/home/vscode/.cargo/bin:${PATH}
+ENV PATH=/home/vscode/.cargo/bin:${PATH} \
+    CARGO_TARGET_DIR=/tmp/atlas/target
 
 RUN <<EOS
 apt-get update

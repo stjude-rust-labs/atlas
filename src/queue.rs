@@ -14,8 +14,8 @@ pub struct Queue {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, sqlx::Type)]
-#[repr(i16)]
 #[serde(rename_all = "lowercase")]
+#[sqlx(type_name = "status", rename_all = "lowercase")]
 pub enum Status {
     Queued,
     Running,

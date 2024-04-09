@@ -1,5 +1,6 @@
 use serde::Serialize;
 use sqlx::postgres::{PgListener, PgPoolOptions};
+use tokio::{signal, sync::watch};
 use tracing::{info, info_span};
 
 use crate::{
@@ -24,13 +25,30 @@ pub async fn worker(config: WorkerConfig) -> anyhow::Result<()> {
 
     let queue = Queue::new(pool.clone());
 
+    let (signal_tx, signal_rx) = watch::channel(());
+
+    tokio::spawn(async move {
+        signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C listener");
+
+        info!("received shutdown signal");
+
+        drop(signal_rx);
+    });
+
     info!("worker initialized");
 
     let mut wait_for_notification = false;
 
     loop {
         if wait_for_notification {
-            let _notification = rx.recv().await?;
+            tokio::select! {
+                _notification = rx.recv() => {},
+                _ = signal_tx.closed() => break,
+            }
+        } else if signal_tx.is_closed() {
+            break;
         }
 
         if let Some(task) = queue.pull_front().await? {
@@ -64,6 +82,5 @@ pub async fn worker(config: WorkerConfig) -> anyhow::Result<()> {
         }
     }
 
-    #[allow(unreachable_code)]
     Ok(())
 }

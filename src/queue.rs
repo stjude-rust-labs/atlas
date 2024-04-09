@@ -57,7 +57,7 @@ impl Queue {
                 select id
                 from tasks
                 where status = $2
-                order by id
+                order by created_at
                 for update skip locked
                 limit 1
             )
@@ -139,6 +139,35 @@ mod tests {
 
         assert!(queue.pull_front().await?.is_some());
         assert!(queue.pull_front().await?.is_none());
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn test_pull_front(pool: PgPool) -> sqlx::Result<()> {
+        let queue = Queue::new(pool.clone());
+
+        queue.push_back(Message::Noop).await?;
+        queue.push_back(Message::Noop).await?;
+
+        let expected_task = sqlx::query_as!(
+            Task,
+            r#"
+            select
+                id,
+                status "status: Status",
+                message "message: Json<Message>",
+                created_at "created_at: Timestampz"
+            from tasks
+            order by created_at
+            "#
+        )
+        .fetch_one(&pool)
+        .await?;
+
+        let actual_task = queue.pull_front().await?;
+
+        assert_eq!(actual_task.map(|task| task.id), Some(expected_task.id));
 
         Ok(())
     }

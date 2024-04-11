@@ -1,24 +1,16 @@
+mod error;
 mod options;
 
 use std::collections::HashMap;
 
 use sqlx::PgPool;
-use thiserror::Error;
 
-pub use self::options::Options;
+pub use self::{error::Error, options::Options};
 
 struct Count {
     sample_name: String,
     feature_name: String,
     count: i32,
-}
-
-#[derive(Debug, Error)]
-pub enum PlotError {
-    #[error("database error")]
-    Database(#[from] sqlx::Error),
-    #[error("insufficient number of samples: got {0}, expected > 3 * {PERPLEXITY}")]
-    InsufficientSampleCount(usize),
 }
 
 #[cfg(not(test))]
@@ -32,7 +24,7 @@ pub async fn plot(
     configuration_id: i32,
     additional_runs: &[(String, HashMap<String, i32>)],
     options: Options,
-) -> Result<(Vec<String>, Vec<f64>, Vec<f64>), PlotError> {
+) -> Result<(Vec<String>, Vec<f64>, Vec<f64>), Error> {
     use crate::store::feature;
 
     let feature_count = feature::count(pool, configuration_id).await? as usize;
@@ -83,7 +75,7 @@ pub async fn plot(
     let sample_count = sample_names.len();
 
     if sample_count - 1 < 3 * PERPLEXITY {
-        return Err(PlotError::InsufficientSampleCount(sample_count));
+        return Err(Error::InsufficientSampleCount(sample_count));
     }
 
     let embedding = transform(options.perplexity, options.theta, raw_counts, feature_count);

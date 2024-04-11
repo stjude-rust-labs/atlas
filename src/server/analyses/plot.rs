@@ -28,6 +28,8 @@ pub fn router() -> Router<Context> {
 struct CreateRequest {
     configuration_id: i32,
     additional_runs: Option<HashMap<String, HashMap<String, i32>>>,
+    #[schema(inline)]
+    options: Option<create::Options>,
 }
 
 #[derive(Serialize)]
@@ -51,7 +53,7 @@ async fn create(
     State(ctx): State<Context>,
     Json(body): Json<CreateRequest>,
 ) -> server::Result<Json<CreateResponse>> {
-    use self::create::validate_run;
+    use self::create::{merge_options, validate_run};
     use crate::{
         queue::{Message, PlotMessage},
         store::configuration,
@@ -60,6 +62,7 @@ async fn create(
     let CreateRequest {
         configuration_id,
         additional_runs,
+        options,
     } = body;
 
     if !configuration::exists(&ctx.pool, configuration_id).await? {
@@ -77,12 +80,16 @@ async fn create(
         validate_run(&feature_names, run).map_err(anyhow::Error::new)?;
     }
 
-    let options = crate::queue::task::plot::Options::default();
+    let mut message_options = crate::queue::task::plot::Options::default();
+
+    if let Some(arguments) = options {
+        merge_options(&mut message_options, &arguments);
+    }
 
     let message = Message::Plot(PlotMessage {
         configuration_id,
         additional_runs,
-        options,
+        options: message_options,
     });
 
     let id = ctx.queue.push_back(message).await?;

@@ -1,6 +1,10 @@
 use std::collections::{HashMap, HashSet};
 
+use serde::Deserialize;
 use thiserror::Error;
+use utoipa::ToSchema;
+
+use crate::queue::task::plot;
 
 #[derive(Debug, Error, Eq, PartialEq)]
 pub enum ValidateError {
@@ -28,6 +32,22 @@ pub(super) fn validate_run(
     }
 
     Ok(())
+}
+
+#[derive(Deserialize, ToSchema)]
+pub struct Options {
+    perplexity: Option<f64>,
+    theta: Option<f64>,
+}
+
+pub(super) fn merge_options(options: &mut plot::Options, arguments: &Options) {
+    if let Some(perplexity) = arguments.perplexity {
+        options.perplexity = perplexity;
+    }
+
+    if let Some(theta) = arguments.theta {
+        options.theta = theta;
+    }
 }
 
 #[cfg(test)]
@@ -76,5 +96,28 @@ mod tests {
             validate_run(&feature_names, &run),
             Err(ValidateError::InvalidName(String::from("f2")))
         );
+    }
+
+    #[test]
+    fn test_merge_options() {
+        let defualt_options = plot::Options::default();
+
+        let mut options = plot::Options::default();
+        let arguments = Options {
+            perplexity: None,
+            theta: None,
+        };
+        merge_options(&mut options, &arguments);
+        assert_eq!(options.perplexity, defualt_options.perplexity);
+        assert_eq!(options.theta, defualt_options.theta);
+
+        let mut options = plot::Options::default();
+        let arguments = Options {
+            perplexity: Some(10.0),
+            theta: Some(0.3),
+        };
+        merge_options(&mut options, &arguments);
+        assert_eq!(options.perplexity, 10.0);
+        assert_eq!(options.theta, 0.3);
     }
 }

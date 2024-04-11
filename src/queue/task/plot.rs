@@ -13,12 +13,6 @@ struct Count {
     count: i32,
 }
 
-#[cfg(not(test))]
-const PERPLEXITY: usize = 30;
-
-#[cfg(test)]
-const PERPLEXITY: usize = 3;
-
 pub async fn plot(
     pool: &PgPool,
     configuration_id: i32,
@@ -74,8 +68,11 @@ pub async fn plot(
 
     let sample_count = sample_names.len();
 
-    if sample_count - 1 < 3 * PERPLEXITY {
-        return Err(Error::InsufficientSampleCount(sample_count));
+    if is_perplexity_too_large(options.perplexity, sample_count) {
+        return Err(Error::PerplexityTooLarge {
+            sample_count,
+            perplexity: options.perplexity,
+        });
     }
 
     let embedding = transform(options.perplexity, options.theta, raw_counts, feature_count);
@@ -89,6 +86,12 @@ pub async fn plot(
     }
 
     Ok((sample_names, xs, ys))
+}
+
+// See <https://github.com/frjnn/bhtsne/blob/a0dc63f7d967a748b9297a4108b1530e68eebf87/src/tsne/mod.rs#L46>.
+fn is_perplexity_too_large(perplexity: f64, sample_count: usize) -> bool {
+    let n = sample_count as f64;
+    sample_count > 0 && (n - 1.0 < 3.0 * perplexity)
 }
 
 fn transform(perplexity: f64, theta: f64, counts: Vec<i32>, feature_count: usize) -> Vec<f64> {
@@ -113,4 +116,15 @@ fn transform(perplexity: f64, theta: f64, counts: Vec<i32>, feature_count: usize
         .perplexity(perplexity)
         .barnes_hut(theta, euclidean_distance)
         .embedding()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_perplexity_too_large() {
+        assert!(is_perplexity_too_large(30.0, 3));
+        assert!(!is_perplexity_too_large(30.0, 100));
+    }
 }

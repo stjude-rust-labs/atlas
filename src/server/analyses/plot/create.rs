@@ -36,7 +36,9 @@ pub(super) fn validate_run(
 
 #[derive(Deserialize, ToSchema)]
 pub struct Options {
+    #[schema(default = 50.0)]
     perplexity: Option<f64>,
+    #[schema(default = 0.5)]
     theta: Option<f64>,
 }
 

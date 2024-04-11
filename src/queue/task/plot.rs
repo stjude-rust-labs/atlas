@@ -1,7 +1,11 @@
+mod options;
+
 use std::collections::HashMap;
 
 use sqlx::PgPool;
 use thiserror::Error;
+
+pub use self::options::Options;
 
 struct Count {
     sample_name: String,
@@ -27,6 +31,7 @@ pub async fn plot(
     pool: &PgPool,
     configuration_id: i32,
     additional_runs: &[(String, HashMap<String, i32>)],
+    options: Options,
 ) -> Result<(Vec<String>, Vec<f64>, Vec<f64>), PlotError> {
     use crate::store::feature;
 
@@ -81,7 +86,7 @@ pub async fn plot(
         return Err(PlotError::InsufficientSampleCount(sample_count));
     }
 
-    let embedding = transform(raw_counts, feature_count);
+    let embedding = transform(options.perplexity, options.theta, raw_counts, feature_count);
 
     let mut xs = Vec::with_capacity(sample_count);
     let mut ys = Vec::with_capacity(sample_count);
@@ -94,15 +99,7 @@ pub async fn plot(
     Ok((sample_names, xs, ys))
 }
 
-fn transform(counts: Vec<i32>, feature_count: usize) -> Vec<f64> {
-    #[cfg(not(test))]
-    const PERPLEXITY: f64 = 30.0;
-
-    #[cfg(test)]
-    const PERPLEXITY: f64 = 3.0;
-
-    const THETA: f64 = 0.5;
-
+fn transform(perplexity: f64, theta: f64, counts: Vec<i32>, feature_count: usize) -> Vec<f64> {
     fn euclidean_distance(a: &&[f64], b: &&[f64]) -> f64 {
         a.iter()
             .zip(b.iter())
@@ -121,7 +118,7 @@ fn transform(counts: Vec<i32>, feature_count: usize) -> Vec<f64> {
     let data: Vec<_> = normalized_counts.chunks(feature_count).collect();
 
     bhtsne::tSNE::new(&data)
-        .perplexity(PERPLEXITY)
-        .barnes_hut(THETA, euclidean_distance)
+        .perplexity(perplexity)
+        .barnes_hut(theta, euclidean_distance)
         .embedding()
 }

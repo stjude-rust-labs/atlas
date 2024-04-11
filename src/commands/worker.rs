@@ -62,7 +62,8 @@ pub async fn worker(config: WorkerConfig) -> anyhow::Result<()> {
                 Message::Plot(PlotMessage {
                     configuration_id,
                     additional_runs,
-                }) => match plot(&pool, configuration_id, &additional_runs).await {
+                    options,
+                }) => match plot(&pool, configuration_id, &additional_runs, options).await {
                     Ok((sample_names, xs, ys)) => {
                         let body = PlotBody {
                             sample_names,

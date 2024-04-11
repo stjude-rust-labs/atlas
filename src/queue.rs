@@ -8,6 +8,8 @@ use uuid::Uuid;
 
 use crate::server::types::Timestampz;
 
+use self::task::plot;
+
 #[derive(Clone)]
 pub struct Queue {
     pool: PgPool,
@@ -34,6 +36,7 @@ pub struct Task {
 pub struct PlotMessage {
     pub configuration_id: i32,
     pub additional_runs: Vec<(String, HashMap<String, i32>)>,
+    pub options: plot::Options,
 }
 
 #[derive(Deserialize, Serialize)]

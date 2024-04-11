@@ -77,9 +77,12 @@ async fn create(
         validate_run(&feature_names, run).map_err(anyhow::Error::new)?;
     }
 
+    let options = crate::queue::task::plot::Options::default();
+
     let message = Message::Plot(PlotMessage {
         configuration_id,
         additional_runs,
+        options,
     });
 
     let id = ctx.queue.push_back(message).await?;

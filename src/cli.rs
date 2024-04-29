@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{net::SocketAddr, path::PathBuf};
 
 use clap::{Parser, Subcommand};
 
@@ -87,9 +87,9 @@ pub struct ServerConfig {
     #[clap(long, env)]
     pub database_url: String,
 
-    /// The port for the server to use.
-    #[clap(long, env, default_value_t = 3000)]
-    pub port: u16,
+    /// The socket address the server binds to.
+    #[clap(long, env = "BIND_ADDRESS", default_value = "127.0.0.1:3000")]
+    pub bind: SocketAddr,
 }
 
 #[derive(Debug, Parser)]

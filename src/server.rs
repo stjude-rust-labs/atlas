@@ -5,8 +5,6 @@ mod error;
 mod samples;
 pub mod types;
 
-use std::net::{Ipv4Addr, SocketAddr};
-
 use axum::{routing::get, Json, Router};
 use sqlx::PgPool;
 use tokio::net::TcpListener;
@@ -56,7 +54,7 @@ pub async fn serve(config: &ServerConfig, pool: PgPool) -> anyhow::Result<()> {
 
     let app = router().layer(service).with_state(ctx);
 
-    let addr = SocketAddr::from((Ipv4Addr::UNSPECIFIED, config.port));
+    let addr = &config.bind;
     let listener = TcpListener::bind(addr).await?;
 
     info!("listening on {addr}");

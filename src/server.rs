@@ -32,6 +32,7 @@ pub type Result<T> = std::result::Result<T, Error>;
         analyses::plot::show,
         configurations::index,
         configurations::features::index,
+        configurations::features::show,
         counts::show,
         samples::index,
         samples::show,

@@ -17,3 +17,23 @@ values
   (1, '39_feature_2'),
   (2, '19_feature_1'),
   (2, '19_feature_2');
+
+insert into samples
+  (name)
+values
+  ('sample1'),
+  ('sample2');
+
+insert into runs
+  (sample_id, configuration_id, data_type)
+values
+  (1, 1, 'RNA-Seq'),
+  (2, 1, 'RNA-Seq');
+
+insert into counts
+  (run_id, feature_id, value)
+values
+  (1, 1, 5),
+  (1, 2, 8),
+  (2, 1, 13),
+  (2, 2, 21);

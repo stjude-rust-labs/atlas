@@ -1,14 +1,22 @@
+use std::collections::HashMap;
+
 use axum::{
     extract::{Path, State},
     routing::get,
     Json, Router,
 };
+use futures::{StreamExt, TryStreamExt};
 use serde::Serialize;
 
 use crate::server::{self, Context, Error};
 
 pub fn router() -> Router<Context> {
-    Router::new().route("/configurations/:configuration_id/features", get(index))
+    Router::new()
+        .route("/configurations/:configuration_id/features", get(index))
+        .route(
+            "/configurations/:configuration_id/features/:feature_name",
+            get(show),
+        )
 }
 
 #[derive(Serialize)]
@@ -59,6 +67,54 @@ async fn index(
     .await?;
 
     Ok(Json(IndexBody { features }))
+}
+
+#[derive(Serialize)]
+struct ShowResponse {
+    counts: HashMap<String, i32>,
+}
+
+/// Shows counts for samples with the given configuration ID and feature name.
+#[utoipa::path(
+    get,
+    path = "/configurations/{configuration_id}/features/{feature_name}",
+    operation_id = "configurations-features-show",
+    params(
+        ("configuration_id" = i32, Path, description = "Configuration ID"),
+        ("feature_name" = String, Path, description = "Feature name"),
+    ),
+    responses(
+        (status = OK, description = "Counts associated with the given configuration ID and feature name"),
+    ),
+)]
+async fn show(
+    Path((configuration_id, feature_name)): Path<(i32, String)>,
+    State(ctx): State<Context>,
+) -> server::Result<Json<ShowResponse>> {
+    let counts = sqlx::query!(
+        "
+        select
+            samples.name,
+            counts.value
+        from counts
+        inner join runs
+            on runs.id = counts.run_id
+        inner join samples
+            on samples.id = runs.sample_id
+        inner join features
+            on features.id = counts.feature_id
+        where runs.configuration_id = $1
+            and features.name = $2
+        ",
+        configuration_id,
+        feature_name,
+    )
+    .fetch(&ctx.pool)
+    .map(|result| result.map(|record| (record.name, record.value)))
+    .try_collect()
+    .await?;
+
+    Ok(Json(ShowResponse { counts }))
 }
 
 #[cfg(test)]
@@ -114,6 +170,30 @@ mod tests {
             .body(Body::empty())?;
         let response = app(pool).oneshot(request).await?;
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures("features"))]
+    async fn test_show(pool: PgPool) -> anyhow::Result<()> {
+        let request = Request::builder()
+            .uri("/configurations/1/features/39_feature_1")
+            .body(Body::empty())?;
+        let response = app(pool).oneshot(request).await?;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = response.into_body().collect().await?.to_bytes();
+        let actual: Value = serde_json::from_slice(&body)?;
+
+        assert_eq!(
+            actual,
+            json!({
+                "counts": {
+                    "sample1": 5,
+                    "sample2": 13,
+                }
+            })
+        );
+
         Ok(())
     }
 }

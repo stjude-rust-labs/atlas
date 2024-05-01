@@ -7,7 +7,7 @@ pub mod types;
 
 use axum::{routing::get, Json, Router};
 use sqlx::PgPool;
-use tokio::net::TcpListener;
+use tokio::{net::TcpListener, signal};
 use tower::ServiceBuilder;
 use tower_http::{services::ServeFile, ServiceBuilderExt};
 use tracing::info;
@@ -60,7 +60,15 @@ pub async fn serve(config: &ServerConfig, pool: PgPool) -> anyhow::Result<()> {
 
     info!("listening on {addr}");
 
-    axum::serve(listener, app).await?;
+    axum::serve(listener, app)
+        .with_graceful_shutdown(async {
+            signal::ctrl_c()
+                .await
+                .expect("failed to install Ctrl+C listener");
+
+            info!("received shutdown signal");
+        })
+        .await?;
 
     Ok(())
 }

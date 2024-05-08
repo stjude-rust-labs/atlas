@@ -1,5 +1,6 @@
 use sqlx::PgExecutor;
 
+#[cfg(test)]
 #[derive(Debug)]
 pub struct Sample {
     pub id: i32,

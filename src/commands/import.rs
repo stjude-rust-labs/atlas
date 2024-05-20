@@ -41,7 +41,6 @@ pub async fn import(config: ImportConfig) -> anyhow::Result<()> {
         annotations.id,
         &config.feature_type,
         &config.feature_name,
-        config.strand_specification,
     )
     .await?;
 
@@ -116,7 +115,14 @@ where
         chunk.push((sample_name.into(), counts));
     }
 
-    import_batch(tx, configuration_id, data_type, &chunk).await?;
+    import_batch(
+        tx,
+        configuration_id,
+        strand_specification,
+        data_type,
+        &chunk,
+    )
+    .await?;
 
     Ok(())
 }
@@ -155,7 +161,14 @@ where
         }
     }
 
-    import_batch(tx, configuration_id, data_type, &chunk).await?;
+    import_batch(
+        tx,
+        configuration_id,
+        strand_specification,
+        data_type,
+        &chunk,
+    )
+    .await?;
 
     Ok(())
 }
@@ -163,6 +176,7 @@ where
 async fn import_batch(
     tx: &mut Transaction<'_, Postgres>,
     configuration_id: i32,
+    strand_specification: StrandSpecification,
     data_type: &str,
     chunk: &[(String, HashMap<String, u64>)],
 ) -> anyhow::Result<()> {
@@ -198,7 +212,14 @@ async fn import_batch(
         anyhow::bail!("run already exists for the sample and configuration");
     }
 
-    let run_ids = create_runs(tx, configuration_id, &sample_ids, data_type).await?;
+    let run_ids = create_runs(
+        tx,
+        configuration_id,
+        &sample_ids,
+        strand_specification,
+        data_type,
+    )
+    .await?;
 
     for ((sample_name, counts), &run_id) in chunk.iter().zip(run_ids.iter()) {
         info!(name = sample_name, "loaded sample");

@@ -75,7 +75,6 @@ mod tests {
     use super::*;
     use crate::store::{
         annotations::find_or_create_annotations, configuration::find_or_create_configuration,
-        StrandSpecification,
     };
 
     #[sqlx::test]
@@ -86,14 +85,8 @@ mod tests {
 
         let annotations = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
 
-        let configuration = find_or_create_configuration(
-            &mut tx,
-            annotations.id,
-            "gene",
-            "gene_name",
-            StrandSpecification::Reverse,
-        )
-        .await?;
+        let configuration =
+            find_or_create_configuration(&mut tx, annotations.id, "gene", "gene_name").await?;
 
         let names = [String::from("feature1"), String::from("feature2")]
             .into_iter()
@@ -113,14 +106,8 @@ mod tests {
 
         let annotations = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
 
-        let configuration = find_or_create_configuration(
-            &mut tx,
-            annotations.id,
-            "gene",
-            "gene_name",
-            StrandSpecification::Reverse,
-        )
-        .await?;
+        let configuration =
+            find_or_create_configuration(&mut tx, annotations.id, "gene", "gene_name").await?;
 
         let features = find_features(&mut *tx, configuration.id).await?;
         assert!(features.is_empty());
@@ -142,14 +129,8 @@ mod tests {
 
         let annotations = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
 
-        let configuration = find_or_create_configuration(
-            &mut tx,
-            annotations.id,
-            "gene",
-            "gene_name",
-            StrandSpecification::Reverse,
-        )
-        .await?;
+        let configuration =
+            find_or_create_configuration(&mut tx, annotations.id, "gene", "gene_name").await?;
 
         let names = [String::from("feature1"), String::from("feature2")]
             .into_iter()

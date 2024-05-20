@@ -1,8 +1,6 @@
 use serde::Serialize;
 use sqlx::{PgExecutor, PgPool, Postgres, Transaction};
 
-use super::StrandSpecification;
-
 #[derive(Debug, Serialize, Eq, PartialEq, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AllResult {
@@ -11,7 +9,6 @@ pub struct AllResult {
     annotation_genome_build: String,
     feature_type: String,
     feature_name: String,
-    strand_specification: StrandSpecification,
 }
 
 pub async fn all<'a, E>(executor: E) -> sqlx::Result<Vec<AllResult>>
@@ -26,8 +23,7 @@ where
             annotations.name as annotation_name,
             annotations.genome_build as annotation_genome_build,
             configurations.feature_type,
-            configurations.feature_name,
-            configurations.strand_specification as "strand_specification: _"
+            configurations.feature_name
         from configurations
         inner join annotations on configurations.annotation_id = annotations.id
         "#,
@@ -55,14 +51,13 @@ pub async fn find_or_create_configuration(
     annotations_id: i32,
     feature_type: &str,
     feature_name: &str,
-    strand_specification: StrandSpecification,
 ) -> sqlx::Result<Configuration> {
     let configuration_id = sqlx::query_scalar!(
         "
         insert into configurations
-            (annotation_id, feature_type, feature_name, strand_specification)
+            (annotation_id, feature_type, feature_name)
         values
-            ($1, $2, $3, $4)
+            ($1, $2, $3)
         on conflict (annotation_id, feature_type, feature_name) do update
             set id = configurations.id
         returning id
@@ -70,7 +65,6 @@ pub async fn find_or_create_configuration(
         annotations_id,
         feature_type,
         feature_name,
-        strand_specification as _,
     )
     .fetch_one(&mut **tx)
     .await?;
@@ -99,7 +93,6 @@ mod tests {
                 annotation_genome_build: String::from("GRCh38.p13"),
                 feature_type: String::from("gene"),
                 feature_name: String::from("gene_name"),
-                strand_specification: StrandSpecification::Reverse,
             }]
         );
 
@@ -120,44 +113,20 @@ mod tests {
         let gencode_21 = find_or_create_annotations(&mut tx, "GENCODE 21", "GRCh38").await?;
         let gencode_40 = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
 
-        let configuration = find_or_create_configuration(
-            &mut tx,
-            gencode_40.id,
-            "gene",
-            "gene_name",
-            StrandSpecification::Reverse,
-        )
-        .await?;
+        let configuration =
+            find_or_create_configuration(&mut tx, gencode_40.id, "gene", "gene_name").await?;
         assert_eq!(configuration.id, 1);
 
-        let configuration = find_or_create_configuration(
-            &mut tx,
-            gencode_40.id,
-            "gene",
-            "gene_name",
-            StrandSpecification::Reverse,
-        )
-        .await?;
+        let configuration =
+            find_or_create_configuration(&mut tx, gencode_40.id, "gene", "gene_name").await?;
         assert_eq!(configuration.id, 1);
 
-        let configuration = find_or_create_configuration(
-            &mut tx,
-            gencode_40.id,
-            "exon",
-            "gene_id",
-            StrandSpecification::Reverse,
-        )
-        .await?;
+        let configuration =
+            find_or_create_configuration(&mut tx, gencode_40.id, "exon", "gene_id").await?;
         assert_eq!(configuration.id, 3);
 
-        let configuration = find_or_create_configuration(
-            &mut tx,
-            gencode_21.id,
-            "gene",
-            "gene_name",
-            StrandSpecification::Reverse,
-        )
-        .await?;
+        let configuration =
+            find_or_create_configuration(&mut tx, gencode_21.id, "gene", "gene_name").await?;
         assert_eq!(configuration.id, 4);
 
         Ok(())

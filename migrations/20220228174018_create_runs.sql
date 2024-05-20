@@ -1,9 +1,12 @@
+create type strand_specification as enum ('none', 'forward', 'reverse');
+
 create table runs (
     id serial primary key,
 
     sample_id integer not null,
     configuration_id integer not null,
 
+    strand_specification strand_specification not null,
     data_type text not null,
 
     created_at timestamptz not null default now(),

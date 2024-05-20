@@ -81,14 +81,12 @@ mod tests {
                     "annotationGenomeBuild": "GRCh38.p13",
                     "featureType": "exon",
                     "featureName": "gene_name",
-                    "strandSpecification": "reverse",
                 }, {
                     "id": 2,
                     "annotationName": "GENCODE 19",
                     "annotationGenomeBuild": "GRCh37.p13",
                     "featureType": "exon",
                     "featureName": "gene_name",
-                    "strandSpecification": "reverse",
                 }]
             })
         );

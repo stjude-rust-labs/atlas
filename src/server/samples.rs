@@ -104,7 +104,7 @@ async fn show(
                 annotations.name as counts_gene_model,
                 configurations.feature_type as counts_feature_type,
                 configurations.feature_name as counts_feature_name,
-                configurations.strand_specification as "counts_strand_specification: _",
+                runs.strand_specification as "counts_strand_specification: _",
                 runs.data_type as counts_data_type
             from samples
             inner join runs

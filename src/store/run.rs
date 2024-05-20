@@ -1,5 +1,7 @@
 use sqlx::{PgExecutor, Postgres, Transaction};
 
+use super::StrandSpecification;
+
 pub async fn runs_exists<'a, E>(
     executor: E,
     configuration_id: i32,
@@ -28,18 +30,20 @@ pub async fn create_run(
     tx: &mut Transaction<'_, Postgres>,
     configuration_id: i32,
     sample_id: i32,
+    strand_specification: StrandSpecification,
     data_type: &str,
 ) -> sqlx::Result<i32> {
     sqlx::query_scalar!(
         "
         insert into runs
-            (sample_id, configuration_id, data_type)
+            (sample_id, configuration_id, strand_specification, data_type)
         values
-            ($1, $2, $3)
+            ($1, $2, $3, $4)
         returning id
         ",
         sample_id,
         configuration_id,
+        strand_specification as _,
         data_type,
     )
     .fetch_one(&mut **tx)
@@ -50,12 +54,16 @@ pub async fn create_runs(
     tx: &mut Transaction<'_, Postgres>,
     configuration_id: i32,
     sample_ids: &[i32],
+    strand_specification: StrandSpecification,
     data_type: &str,
 ) -> sqlx::Result<Vec<i32>> {
     use std::iter;
 
     let sample_count = sample_ids.len();
     let configuration_ids: Vec<_> = iter::repeat(configuration_id).take(sample_count).collect();
+    let strand_specifications: Vec<_> = iter::repeat(strand_specification)
+        .take(sample_count)
+        .collect();
     let data_types: Vec<_> = iter::repeat(data_type)
         .map(String::from)
         .take(sample_count)
@@ -63,12 +71,13 @@ pub async fn create_runs(
 
     let records = sqlx::query!(
         "
-        insert into runs (sample_id, configuration_id, data_type)
-        select * from unnest($1::integer[], $2::integer[], $3::text[])
+        insert into runs (sample_id, configuration_id, strand_specification, data_type)
+        select * from unnest($1::integer[], $2::integer[], $3::strand_specification[], $4::text[])
         returning id
         ",
         sample_ids,
         &configuration_ids[..],
+        &strand_specifications[..] as _,
         &data_types[..],
     )
     .fetch_all(&mut **tx)
@@ -84,7 +93,7 @@ mod tests {
     use super::*;
     use crate::store::{
         annotations::find_or_create_annotations, configuration::find_or_create_configuration,
-        sample::find_or_create_sample, StrandSpecification,
+        sample::find_or_create_sample,
     };
 
     #[sqlx::test]
@@ -93,17 +102,18 @@ mod tests {
 
         let annotations = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
 
-        let configuration = find_or_create_configuration(
-            &mut tx,
-            annotations.id,
-            "gene",
-            "gene_name",
-            StrandSpecification::Reverse,
-        )
-        .await?;
+        let configuration =
+            find_or_create_configuration(&mut tx, annotations.id, "gene", "gene_name").await?;
 
         let sample = find_or_create_sample(&mut tx, "sample1").await?;
-        create_run(&mut tx, configuration.id, sample.id, "RNA-Seq").await?;
+        create_run(
+            &mut tx,
+            configuration.id,
+            sample.id,
+            StrandSpecification::Reverse,
+            "RNA-Seq",
+        )
+        .await?;
 
         let sample_ids = [sample.id];
         assert!(runs_exists(&mut *tx, configuration.id, &sample_ids).await?);
@@ -120,19 +130,21 @@ mod tests {
 
         let annotations = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
 
-        let configuration = find_or_create_configuration(
-            &mut tx,
-            annotations.id,
-            "gene",
-            "gene_name",
-            StrandSpecification::Reverse,
-        )
-        .await?;
+        let configuration =
+            find_or_create_configuration(&mut tx, annotations.id, "gene", "gene_name").await?;
 
         let sample = find_or_create_sample(&mut tx, "sample1").await?;
         let sample_ids = [sample.id];
 
-        let run_ids = create_runs(&mut tx, configuration.id, &sample_ids, "RNA-Seq").await?;
+        let run_ids = create_runs(
+            &mut tx,
+            configuration.id,
+            &sample_ids,
+            StrandSpecification::Reverse,
+            "RNA-Seq",
+        )
+        .await?;
+
         assert_eq!(run_ids, [1]);
 
         Ok(())

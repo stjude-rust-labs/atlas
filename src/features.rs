@@ -68,6 +68,30 @@ where
     Ok(features)
 }
 
+fn merge_features(features: &[Feature]) -> Vec<Feature> {
+    assert!(!features.is_empty());
+
+    let mut features = features.to_vec();
+    features.sort_unstable();
+
+    let mut merged_features = Vec::with_capacity(features.len());
+    let (mut current_start, mut current_end) = features[0];
+
+    for (next_start, next_end) in features.iter().copied().skip(1) {
+        if next_start > current_end {
+            merged_features.push((current_start, current_end));
+            current_start = next_start;
+            current_end = next_end;
+        } else if current_end < next_end {
+            current_end = next_end;
+        }
+    }
+
+    merged_features.push((current_start, current_end));
+
+    merged_features
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -100,6 +124,30 @@ sq0	.	exon	13	21	.	.	.	ID=3.0;gene_name=r2
         ]
         .into_iter()
         .collect();
+
+        assert_eq!(actual, expected);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_merge_features() -> Result<(), noodles::core::position::TryFromIntError> {
+        let features = [
+            (Position::try_from(2)?, Position::try_from(5)?),
+            (Position::try_from(3)?, Position::try_from(4)?),
+            (Position::try_from(5)?, Position::try_from(7)?),
+            (Position::try_from(9)?, Position::try_from(12)?),
+            (Position::try_from(10)?, Position::try_from(15)?),
+            (Position::try_from(16)?, Position::try_from(21)?),
+        ];
+
+        let actual = merge_features(&features);
+
+        let expected = [
+            (Position::try_from(2)?, Position::try_from(7)?),
+            (Position::try_from(9)?, Position::try_from(15)?),
+            (Position::try_from(16)?, Position::try_from(21)?),
+        ];
 
         assert_eq!(actual, expected);
 

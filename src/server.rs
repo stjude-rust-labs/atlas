@@ -33,7 +33,7 @@ pub type Result<T> = std::result::Result<T, Error>;
         configurations::index,
         configurations::features::index,
         configurations::features::show,
-        runs::show,
+        runs::counts::index,
         samples::index,
         samples::show,
     ),
@@ -75,7 +75,7 @@ pub async fn serve(config: &ServerConfig, pool: PgPool) -> anyhow::Result<()> {
 
 fn router() -> Router<Context> {
     samples::router()
-        .merge(runs::router())
+        .merge(runs::counts::router())
         .merge(configurations::features::router())
         .merge(configurations::router())
         .merge(analyses::plot::router())

@@ -10,7 +10,7 @@ use serde::Serialize;
 use super::{Context, Error};
 
 pub fn router() -> Router<Context> {
-    Router::new().route("/counts/:id", get(show))
+    Router::new().route("/runs/:id", get(show))
 }
 
 #[derive(Serialize)]
@@ -26,8 +26,8 @@ struct Count {
 /// Shows counts for a given run.
 #[utoipa::path(
     get,
-    path = "/counts/{id}",
-    operation_id = "counts-show",
+    path = "/runs/{id}",
+    operation_id = "runs-show",
     params(
         ("id" = i32, Path, description = "Run ID"),
     ),
@@ -85,14 +85,14 @@ mod tests {
         router().with_state(Context { pool, queue })
     }
 
-    #[sqlx::test(fixtures("counts"))]
+    #[sqlx::test(fixtures("runs"))]
     async fn test_show(pool: PgPool) -> anyhow::Result<()> {
         #[derive(Deserialize)]
         struct CountsBody {
             counts: HashMap<String, i32>,
         }
 
-        let request = Request::builder().uri("/counts/1").body(Body::empty())?;
+        let request = Request::builder().uri("/runs/1").body(Body::empty())?;
         let response = app(pool).oneshot(request).await?;
 
         assert_eq!(response.status(), StatusCode::OK);
@@ -111,7 +111,7 @@ mod tests {
 
     #[sqlx::test]
     async fn test_show_with_an_invalid_id(pool: PgPool) -> anyhow::Result<()> {
-        let request = Request::builder().uri("/counts/1597").body(Body::empty())?;
+        let request = Request::builder().uri("/runs/1597").body(Body::empty())?;
         let response = app(pool).oneshot(request).await?;
 
         assert_eq!(response.status(), StatusCode::NOT_FOUND);

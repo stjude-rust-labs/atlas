@@ -54,8 +54,7 @@ struct SampleFromQuery {
     counts_genome_build: String,
     counts_gene_model: String,
     counts_data_type: String,
-    counts_feature_type: String,
-    counts_feature_name: String,
+    counts_configuration_id: i32,
     counts_strand_specification: StrandSpecification,
 }
 
@@ -66,8 +65,7 @@ pub struct Counts {
     genome_build: String,
     gene_model: String,
     data_type: String,
-    feature_type: String,
-    feature_name: String,
+    configuration_id: i32,
     strand_specification: StrandSpecification,
 }
 
@@ -102,8 +100,7 @@ async fn show(
                 runs.id as counts_id,
                 annotations.genome_build as counts_genome_build,
                 annotations.name as counts_gene_model,
-                configurations.feature_type as counts_feature_type,
-                configurations.feature_name as counts_feature_name,
+                runs.configuration_id as counts_configuration_id,
                 runs.strand_specification as "counts_strand_specification: _",
                 runs.data_type as counts_data_type
             from samples
@@ -134,8 +131,7 @@ async fn show(
             genome_build: row.counts_genome_build,
             gene_model: row.counts_gene_model,
             data_type: row.counts_data_type,
-            feature_type: row.counts_feature_type,
-            feature_name: row.counts_feature_name,
+            configuration_id: row.counts_configuration_id,
             strand_specification: row.counts_strand_specification,
         })
         .collect();
@@ -206,16 +202,14 @@ mod tests {
                     "id": 1,
                     "genomeBuild": "GRCh38.p13",
                     "geneModel": "GENCODE 39",
-                    "featureType": "exon",
-                    "featureName": "gene_name",
+                    "configurationId": 1,
                     "strandSpecification": "reverse",
                     "dataType": "RNA-Seq",
                 }, {
                     "id": 2,
                     "genomeBuild": "GRCh37.p13",
                     "geneModel": "GENCODE 19",
-                    "featureType": "exon",
-                    "featureName": "gene_name",
+                    "configurationId": 2,
                     "strandSpecification": "reverse",
                     "dataType": "RNA-Seq",
                 }],

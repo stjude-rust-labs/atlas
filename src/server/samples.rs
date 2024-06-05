@@ -12,7 +12,7 @@ use super::{types::Timestampz, Context, Error};
 pub fn router() -> Router<Context> {
     Router::new()
         .route("/samples", get(index))
-        .route("/samples/:name", get(show))
+        .route("/samples/:id", get(show))
 }
 
 #[derive(Serialize)]
@@ -77,22 +77,22 @@ struct SampleWithCounts {
     counts: Vec<Counts>,
 }
 
-/// Shows associated runs for a given sample name.
+/// Shows associated runs for a given sample.
 #[utoipa::path(
     get,
-    path = "/samples/{name}",
+    path = "/samples/{id}",
     operation_id = "samples-show",
     params(
-        ("name" = String, Path, description = "Sample name"),
+        ("id" = i32, Path, description = "Sample ID"),
     ),
     responses(
-        (status = OK, description = "The sample name has runs"),
-        (status = NOT_FOUND, description = "The sample name does not exist")
+        (status = OK, description = "The sample has runs"),
+        (status = NOT_FOUND, description = "The sample does not exist")
     ),
 )]
 async fn show(
     State(ctx): State<Context>,
-    Path(name): Path<String>,
+    Path(id): Path<i32>,
 ) -> super::Result<Json<SampleWithCounts>> {
     let rows = sqlx::query_as!(
         SampleFromQuery,
@@ -113,9 +113,9 @@ async fn show(
                 on runs.configuration_id = configurations.id
             inner join annotations
                 on configurations.annotation_id = annotations.id
-            where samples.name = $1
+            where samples.id = $1
         "#,
-        name
+        id
     )
     .fetch_all(&ctx.pool)
     .await?;
@@ -192,12 +192,9 @@ mod tests {
 
     #[sqlx::test(fixtures("samples"))]
     async fn test_show(pool: PgPool) -> anyhow::Result<()> {
-        let request = Request::builder()
-            .uri("/samples/sample_1")
-            .body(Body::empty())?;
+        let request = Request::builder().uri("/samples/1").body(Body::empty())?;
 
         let response = app(pool).oneshot(request).await?;
-
         let body = response.into_body().collect().await?.to_bytes();
         let actual: Value = serde_json::from_slice(&body)?;
 
@@ -231,7 +228,7 @@ mod tests {
     #[sqlx::test(fixtures("samples"))]
     async fn test_show_with_an_invalid_name(pool: PgPool) -> anyhow::Result<()> {
         let request = Request::builder()
-            .uri("/samples/sample_x")
+            .uri("/samples/1597")
             .body(Body::empty())?;
 
         let response = app(pool).oneshot(request).await?;

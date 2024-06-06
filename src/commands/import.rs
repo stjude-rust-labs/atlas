@@ -18,42 +18,30 @@ use crate::{
 };
 
 pub async fn import(config: ImportConfig) -> anyhow::Result<()> {
-    use crate::store::{
-        annotations::find_or_create_annotations, configuration::find_or_create_configuration,
-    };
-
     let pool = PgPoolOptions::new().connect(&config.database_url).await?;
     sqlx::migrate!().run(&pool).await?;
 
     let mut tx = pool.begin().await?;
 
-    let annotations = find_or_create_annotations(
-        &mut tx,
-        &config.annotations_name,
-        &config.annotations_genome_build,
+    let configuration_id = config.configuration_id;
+
+    let feature_name = sqlx::query!(
+        "select feature_name from configurations where id = $1",
+        configuration_id
     )
-    .await?;
+    .fetch_one(&pool)
+    .await
+    .map(|record| record.feature_name)?;
 
-    info!(id = annotations.id, "loaded annotations");
-
-    let configuration = find_or_create_configuration(
-        &mut tx,
-        annotations.id,
-        &config.feature_type,
-        &config.feature_name,
-    )
-    .await?;
-
-    info!(id = configuration.id, "loaded configuration");
     info!(src_count = config.srcs.len(), "reading srcs");
 
     let result = if config.sample_sheet {
         import_from_sample_sheets(
             &mut tx,
             &config.srcs,
-            configuration.id,
+            configuration_id,
             config.format,
-            &config.feature_name,
+            &feature_name,
             config.strand_specification,
             &config.data_type,
         )
@@ -62,10 +50,10 @@ pub async fn import(config: ImportConfig) -> anyhow::Result<()> {
         import_from_paths(
             &mut tx,
             &config.srcs,
-            configuration.id,
+            configuration_id,
             &config.sample_name_delimiter,
             config.format,
-            &config.feature_name,
+            &feature_name,
             config.strand_specification,
             &config.data_type,
         )

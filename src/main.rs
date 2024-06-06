@@ -10,6 +10,7 @@ async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
+        Commands::Configuration(command) => atlas::commands::configuration(command).await?,
         Commands::Import(config) => atlas::commands::import(config).await?,
         Commands::Server(config) => atlas::commands::server(config).await?,
         Commands::Worker(config) => atlas::commands::worker(config).await?,

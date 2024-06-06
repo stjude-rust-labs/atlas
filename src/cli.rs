@@ -1,3 +1,5 @@
+pub mod configuration;
+
 use std::{net::SocketAddr, path::PathBuf};
 
 use clap::{Parser, Subcommand};
@@ -13,6 +15,9 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
+    /// Manage configurations
+    #[clap(subcommand)]
+    Configuration(configuration::Command),
     /// Imports a sample into the database
     Import(ImportConfig),
     /// Starts an atlas server and blocks indefinitely

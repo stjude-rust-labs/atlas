@@ -11,7 +11,7 @@ use thiserror::Error;
 pub type Feature = (Position, Position);
 
 #[derive(Error, Debug)]
-enum ReadFeaturesError {
+pub enum ReadFeaturesError {
     #[error("I/O error")]
     Io(#[from] io::Error),
     #[error("missing attribute")]
@@ -20,7 +20,7 @@ enum ReadFeaturesError {
     InvalidAttribute,
 }
 
-fn read_features<R>(
+pub fn read_features<R>(
     reader: &mut R,
     feature_type: &str,
     feature_id: &str,

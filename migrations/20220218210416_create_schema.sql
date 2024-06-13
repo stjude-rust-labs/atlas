@@ -39,6 +39,7 @@ create table features (
     configuration_id integer not null,
 
     name text not null,
+    length integer not null,
 
     foreign key (configuration_id) references configurations (id),
     unique (configuration_id, name)

@@ -4,7 +4,11 @@ use sqlx::postgres::PgPoolOptions;
 use tokio::io;
 use tracing::info;
 
-use crate::{cli::configuration::ImportConfig, features::Feature, store::feature::create_features};
+use crate::{
+    cli::configuration::ImportConfig,
+    features::{merge_features, Feature},
+    store::feature::create_features,
+};
 
 pub(super) async fn import(config: ImportConfig) -> anyhow::Result<()> {
     use crate::store::{
@@ -36,8 +40,13 @@ pub(super) async fn import(config: ImportConfig) -> anyhow::Result<()> {
     info!(id = configuration.id, "imported configuration");
 
     let features = read_features(&config.src, &config.feature_type, &config.feature_name).await?;
-    let names = features.keys().cloned().collect();
-    create_features(&mut tx, configuration.id, &names).await?;
+
+    let mut names: Vec<_> = features.keys().cloned().collect();
+    names.sort();
+
+    let lengths = calculate_feature_lengths(&features, &names)?;
+
+    create_features(&mut tx, configuration.id, &names, &lengths).await?;
 
     info!("imported {} features", names.len());
 
@@ -72,4 +81,28 @@ where
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
     })
     .await?
+}
+
+fn calculate_feature_lengths(
+    features: &HashMap<String, Vec<Feature>>,
+    names: &[String],
+) -> io::Result<Vec<i32>> {
+    let mut lengths = Vec::with_capacity(names.len());
+
+    for name in names {
+        let segments = features.get(name).unwrap();
+        let merged_segments = merge_features(segments);
+
+        let length: usize = merged_segments
+            .into_iter()
+            .map(|(start, end)| usize::from(end) - usize::from(start) + 1)
+            .sum();
+
+        let length =
+            i32::try_from(length).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+
+        lengths.push(length);
+    }
+
+    Ok(lengths)
 }

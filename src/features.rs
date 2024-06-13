@@ -68,7 +68,7 @@ where
     Ok(features)
 }
 
-fn merge_features(features: &[Feature]) -> Vec<Feature> {
+pub fn merge_features(features: &[Feature]) -> Vec<Feature> {
     assert!(!features.is_empty());
 
     let mut features = features.to_vec();

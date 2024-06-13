@@ -11,12 +11,12 @@ values
   (2, 'exon', 'gene_name');
 
 insert into features
-  (configuration_id, name)
+  (configuration_id, name, length)
 values
-  (1, '39_feature_1'),
-  (1, '39_feature_2'),
-  (2, '19_feature_1'),
-  (2, '19_feature_2');
+  (1, '39_feature_1', 8),
+  (1, '39_feature_2', 13),
+  (2, '19_feature_1', 8),
+  (2, '19_feature_2', 13);
 
 insert into samples
   (name)

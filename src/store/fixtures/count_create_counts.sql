@@ -16,7 +16,7 @@ values
   (1, 1, 'reverse', 'RNA-Seq');
 
 insert into features
-  (configuration_id, name)
+  (configuration_id, name, length)
 values
-  (1, 'feature1'),
-  (1, 'feature2');
+  (1, 'feature1', 8),
+  (1, 'feature2', 13);

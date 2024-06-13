@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use futures::TryStreamExt;
 use sqlx::{PgExecutor, Postgres, Transaction};
 
@@ -41,21 +39,22 @@ where
 pub async fn create_features(
     tx: &mut Transaction<'_, Postgres>,
     configuration_id: i32,
-    names: &HashSet<String>,
+    names: &[String],
+    lengths: &[i32],
 ) -> sqlx::Result<Vec<(i32, String)>> {
     use std::iter;
 
     let configuration_ids: Vec<_> = iter::repeat(configuration_id).take(names.len()).collect();
-    let names: Vec<_> = names.iter().cloned().collect();
 
     let mut rows = sqlx::query!(
         "
-        insert into features (configuration_id, name)
-        select * from unnest($1::integer[], $2::text[])
+        insert into features (configuration_id, name, length)
+        select * from unnest($1::integer[], $2::text[], $3::integer[])
         returning id, name
         ",
         &configuration_ids[..],
-        &names[..]
+        names,
+        lengths,
     )
     .fetch(&mut **tx);
 
@@ -88,10 +87,9 @@ mod tests {
         let configuration =
             find_or_create_configuration(&mut tx, annotations.id, "gene", "gene_name").await?;
 
-        let names = [String::from("feature1"), String::from("feature2")]
-            .into_iter()
-            .collect();
-        create_features(&mut tx, configuration.id, &names).await?;
+        let names = [String::from("feature1"), String::from("feature2")];
+        let lengths = [8, 13];
+        create_features(&mut tx, configuration.id, &names, &lengths).await?;
 
         tx.commit().await?;
 
@@ -112,10 +110,9 @@ mod tests {
         let features = find_features(&mut *tx, configuration.id).await?;
         assert!(features.is_empty());
 
-        let names = [String::from("feature1"), String::from("feature2")]
-            .into_iter()
-            .collect();
-        create_features(&mut tx, configuration.id, &names).await?;
+        let names = [String::from("feature1"), String::from("feature2")];
+        let lengths = [8, 13];
+        create_features(&mut tx, configuration.id, &names, &lengths).await?;
 
         let features = find_features(&mut *tx, configuration.id).await?;
         assert_eq!(features.len(), names.len());
@@ -132,10 +129,9 @@ mod tests {
         let configuration =
             find_or_create_configuration(&mut tx, annotations.id, "gene", "gene_name").await?;
 
-        let names = [String::from("feature1"), String::from("feature2")]
-            .into_iter()
-            .collect();
-        create_features(&mut tx, configuration.id, &names).await?;
+        let names = [String::from("feature1"), String::from("feature2")];
+        let lengths = [8, 13];
+        create_features(&mut tx, configuration.id, &names, &lengths).await?;
 
         let features = find_features(&mut *tx, configuration.id).await?;
         assert_eq!(features.len(), names.len());

@@ -1,4 +1,5 @@
 mod format;
+pub mod normalization;
 pub mod reader;
 
 pub use self::format::Format;

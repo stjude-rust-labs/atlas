@@ -1,8 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    io,
-    path::Path,
-};
+use std::{collections::HashMap, io, path::Path};
 
 use sqlx::{postgres::PgPoolOptions, Postgres, Transaction};
 use tokio::{
@@ -170,24 +166,17 @@ async fn import_batch(
 ) -> anyhow::Result<()> {
     use crate::store::{
         count::create_counts,
-        feature::{create_features, find_features},
+        feature::find_features,
         run::{create_runs, runs_exists},
         sample::find_or_create_samples,
     };
 
     assert!(!chunk.is_empty());
 
-    let mut features = find_features(&mut **tx, configuration_id).await?;
-
-    info!("loaded {} features", features.len());
+    let features = find_features(&mut **tx, configuration_id).await?;
 
     if features.is_empty() {
-        let mut names = HashSet::new();
-        // SAFETY: `chunk` is non-empty.
-        let (_, counts) = &chunk[0];
-        names.extend(counts.keys().cloned());
-        features = create_features(tx, configuration_id, &names).await?;
-        info!("created {} features", features.len());
+        anyhow::bail!("configuration {configuration_id} is missing features");
     }
 
     let sample_names: Vec<_> = chunk

@@ -8,7 +8,7 @@ use tokio::{
 use tracing::info;
 
 use crate::{
-    cli::ImportConfig,
+    cli::run::ImportConfig,
     counts::{feature_names_eq, reader::read_counts, Format},
     store::StrandSpecification,
 };

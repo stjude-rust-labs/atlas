@@ -1,11 +1,12 @@
 use std::collections::HashMap;
 
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     routing::get,
     Json, Router,
 };
-use serde::Serialize;
+use futures::{StreamExt, TryStreamExt};
+use serde::{Deserialize, Serialize};
 
 use crate::server::{self, Context, Error};
 
@@ -13,9 +14,27 @@ pub fn router() -> Router<Context> {
     Router::new().route("/runs/:run_id/counts", get(index))
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum Normalize {
+    Tpm,
+}
+
+#[derive(Debug, Deserialize)]
+struct IndexQuery {
+    normalize: Option<Normalize>,
+}
+
+#[derive(Serialize)]
+#[serde(untagged)]
+enum Counts {
+    Normalized(HashMap<String, f64>),
+    Raw(HashMap<String, i32>),
+}
+
 #[derive(Serialize)]
 struct IndexBody {
-    counts: HashMap<String, i32>,
+    counts: Counts,
 }
 
 struct Count {
@@ -39,6 +58,7 @@ struct Count {
 async fn index(
     State(ctx): State<Context>,
     Path(run_id): Path<i32>,
+    Query(params): Query<IndexQuery>,
 ) -> server::Result<Json<IndexBody>> {
     let rows = sqlx::query_as!(
         Count,
@@ -66,7 +86,33 @@ async fn index(
 
     let counts = rows.into_iter().map(|c| (c.name, c.value)).collect();
 
-    Ok(Json(IndexBody { counts }))
+    if let Some(Normalize::Tpm) = params.normalize {
+        let features: HashMap<String, i32> = sqlx::query!(
+            "
+            select features.name, features.length
+            from runs
+            inner join features
+                on runs.configuration_id = features.configuration_id
+            where runs.id = $1
+            ",
+            run_id
+        )
+        .fetch(&ctx.pool)
+        .map(|result| result.map(|row| (row.name, row.length)))
+        .try_collect()
+        .await?;
+
+        let normalized_counts =
+            crate::counts::normalization::tpm::calculate_tpms(&features, &counts).unwrap();
+
+        Ok(Json(IndexBody {
+            counts: Counts::Normalized(normalized_counts),
+        }))
+    } else {
+        Ok(Json(IndexBody {
+            counts: Counts::Raw(counts),
+        }))
+    }
 }
 
 #[cfg(test)]

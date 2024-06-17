@@ -13,12 +13,11 @@ EOS
 
 USER vscode
 
-RUN <<EOS
-curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal
-rustup toolchain install stable
-rustup default stable
-rustup component add clippy rustfmt
-EOS
+RUN curl https://sh.rustup.rs -sSf | sh -s -- \
+    -y \
+    --profile minimal \
+    --default-toolchain stable \
+    --component clippy,rustfmt
 
 RUN cargo install \
     --no-default-features \

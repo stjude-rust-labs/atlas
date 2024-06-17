@@ -15,7 +15,7 @@ bhtsne = { version = "0.5.2", default-features = false }
 clap = { version = "4.4.0", features = ["derive", "env"] }
 dotenvy = "0.15.0"
 futures = { version = "0.3.21", default-features = false, features = ["std"] }
-noodles = { version = "0.75.0", features = ["core", "gff"] }
+noodles = { version = "0.77.0", features = ["core", "gff"] }
 serde = { version = "1.0.136", features = ["derive"] }
 serde_json = "1.0.79"
 sqlx = { version = "0.7.0", features = ["json", "runtime-tokio", "postgres", "time", "tls-native-tls", "uuid"] }

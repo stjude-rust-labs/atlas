@@ -17,12 +17,12 @@ values
     (2, 'exon', 'gene_name');
 
 insert into features
-    (configuration_id, name)
+    (configuration_id, name, length)
 values
-    (1, 'feature_1'),
-    (1, 'feature_2'),
-    (2, 'feature_1'),
-    (2, 'feature_2');
+    (1, 'feature_1', 8),
+    (1, 'feature_2', 13),
+    (2, 'feature_1', 8),
+    (2, 'feature_2', 13);
 
 insert into runs
     (sample_id, configuration_id, strand_specification, data_type)

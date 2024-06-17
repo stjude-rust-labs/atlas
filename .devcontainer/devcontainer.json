@@ -5,8 +5,11 @@
   "service": "devcontainer",
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
 
-  "forwardPorts": [5432],
+  "forwardPorts": [3000, 5432],
   "portsAttributes": {
+    "3000": {
+      "label": "atlas"
+    },
     "5432": {
       "label": "PostgreSQL"
     }

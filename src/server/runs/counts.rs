@@ -17,6 +17,7 @@ pub fn router() -> Router<Context> {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
 enum Normalize {
+    Fpkm,
     Tpm,
 }
 
@@ -86,7 +87,7 @@ async fn index(
 
     let counts = rows.into_iter().map(|c| (c.name, c.value)).collect();
 
-    if let Some(Normalize::Tpm) = params.normalize {
+    if let Some(normalization_method) = params.normalize {
         let features: HashMap<String, i32> = sqlx::query!(
             "
             select features.name, features.length
@@ -102,8 +103,14 @@ async fn index(
         .try_collect()
         .await?;
 
-        let normalized_counts =
-            crate::counts::normalization::tpm::calculate_tpms(&features, &counts).unwrap();
+        let normalized_counts = match normalization_method {
+            Normalize::Fpkm => {
+                crate::counts::normalization::fpkm::calculate_fpkms(&features, &counts).unwrap()
+            }
+            Normalize::Tpm => {
+                crate::counts::normalization::tpm::calculate_tpms(&features, &counts).unwrap()
+            }
+        };
 
         Ok(Json(IndexBody {
             counts: Counts::Normalized(normalized_counts),

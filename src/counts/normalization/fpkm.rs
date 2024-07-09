@@ -1,6 +1,5 @@
 use std::{collections::HashMap, io};
 
-#[allow(dead_code)]
 pub fn calculate_fpkms(
     features: &HashMap<String, i32>,
     counts: &HashMap<String, i32>,

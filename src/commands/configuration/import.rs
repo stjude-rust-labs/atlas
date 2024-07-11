@@ -95,7 +95,7 @@ fn calculate_feature_lengths(
 
         let length: usize = merged_segments
             .into_iter()
-            .map(|(start, end)| usize::from(end) - usize::from(start) + 1)
+            .map(|feature| usize::from(feature.end) - usize::from(feature.start) + 1)
             .sum();
 
         let length =

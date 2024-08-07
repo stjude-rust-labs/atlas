@@ -1,5 +1,6 @@
 mod analyses;
 mod configurations;
+mod counts;
 mod error;
 mod runs;
 mod samples;
@@ -76,6 +77,7 @@ pub async fn serve(config: &ServerConfig, pool: PgPool) -> anyhow::Result<()> {
 fn router() -> Router<Context> {
     samples::router()
         .merge(runs::counts::router())
+        .merge(counts::router())
         .merge(configurations::features::router())
         .merge(configurations::router())
         .merge(analyses::plot::router())

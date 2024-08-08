@@ -1,9 +1,10 @@
 pub mod configuration;
 pub mod run;
-
-use std::net::SocketAddr;
+mod server;
 
 use clap::{Parser, Subcommand};
+
+pub use self::server::ServerConfig;
 
 #[derive(Debug, Parser)]
 #[clap(version)]
@@ -24,17 +25,6 @@ pub enum Commands {
     Server(ServerConfig),
     /// Starts an atlas worker.
     Worker(WorkerConfig),
-}
-
-#[derive(Debug, Parser)]
-pub struct ServerConfig {
-    /// The PostgreSQL database connection URL.
-    #[clap(long, env)]
-    pub database_url: String,
-
-    /// The socket address the server binds to.
-    #[clap(long, env = "BIND_ADDRESS", default_value = "127.0.0.1:3000")]
-    pub bind: SocketAddr,
 }
 
 #[derive(Debug, Parser)]

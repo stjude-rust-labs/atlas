@@ -1,10 +1,11 @@
 pub mod configuration;
 pub mod run;
 mod server;
+mod worker;
 
 use clap::{Parser, Subcommand};
 
-pub use self::server::ServerConfig;
+pub use self::{server::ServerConfig, worker::WorkerConfig};
 
 #[derive(Debug, Parser)]
 #[clap(version)]
@@ -25,11 +26,4 @@ pub enum Commands {
     Server(ServerConfig),
     /// Starts an atlas worker.
     Worker(WorkerConfig),
-}
-
-#[derive(Debug, Parser)]
-pub struct WorkerConfig {
-    /// The PostgreSQL database connection URL.
-    #[clap(long, env)]
-    pub database_url: String,
 }

@@ -31,6 +31,18 @@ pub fn router() -> Router<Context> {
     Router::new().route("/counts", get(index))
 }
 
+/// Shows counts for runs.
+#[utoipa::path(
+    get,
+    path = "/counts",
+    operation_id = "counts-index",
+    params(
+        ("run_ids" = String, Query, description = "A comma-separated list of run IDs"),
+    ),
+    responses(
+        (status = OK, description = "Counts associated with the given run IDs"),
+    ),
+)]
 async fn index(
     State(ctx): State<Context>,
     Query(params): Query<IndexQuery>,

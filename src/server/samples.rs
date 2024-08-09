@@ -4,10 +4,11 @@ use axum::{
     Json, Router,
 };
 use serde::Serialize;
+use time::OffsetDateTime;
 
 use crate::store::StrandSpecification;
 
-use super::{types::Timestampz, Context, Error};
+use super::{Context, Error};
 
 pub fn router() -> Router<Context> {
     Router::new()
@@ -25,7 +26,8 @@ struct SamplesBody<T> {
 struct Sample {
     id: i32,
     name: String,
-    created_at: Timestampz,
+    #[serde(with = "time::serde::rfc3339")]
+    created_at: OffsetDateTime,
 }
 
 /// Lists all samples with runs.
@@ -38,12 +40,9 @@ struct Sample {
     )
 )]
 async fn index(State(ctx): State<Context>) -> super::Result<Json<SamplesBody<Vec<Sample>>>> {
-    let samples = sqlx::query_as!(
-        Sample,
-        r#"select id, name, created_at "created_at: Timestampz" from samples"#
-    )
-    .fetch_all(&ctx.pool)
-    .await?;
+    let samples = sqlx::query_as!(Sample, r#"select id, name, created_at from samples"#)
+        .fetch_all(&ctx.pool)
+        .await?;
 
     Ok(Json(SamplesBody { samples }))
 }

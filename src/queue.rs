@@ -4,9 +4,8 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 use sqlx::{types::Json, PgPool};
+use time::OffsetDateTime;
 use uuid::Uuid;
-
-use crate::server::types::Timestampz;
 
 use self::task::plot;
 
@@ -29,7 +28,7 @@ pub struct Task {
     pub id: Uuid,
     pub status: Status,
     pub message: Json<Message>,
-    pub created_at: Timestampz,
+    pub created_at: OffsetDateTime,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -68,7 +67,7 @@ impl Queue {
                 id,
                 status "status: Status",
                 message "message: Json<Message>",
-                created_at "created_at: Timestampz"
+                created_at
         "#,
             Status::Running as Status,
             Status::Queued as Status,
@@ -160,7 +159,7 @@ mod tests {
                 id,
                 status "status: Status",
                 message "message: Json<Message>",
-                created_at "created_at: Timestampz"
+                created_at
             from tasks
             order by created_at
             "#
@@ -189,7 +188,7 @@ mod tests {
                 id,
                 status "status: Status",
                 message "message: Json<Message>",
-                created_at "created_at: Timestampz"
+                created_at
             from tasks
             where id = $1
             "#,

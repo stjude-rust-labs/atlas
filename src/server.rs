@@ -4,7 +4,6 @@ mod counts;
 mod error;
 mod runs;
 mod samples;
-pub mod types;
 
 use axum::{routing::get, Json, Router};
 use sqlx::PgPool;

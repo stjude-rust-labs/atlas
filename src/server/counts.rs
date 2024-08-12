@@ -5,6 +5,7 @@ use axum::{
     routing::get,
     Json, Router,
 };
+use futures::{StreamExt, TryStreamExt};
 use serde::{Deserialize, Serialize};
 
 use crate::server::Error;
@@ -12,14 +13,29 @@ use crate::server::Error;
 use super::Context;
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum Normalize {
+    Fpkm,
+    Tpm,
+}
+
+#[derive(Debug, Deserialize)]
 struct IndexQuery {
     run_ids: String,
+    normalize: Option<Normalize>,
+}
+
+#[derive(Serialize)]
+#[serde(untagged)]
+enum Counts {
+    Normalized(HashMap<String, f64>),
+    Raw(HashMap<String, i32>),
 }
 
 #[derive(Serialize)]
 struct Run {
     id: i32,
-    counts: HashMap<String, i32>,
+    counts: Counts,
 }
 
 #[derive(Serialize)]
@@ -110,14 +126,57 @@ async fn index(
     let mut runs = Vec::with_capacity(run_ids.len());
     let chunks = counts.chunks_exact(feature_names.len());
 
-    for (id, chunk) in run_ids.into_iter().zip(chunks) {
-        let counts = feature_names
-            .iter()
-            .zip(chunk)
-            .map(|(name, count)| (name.clone(), *count))
-            .collect();
+    if let Some(normalization_method) = params.normalize {
+        let features: HashMap<String, i32> = sqlx::query!(
+            "
+            select features.name, features.length
+            from runs
+            inner join features
+                on runs.configuration_id = features.configuration_id
+            where runs.id = $1
+            ",
+            // SAFETY: `run_ids` is non-empty.
+            run_ids[0]
+        )
+        .fetch(&ctx.pool)
+        .map(|result| result.map(|row| (row.name, row.length)))
+        .try_collect()
+        .await?;
 
-        runs.push(Run { id, counts });
+        for (id, chunk) in run_ids.into_iter().zip(chunks) {
+            let counts = feature_names
+                .iter()
+                .zip(chunk)
+                .map(|(name, count)| (name.clone(), *count))
+                .collect();
+
+            let normalized_counts = match normalization_method {
+                Normalize::Fpkm => {
+                    crate::counts::normalization::fpkm::calculate_fpkms(&features, &counts).unwrap()
+                }
+                Normalize::Tpm => {
+                    crate::counts::normalization::tpm::calculate_tpms(&features, &counts).unwrap()
+                }
+            };
+
+            runs.push(Run {
+                id,
+                counts: Counts::Normalized(normalized_counts),
+            })
+        }
+    } else {
+        for (id, chunk) in run_ids.into_iter().zip(chunks) {
+            let counts = feature_names
+                .iter()
+                .zip(chunk)
+                .map(|(name, count)| (name.clone(), *count))
+                .collect();
+
+            runs.push(Run {
+                id,
+                counts: Counts::Raw(counts),
+            });
+        }
     }
 
     Ok(Json(IndexBody { runs }))

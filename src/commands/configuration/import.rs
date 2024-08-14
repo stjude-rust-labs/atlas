@@ -52,6 +52,8 @@ pub(super) async fn import(config: ImportConfig) -> anyhow::Result<()> {
 
     tx.commit().await?;
 
+    println!("{}", configuration.id);
+
     Ok(())
 }
 

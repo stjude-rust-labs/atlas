@@ -1,6 +1,4 @@
 use ndarray::{Array2, Axis, Zip};
-use ndarray_stats::{interpolate::Midpoint, QuantileExt};
-use noisy_float::types::n64;
 
 #[allow(dead_code)]
 fn normalize(data: Array2<u32>) -> Array2<f64> {
@@ -31,11 +29,17 @@ fn normalize(data: Array2<u32>) -> Array2<f64> {
     // Calculate median of ratios for each sample.
     //
     // All values are either finite or NaN. NaN values are ignored in the median calculation.
-    //
-    // SAFETY: `log_data` is 2D.
-    let mut medians = log_data
-        .quantile_axis_skipnan_mut(Axis(1), n64(0.5), &Midpoint)
-        .unwrap();
+    let mut medians = log_data.map_axis(Axis(1), |row| {
+        let mut values: Vec<_> = row
+            .iter()
+            .filter_map(|&n| if n.is_nan() { None } else { Some(n) })
+            .collect();
+
+        // SAFETY: All values are finite.
+        values.sort_by(|a, b| a.partial_cmp(b).unwrap());
+
+        median(&values)
+    });
 
     // Log to normal: e^n.
     medians.mapv_inplace(|n| E.powf(n));
@@ -50,6 +54,17 @@ fn normalize(data: Array2<u32>) -> Array2<f64> {
         });
 
     normalized_data
+}
+
+// `values` must be non-empty and sorted.
+fn median(values: &[f64]) -> f64 {
+    let i = values.len() / 2;
+
+    if values.len() % 2 == 0 {
+        (values[i - 1] + values[i]) / 2.0
+    } else {
+        values[i]
+    }
 }
 
 #[cfg(test)]
@@ -72,5 +87,14 @@ mod tests {
         let actual = normalize(data);
         let expected = array![[0.0, 16.474, 26.770], [10.198, 16.511, 26.709]];
         assert_approx_eq(&actual, &expected);
+    }
+
+    #[test]
+    fn test_median() {
+        let values = [0.0, 1.0, 2.0];
+        assert_eq!(median(&values), 1.0);
+
+        let values = [0.0, 1.0];
+        assert_eq!(median(&values), 0.5);
     }
 }

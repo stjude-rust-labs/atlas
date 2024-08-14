@@ -1,3 +1,5 @@
+use std::io;
+
 use atlas::{cli::Commands, Cli};
 use clap::Parser;
 
@@ -5,7 +7,7 @@ use clap::Parser;
 async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
 
-    tracing_subscriber::fmt::init();
+    tracing_subscriber::fmt().with_writer(io::stderr).init();
 
     let cli = Cli::parse();
 

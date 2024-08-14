@@ -14,9 +14,10 @@ pub fn router() -> Router<Context> {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 enum Normalize {
     Fpkm,
+    MedianOfRatios,
     Tpm,
 }
 
@@ -94,6 +95,13 @@ async fn index(
         let normalized_counts = match normalization_method {
             Normalize::Fpkm => {
                 crate::counts::normalization::fpkm::calculate_fpkms(&features, &counts).unwrap()
+            }
+            Normalize::MedianOfRatios => {
+                // Applying median of ratios to a single sample is a no-op.
+                counts
+                    .into_iter()
+                    .map(|(name, count)| (name, count as f64))
+                    .collect()
             }
             Normalize::Tpm => {
                 crate::counts::normalization::tpm::calculate_tpms(&features, &counts).unwrap()

@@ -59,7 +59,7 @@ struct SampleFromQuery {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Counts {
+pub struct Run {
     id: i32,
     genome_build: String,
     gene_model: String,
@@ -71,7 +71,7 @@ pub struct Counts {
 #[derive(Serialize)]
 struct SampleWithCounts {
     name: String,
-    counts: Vec<Counts>,
+    runs: Vec<Run>,
 }
 
 /// Shows associated runs for a given sample.
@@ -123,9 +123,9 @@ async fn show(
     let first_row = rows.first().expect("missing first row");
     let name = first_row.name.clone();
 
-    let counts = rows
+    let runs = rows
         .into_iter()
-        .map(|row| Counts {
+        .map(|row| Run {
             id: row.counts_id,
             genome_build: row.counts_genome_build,
             gene_model: row.counts_gene_model,
@@ -135,7 +135,7 @@ async fn show(
         })
         .collect();
 
-    Ok(Json(SampleWithCounts { name, counts }))
+    Ok(Json(SampleWithCounts { name, runs }))
 }
 
 #[cfg(test)]
@@ -197,7 +197,7 @@ mod tests {
             actual,
             json!({
                 "name": "sample_1",
-                "counts": [{
+                "runs": [{
                     "id": 1,
                     "genomeBuild": "GRCh38.p13",
                     "geneModel": "GENCODE 39",

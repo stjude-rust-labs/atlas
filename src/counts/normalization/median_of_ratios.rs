@@ -1,7 +1,6 @@
 use ndarray::{Array2, Axis, Zip};
 
-#[allow(dead_code)]
-fn normalize(data: Array2<u32>) -> Array2<f64> {
+pub fn normalize(data: Array2<u32>) -> Array2<f64> {
     use std::f64::consts::E;
 
     assert!(!data.is_empty());

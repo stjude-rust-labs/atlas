@@ -5,6 +5,7 @@ use axum::{
     routing::get,
     Json, Router,
 };
+use ndarray::{Array2, Axis};
 use serde::{Deserialize, Serialize};
 
 use crate::server::Error;
@@ -12,9 +13,10 @@ use crate::server::Error;
 use super::Context;
 
 #[derive(Debug, Deserialize)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 enum Normalize {
     Fpkm,
+    MedianOfRatios,
     Tpm,
 }
 
@@ -62,7 +64,7 @@ async fn index(
     State(ctx): State<Context>,
     Query(params): Query<IndexQuery>,
 ) -> super::Result<Json<IndexBody>> {
-    use crate::store::feature;
+    use crate::{counts::normalization::median_of_ratios, store::feature};
 
     const DELIMITER: char = ',';
 
@@ -125,34 +127,64 @@ async fn index(
     }
 
     let mut runs = Vec::with_capacity(run_ids.len());
-    let chunks = counts.chunks_exact(feature_names.len());
 
     if let Some(normalization_method) = params.normalize {
-        // SAFETY: `run_ids` is non-empty.
-        let features = feature::find_lengths_by_run_id(&ctx.pool, run_ids[0]).await?;
+        if matches!(normalization_method, Normalize::MedianOfRatios) {
+            let values: Vec<_> = counts.into_iter().map(|n| n as u32).collect();
+            let counts = Array2::from_shape_vec((run_ids.len(), feature_names.len()), values)
+                .map_err(|e| super::Error::Anyhow(e.into()))?;
 
-        for (id, chunk) in run_ids.into_iter().zip(chunks) {
-            let counts = feature_names
-                .iter()
-                .zip(chunk)
-                .map(|(name, count)| (name.clone(), *count))
-                .collect();
+            let normalized_counts = median_of_ratios::normalize(counts);
 
-            let normalized_counts = match normalization_method {
-                Normalize::Fpkm => {
-                    crate::counts::normalization::fpkm::calculate_fpkms(&features, &counts).unwrap()
-                }
-                Normalize::Tpm => {
-                    crate::counts::normalization::tpm::calculate_tpms(&features, &counts).unwrap()
-                }
-            };
+            for (id, row) in run_ids
+                .into_iter()
+                .zip(normalized_counts.axis_iter(Axis(0)))
+            {
+                let counts = feature_names
+                    .iter()
+                    .zip(row)
+                    .map(|(name, count)| (name.clone(), *count))
+                    .collect();
 
-            runs.push(Run {
-                id,
-                counts: Counts::Normalized(normalized_counts),
-            })
+                runs.push(Run {
+                    id,
+                    counts: Counts::Normalized(counts),
+                });
+            }
+        } else {
+            let chunks = counts.chunks_exact(feature_names.len());
+
+            // SAFETY: `run_ids` is non-empty.
+            let features = feature::find_lengths_by_run_id(&ctx.pool, run_ids[0]).await?;
+
+            for (id, chunk) in run_ids.into_iter().zip(chunks) {
+                let counts = feature_names
+                    .iter()
+                    .zip(chunk)
+                    .map(|(name, count)| (name.clone(), *count))
+                    .collect();
+
+                let normalized_counts = match normalization_method {
+                    Normalize::Fpkm => {
+                        crate::counts::normalization::fpkm::calculate_fpkms(&features, &counts)
+                            .unwrap()
+                    }
+                    Normalize::MedianOfRatios => unreachable!(),
+                    Normalize::Tpm => {
+                        crate::counts::normalization::tpm::calculate_tpms(&features, &counts)
+                            .unwrap()
+                    }
+                };
+
+                runs.push(Run {
+                    id,
+                    counts: Counts::Normalized(normalized_counts),
+                })
+            }
         }
     } else {
+        let chunks = counts.chunks_exact(feature_names.len());
+
         for (id, chunk) in run_ids.into_iter().zip(chunks) {
             let counts = feature_names
                 .iter()

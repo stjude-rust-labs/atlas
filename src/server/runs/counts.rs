@@ -5,7 +5,6 @@ use axum::{
     routing::get,
     Json, Router,
 };
-use futures::{StreamExt, TryStreamExt};
 use serde::{Deserialize, Serialize};
 
 use crate::server::{self, Context, Error};
@@ -61,6 +60,8 @@ async fn index(
     Path(run_id): Path<i32>,
     Query(params): Query<IndexQuery>,
 ) -> server::Result<Json<IndexBody>> {
+    use crate::store::feature;
+
     let rows = sqlx::query_as!(
         Count,
         r#"
@@ -88,20 +89,7 @@ async fn index(
     let counts = rows.into_iter().map(|c| (c.name, c.value)).collect();
 
     if let Some(normalization_method) = params.normalize {
-        let features: HashMap<String, i32> = sqlx::query!(
-            "
-            select features.name, features.length
-            from runs
-            inner join features
-                on runs.configuration_id = features.configuration_id
-            where runs.id = $1
-            ",
-            run_id
-        )
-        .fetch(&ctx.pool)
-        .map(|result| result.map(|row| (row.name, row.length)))
-        .try_collect()
-        .await?;
+        let features = feature::find_lengths_by_run_id(&ctx.pool, run_id).await?;
 
         let normalized_counts = match normalization_method {
             Normalize::Fpkm => {

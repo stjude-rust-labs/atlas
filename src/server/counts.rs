@@ -5,7 +5,6 @@ use axum::{
     routing::get,
     Json, Router,
 };
-use futures::{StreamExt, TryStreamExt};
 use serde::{Deserialize, Serialize};
 
 use crate::server::Error;
@@ -63,6 +62,8 @@ async fn index(
     State(ctx): State<Context>,
     Query(params): Query<IndexQuery>,
 ) -> super::Result<Json<IndexBody>> {
+    use crate::store::feature;
+
     const DELIMITER: char = ',';
 
     let run_ids: Vec<i32> = params
@@ -127,21 +128,8 @@ async fn index(
     let chunks = counts.chunks_exact(feature_names.len());
 
     if let Some(normalization_method) = params.normalize {
-        let features: HashMap<String, i32> = sqlx::query!(
-            "
-            select features.name, features.length
-            from runs
-            inner join features
-                on runs.configuration_id = features.configuration_id
-            where runs.id = $1
-            ",
-            // SAFETY: `run_ids` is non-empty.
-            run_ids[0]
-        )
-        .fetch(&ctx.pool)
-        .map(|result| result.map(|row| (row.name, row.length)))
-        .try_collect()
-        .await?;
+        // SAFETY: `run_ids` is non-empty.
+        let features = feature::find_lengths_by_run_id(&ctx.pool, run_ids[0]).await?;
 
         for (id, chunk) in run_ids.into_iter().zip(chunks) {
             let counts = feature_names

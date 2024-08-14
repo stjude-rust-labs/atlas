@@ -1,4 +1,6 @@
-use futures::TryStreamExt;
+use std::collections::HashMap;
+
+use futures::{StreamExt, TryStreamExt};
 use sqlx::{PgExecutor, Postgres, Transaction};
 
 pub async fn count<'a, E>(executor: E, configuration_id: i32) -> sqlx::Result<i64>
@@ -65,6 +67,29 @@ pub async fn create_features(
     }
 
     Ok(names)
+}
+
+pub async fn find_lengths_by_run_id<'a, E>(
+    executor: E,
+    run_id: i32,
+) -> sqlx::Result<HashMap<String, i32>>
+where
+    E: PgExecutor<'a>,
+{
+    sqlx::query!(
+        "
+        select features.name, features.length
+        from runs
+        inner join features
+            on runs.configuration_id = features.configuration_id
+        where runs.id = $1
+        ",
+        run_id
+    )
+    .fetch(executor)
+    .map(|result| result.map(|row| (row.name, row.length)))
+    .try_collect()
+    .await
 }
 
 #[cfg(test)]

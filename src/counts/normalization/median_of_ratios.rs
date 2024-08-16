@@ -34,10 +34,15 @@ pub fn normalize(data: Array2<u32>) -> Array2<f64> {
             .filter_map(|&n| if n.is_nan() { None } else { Some(n) })
             .collect();
 
-        // SAFETY: All values are finite.
-        values.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        if values.is_empty() {
+            1.0
+        } else {
+            // SAFETY: All values are finite.
+            values.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
-        median(&values)
+            // SAFETY: `values` is non-empty and sorted.
+            median(&values)
+        }
     });
 
     // Log to normal: e^n.

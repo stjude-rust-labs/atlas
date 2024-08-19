@@ -28,6 +28,7 @@ struct IndexBody<T> {
 struct Feature {
     id: i32,
     name: String,
+    length: i32,
 }
 
 /// Lists features in a configuration.
@@ -57,7 +58,8 @@ async fn index(
         r#"
         select
             id,
-            name
+            name,
+            length
         from features
         where configuration_id = $1
         "#,
@@ -153,9 +155,11 @@ mod tests {
                 "features": [{
                     "id": 1,
                     "name": "39_feature_1",
+                    "length": 8,
                 }, {
                     "id": 2,
                     "name": "39_feature_2",
+                    "length": 13,
                 }]
             })
         );

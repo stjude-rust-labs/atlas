@@ -92,7 +92,7 @@ mod tests {
 
     use super::*;
     use crate::store::{
-        annotations::find_or_create_annotations, configuration::find_or_create_configuration,
+        annotations::find_or_create_annotations, configuration::create_configuration,
         sample::find_or_create_sample,
     };
 
@@ -103,7 +103,7 @@ mod tests {
         let annotations = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
 
         let configuration =
-            find_or_create_configuration(&mut tx, annotations.id, "gene", "gene_name").await?;
+            create_configuration(&mut tx, annotations.id, "gene", "gene_name").await?;
 
         let sample = find_or_create_sample(&mut tx, "sample1").await?;
         create_run(
@@ -131,7 +131,7 @@ mod tests {
         let annotations = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
 
         let configuration =
-            find_or_create_configuration(&mut tx, annotations.id, "gene", "gene_name").await?;
+            create_configuration(&mut tx, annotations.id, "gene", "gene_name").await?;
 
         let sample = find_or_create_sample(&mut tx, "sample1").await?;
         let sample_ids = [sample.id];

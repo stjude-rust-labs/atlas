@@ -16,7 +16,7 @@ pub fn router() -> Router<Context> {
     Router::new()
         .route("/configurations/:configuration_id/features", get(index))
         .route(
-            "/configurations/:configuration_id/features/:feature_name",
+            "/configurations/:configuration_id/features/:feature_id",
             get(show),
         )
 }
@@ -106,18 +106,18 @@ struct ShowResponse {
 /// Shows counts for samples with the given configuration ID and feature name.
 #[utoipa::path(
     get,
-    path = "/configurations/{configuration_id}/features/{feature_name}",
+    path = "/configurations/{configuration_id}/features/{feature_id}",
     operation_id = "configurations-features-show",
     params(
         ("configuration_id" = i32, Path, description = "Configuration ID"),
-        ("feature_name" = String, Path, description = "Feature name"),
+        ("feature_id" = i32, Path, description = "Feature ID"),
     ),
     responses(
-        (status = OK, description = "Counts associated with the given configuration ID and feature name"),
+        (status = OK, description = "Counts associated with the given configuration ID and feature ID"),
     ),
 )]
 async fn show(
-    Path((configuration_id, feature_name)): Path<(i32, String)>,
+    Path((configuration_id, feature_id)): Path<(i32, i32)>,
     State(ctx): State<Context>,
 ) -> server::Result<Json<ShowResponse>> {
     let counts = sqlx::query!(
@@ -133,10 +133,10 @@ async fn show(
         inner join features
             on features.id = counts.feature_id
         where runs.configuration_id = $1
-            and features.name = $2
+            and features.id = $2
         ",
         configuration_id,
-        feature_name,
+        feature_id,
     )
     .fetch(&ctx.pool)
     .map(|result| result.map(|record| (record.name, record.value)))
@@ -207,7 +207,7 @@ mod tests {
     #[sqlx::test(fixtures("features"))]
     async fn test_show(pool: PgPool) -> anyhow::Result<()> {
         let request = Request::builder()
-            .uri("/configurations/1/features/39_feature_1")
+            .uri("/configurations/1/features/1")
             .body(Body::empty())?;
         let response = app(pool).oneshot(request).await?;
         assert_eq!(response.status(), StatusCode::OK);

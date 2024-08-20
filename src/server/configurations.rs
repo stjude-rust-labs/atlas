@@ -4,7 +4,7 @@ use axum::{extract::State, routing::get, Json, Router};
 use serde::Serialize;
 
 use super::Context;
-use crate::store::{configuration, StrandSpecification};
+use crate::store::configuration;
 
 pub fn router() -> Router<Context> {
     Router::new().route("/configurations", get(index))
@@ -14,17 +14,6 @@ pub fn router() -> Router<Context> {
 struct IndexResponse {
     #[schema(inline)]
     configurations: Vec<configuration::AllResult>,
-}
-
-#[derive(Debug, Serialize, sqlx::FromRow)]
-#[serde(rename_all = "camelCase")]
-struct Configuration {
-    id: i32,
-    annotation_name: String,
-    annotation_genome_build: String,
-    feature_type: String,
-    feature_name: String,
-    strand_specification: StrandSpecification,
 }
 
 /// Lists all configurations.

@@ -66,14 +66,18 @@ mod tests {
             json!({
                 "configurations": [{
                     "id": 1,
-                    "annotationName": "GENCODE 39",
-                    "annotationGenomeBuild": "GRCh38.p13",
+                    "annotation": {
+                        "name": "GENCODE 39",
+                        "genomeBuild": "GRCh38.p13",
+                    },
                     "featureType": "exon",
                     "featureName": "gene_name",
                 }, {
                     "id": 2,
-                    "annotationName": "GENCODE 19",
-                    "annotationGenomeBuild": "GRCh37.p13",
+                    "annotation": {
+                        "name": "GENCODE 19",
+                        "genomeBuild": "GRCh37.p13",
+                    },
                     "featureType": "exon",
                     "featureName": "gene_name",
                 }]

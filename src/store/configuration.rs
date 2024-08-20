@@ -1,12 +1,19 @@
 use serde::Serialize;
 use sqlx::{PgExecutor, PgPool, Postgres, Transaction};
 
-#[derive(Debug, Serialize, Eq, PartialEq, utoipa::ToSchema)]
+#[derive(Debug, Serialize, Eq, PartialEq, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct Annotation {
+    name: String,
+    genome_build: String,
+}
+
+#[derive(Debug, Serialize, Eq, PartialEq, sqlx::FromRow, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AllResult {
     id: i32,
-    annotation_name: String,
-    annotation_genome_build: String,
+    #[sqlx(flatten)]
+    annotation: Annotation,
     feature_type: String,
     feature_name: String,
 }
@@ -15,13 +22,12 @@ pub async fn all<'a, E>(executor: E) -> sqlx::Result<Vec<AllResult>>
 where
     E: PgExecutor<'a>,
 {
-    sqlx::query_as!(
-        AllResult,
+    sqlx::query_as(
         r#"
         select
             configurations.id,
-            annotations.name as annotation_name,
-            annotations.genome_build as annotation_genome_build,
+            annotations.name,
+            annotations.genome_build,
             configurations.feature_type,
             configurations.feature_name
         from configurations
@@ -87,8 +93,10 @@ mod tests {
             configurations,
             [AllResult {
                 id: 1,
-                annotation_name: String::from("GENCODE 40"),
-                annotation_genome_build: String::from("GRCh38.p13"),
+                annotation: Annotation {
+                    name: String::from("GENCODE 40"),
+                    genome_build: String::from("GRCh38.p13"),
+                },
                 feature_type: String::from("gene"),
                 feature_name: String::from("gene_name"),
             }]

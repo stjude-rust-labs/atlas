@@ -8,10 +8,7 @@ use serde::Serialize;
 use crate::server::{self, Context};
 
 pub fn router() -> Router<Context> {
-    Router::new().route(
-        "/configurations/:configuration_id/features/:feature_id/runs",
-        get(index),
-    )
+    Router::new().route("/features/:feature_id/runs", get(index))
 }
 
 #[derive(Serialize)]
@@ -26,15 +23,14 @@ struct Run {
 
 #[utoipa::path(
     get,
-    path = "/configurations/{configuration_id}/features/{feature_id}/runs",
-    operation_id = "configurations-features-runs-index",
+    path = "/features/{feature_id}/runs",
+    operation_id = "features-runs-index",
     params(
-        ("configuration_id" = i32, Path, description = "Configuration ID"),
         ("feature_id" = i32, Path, description = "Feature ID"),
     ),
 )]
 async fn index(
-    Path((configuration_id, feature_id)): Path<(i32, i32)>,
+    Path(feature_id): Path<i32>,
     State(ctx): State<Context>,
 ) -> server::Result<Json<IndexBody<Vec<Run>>>> {
     let runs = sqlx::query_as!(
@@ -47,10 +43,9 @@ async fn index(
             on counts.run_id = runs.id
         inner join features
             on features.id = counts.feature_id
-        where runs.configuration_id = $1
-            and features.id = $2
+        where
+            features.id = $1
         ",
-        configuration_id,
         feature_id,
     )
     .fetch_all(&ctx.pool)

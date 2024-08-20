@@ -2,6 +2,7 @@ mod analyses;
 mod configurations;
 mod counts;
 mod error;
+mod features;
 mod runs;
 mod samples;
 
@@ -30,11 +31,11 @@ pub type Result<T> = std::result::Result<T, Error>;
     paths(
         analyses::plot::create,
         analyses::plot::show,
-        configurations::index,
         configurations::features::index,
-        configurations::features::runs::index,
         configurations::features::show,
+        configurations::index,
         counts::index,
+        features::runs::index,
         runs::counts::index,
         samples::index,
         samples::show,
@@ -78,8 +79,8 @@ pub async fn serve(config: &ServerConfig, pool: PgPool) -> anyhow::Result<()> {
 fn router() -> Router<Context> {
     samples::router()
         .merge(runs::counts::router())
+        .merge(features::runs::router())
         .merge(counts::router())
-        .merge(configurations::features::runs::router())
         .merge(configurations::features::router())
         .merge(configurations::router())
         .merge(analyses::plot::router())

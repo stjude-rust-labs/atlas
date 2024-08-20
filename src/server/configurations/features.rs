@@ -3,12 +3,12 @@ pub mod runs;
 use std::collections::HashMap;
 
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     routing::get,
     Json, Router,
 };
 use futures::{StreamExt, TryStreamExt};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::server::{self, Context, Error};
 
@@ -19,6 +19,11 @@ pub fn router() -> Router<Context> {
             "/configurations/:configuration_id/features/:feature_name",
             get(show),
         )
+}
+
+#[derive(Deserialize)]
+struct IndexQuery {
+    q: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -40,6 +45,7 @@ struct Feature {
     operation_id = "configurations-features-index",
     params(
         ("configuration_id" = i32, Path, description = "Configuration ID"),
+        ("q", Query, description = "A search pattern of the feature name")
     ),
     responses(
         (status = OK, description = "Features associated with the given configuration"),
@@ -48,6 +54,7 @@ struct Feature {
 )]
 async fn index(
     Path(configuration_id): Path<i32>,
+    Query(params): Query<IndexQuery>,
     State(ctx): State<Context>,
 ) -> server::Result<Json<IndexBody<Vec<Feature>>>> {
     use crate::store::configuration;
@@ -56,19 +63,37 @@ async fn index(
         return Err(Error::NotFound);
     }
 
-    let features = sqlx::query_as(
-        r#"
-        select
-            id,
-            name,
-            length
-        from features
-        where configuration_id = $1
-        "#,
-    )
-    .bind(configuration_id)
-    .fetch_all(&ctx.pool)
-    .await?;
+    let features = if let Some(q) = params.q {
+        sqlx::query_as(
+            r#"
+            select
+                id,
+                name,
+                length
+            from features
+            where configuration_id = $1
+                and name ilike concat('%', $2, '%')
+            "#,
+        )
+        .bind(configuration_id)
+        .bind(q)
+        .fetch_all(&ctx.pool)
+        .await?
+    } else {
+        sqlx::query_as(
+            r#"
+            select
+                id,
+                name,
+                length
+            from features
+            where configuration_id = $1
+            "#,
+        )
+        .bind(configuration_id)
+        .fetch_all(&ctx.pool)
+        .await?
+    };
 
     Ok(Json(IndexBody { features }))
 }

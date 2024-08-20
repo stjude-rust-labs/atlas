@@ -32,6 +32,7 @@ pub type Result<T> = std::result::Result<T, Error>;
         analyses::plot::show,
         configurations::index,
         configurations::features::index,
+        configurations::features::runs::index,
         configurations::features::show,
         counts::index,
         runs::counts::index,
@@ -78,6 +79,7 @@ fn router() -> Router<Context> {
     samples::router()
         .merge(runs::counts::router())
         .merge(counts::router())
+        .merge(configurations::features::runs::router())
         .merge(configurations::features::router())
         .merge(configurations::router())
         .merge(analyses::plot::router())

@@ -48,7 +48,8 @@ async fn index(State(ctx): State<Context>) -> super::Result<Json<SamplesBody<Vec
 }
 
 struct SampleFromQuery {
-    name: String,
+    sample_id: i32,
+    sample_name: String,
     counts_id: i32,
     counts_data_type: String,
     counts_configuration_id: i32,
@@ -66,6 +67,7 @@ pub struct Run {
 
 #[derive(Serialize)]
 struct SampleWithCounts {
+    id: i32,
     name: String,
     runs: Vec<Run>,
 }
@@ -96,7 +98,8 @@ async fn show(
         SampleFromQuery,
         r#"
             select
-                samples.name,
+                samples.id as sample_id,
+                samples.name as sample_name,
                 runs.id as counts_id,
                 runs.configuration_id as counts_configuration_id,
                 runs.strand_specification as "counts_strand_specification: _",
@@ -118,7 +121,8 @@ async fn show(
     }
 
     let first_row = rows.first().expect("missing first row");
-    let name = first_row.name.clone();
+    let id = first_row.sample_id;
+    let name = first_row.sample_name.clone();
 
     let runs = rows
         .into_iter()
@@ -131,7 +135,7 @@ async fn show(
         .collect();
 
     Ok(Json(ShowResponse {
-        sample: SampleWithCounts { name, runs },
+        sample: SampleWithCounts { id, name, runs },
     }))
 }
 
@@ -194,6 +198,7 @@ mod tests {
             actual,
             json!({
                 "sample": {
+                    "id": 1,
                     "name": "sample_1",
                     "runs": [{
                         "id": 1,

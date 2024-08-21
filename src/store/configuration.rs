@@ -47,7 +47,7 @@ pub async fn exists(pool: &PgPool, id: i32) -> sqlx::Result<bool> {
     .await
 }
 
-pub async fn create_configuration(
+pub async fn create(
     tx: &mut Transaction<'_, Postgres>,
     annotations_id: i32,
     feature_type: &str,
@@ -104,23 +104,23 @@ mod tests {
     }
 
     #[sqlx::test]
-    async fn test_find_or_create_configuration(pool: PgPool) -> sqlx::Result<()> {
+    async fn test_create(pool: PgPool) -> sqlx::Result<()> {
         let mut tx = pool.begin().await?;
 
         let gencode_21 = find_or_create_annotations(&mut tx, "GENCODE 21", "GRCh38").await?;
         let gencode_40 = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
 
-        let id = create_configuration(&mut tx, gencode_40.id, "gene", "gene_name").await?;
+        let id = create(&mut tx, gencode_40.id, "gene", "gene_name").await?;
         assert_eq!(id, 1);
 
-        let id = create_configuration(&mut tx, gencode_40.id, "exon", "gene_id").await?;
+        let id = create(&mut tx, gencode_40.id, "exon", "gene_id").await?;
         assert_eq!(id, 2);
 
-        let id = create_configuration(&mut tx, gencode_21.id, "gene", "gene_name").await?;
+        let id = create(&mut tx, gencode_21.id, "gene", "gene_name").await?;
         assert_eq!(id, 3);
 
         assert!(matches!(
-            create_configuration(&mut tx, gencode_40.id, "gene", "gene_name").await,
+            create(&mut tx, gencode_40.id, "gene", "gene_name").await,
             Err(sqlx::Error::Database(e)) if e.is_unique_violation()
         ));
 

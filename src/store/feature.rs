@@ -97,9 +97,7 @@ mod tests {
     use sqlx::PgPool;
 
     use super::*;
-    use crate::store::{
-        annotations::find_or_create_annotations, configuration::create_configuration,
-    };
+    use crate::store::{annotations::find_or_create_annotations, configuration};
 
     #[sqlx::test]
     async fn test_count(pool: PgPool) -> sqlx::Result<()> {
@@ -110,7 +108,7 @@ mod tests {
         let annotations = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
 
         let configuration_id =
-            create_configuration(&mut tx, annotations.id, "gene", "gene_name").await?;
+            configuration::create(&mut tx, annotations.id, "gene", "gene_name").await?;
 
         let names = [String::from("feature1"), String::from("feature2")];
         let lengths = [8, 13];
@@ -130,7 +128,7 @@ mod tests {
         let annotations = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
 
         let configuration_id =
-            create_configuration(&mut tx, annotations.id, "gene", "gene_name").await?;
+            configuration::create(&mut tx, annotations.id, "gene", "gene_name").await?;
 
         let features = find_features(&mut *tx, configuration_id).await?;
         assert!(features.is_empty());
@@ -152,7 +150,7 @@ mod tests {
         let annotations = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
 
         let configuration_id =
-            create_configuration(&mut tx, annotations.id, "gene", "gene_name").await?;
+            configuration::create(&mut tx, annotations.id, "gene", "gene_name").await?;
 
         let names = [String::from("feature1"), String::from("feature2")];
         let lengths = [8, 13];

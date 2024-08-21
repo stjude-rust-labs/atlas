@@ -34,6 +34,7 @@ pub type Result<T> = std::result::Result<T, Error>;
         configurations::features::index,
         configurations::features::show,
         configurations::index,
+        configurations::show,
         counts::index,
         features::runs::index,
         runs::counts::index,

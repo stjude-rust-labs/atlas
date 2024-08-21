@@ -1,19 +1,25 @@
 pub mod features;
 
-use axum::{extract::State, routing::get, Json, Router};
+use axum::{
+    extract::{Path, State},
+    routing::get,
+    Json, Router,
+};
 use serde::Serialize;
 
-use super::Context;
-use crate::store::configuration;
+use super::{Context, Error};
+use crate::store::configuration::{self, Configuration};
 
 pub fn router() -> Router<Context> {
-    Router::new().route("/configurations", get(index))
+    Router::new()
+        .route("/configurations", get(index))
+        .route("/configurations/:id", get(show))
 }
 
 #[derive(Serialize, utoipa::ToSchema)]
 struct IndexResponse {
     #[schema(inline)]
-    configurations: Vec<configuration::AllResult>,
+    configurations: Vec<Configuration>,
 }
 
 /// Lists all configurations.
@@ -28,6 +34,35 @@ struct IndexResponse {
 async fn index(State(ctx): State<Context>) -> super::Result<Json<IndexResponse>> {
     let configurations = configuration::all(&ctx.pool).await?;
     Ok(Json(IndexResponse { configurations }))
+}
+
+#[derive(Serialize)]
+struct ShowResponse {
+    configuration: Configuration,
+}
+
+/// Find a configuration by ID.
+#[utoipa::path(
+    get,
+    path = "/configurations/{id}",
+    operation_id = "configurations-show",
+    params(
+        ("id" = i32, Path, description = "Configuration ID"),
+    ),
+    responses(
+        (status = OK, description = "The configurations of the given ID"),
+        (status = NOT_FOUND, description = "The configuration does not exist"),
+    ),
+)]
+async fn show(
+    State(ctx): State<Context>,
+    Path(id): Path<i32>,
+) -> super::Result<Json<ShowResponse>> {
+    let configuration = configuration::find(&ctx.pool, id)
+        .await?
+        .ok_or(Error::NotFound)?;
+
+    Ok(Json(ShowResponse { configuration }))
 }
 
 #[cfg(test)]
@@ -83,6 +118,18 @@ mod tests {
                 }]
             })
         );
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures("configurations"))]
+    async fn test_show(pool: PgPool) -> anyhow::Result<()> {
+        let request = Request::builder()
+            .uri("/configurations/3")
+            .body(Body::empty())?;
+
+        let response = app(pool).oneshot(request).await?;
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
 
         Ok(())
     }

@@ -10,7 +10,7 @@ pub struct Annotation {
 
 #[derive(Debug, Serialize, Eq, PartialEq, sqlx::FromRow, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct AllResult {
+pub struct Configuration {
     id: i32,
     #[sqlx(flatten)]
     annotation: Annotation,
@@ -18,7 +18,7 @@ pub struct AllResult {
     feature_name: String,
 }
 
-pub async fn all<'a, E>(executor: E) -> sqlx::Result<Vec<AllResult>>
+pub async fn all<'a, E>(executor: E) -> sqlx::Result<Vec<Configuration>>
 where
     E: PgExecutor<'a>,
 {
@@ -35,6 +35,29 @@ where
         "#,
     )
     .fetch_all(executor)
+    .await
+}
+
+pub async fn find<'a, E>(executor: E, id: i32) -> sqlx::Result<Option<Configuration>>
+where
+    E: PgExecutor<'a>,
+{
+    sqlx::query_as(
+        r#"
+        select
+            configurations.id,
+            annotations.name,
+            annotations.genome_build,
+            configurations.feature_type,
+            configurations.feature_name
+        from configurations
+        inner join annotations
+            on configurations.annotation_id = annotations.id
+        where configurations.id = $1
+        "#,
+    )
+    .bind(id)
+    .fetch_optional(executor)
     .await
 }
 
@@ -82,7 +105,7 @@ mod tests {
 
         assert_eq!(
             configurations,
-            [AllResult {
+            [Configuration {
                 id: 1,
                 annotation: Annotation {
                     name: String::from("GENCODE 40"),
@@ -92,6 +115,27 @@ mod tests {
                 feature_name: String::from("gene_name"),
             }]
         );
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures("configuration_all"))]
+    async fn test_find(pool: PgPool) -> sqlx::Result<()> {
+        let actual = find(&pool, 1).await?;
+
+        let expected = Configuration {
+            id: 1,
+            annotation: Annotation {
+                name: String::from("GENCODE 40"),
+                genome_build: String::from("GRCh38.p13"),
+            },
+            feature_type: String::from("gene"),
+            feature_name: String::from("gene_name"),
+        };
+
+        assert_eq!(actual, Some(expected));
+
+        assert!(find(&pool, 2).await?.is_none());
 
         Ok(())
     }

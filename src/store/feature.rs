@@ -109,16 +109,16 @@ mod tests {
 
         let annotations = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
 
-        let configuration =
+        let configuration_id =
             create_configuration(&mut tx, annotations.id, "gene", "gene_name").await?;
 
         let names = [String::from("feature1"), String::from("feature2")];
         let lengths = [8, 13];
-        create_features(&mut tx, configuration.id, &names, &lengths).await?;
+        create_features(&mut tx, configuration_id, &names, &lengths).await?;
 
         tx.commit().await?;
 
-        assert_eq!(count(&pool, configuration.id).await?, 2);
+        assert_eq!(count(&pool, configuration_id).await?, 2);
 
         Ok(())
     }
@@ -129,17 +129,17 @@ mod tests {
 
         let annotations = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
 
-        let configuration =
+        let configuration_id =
             create_configuration(&mut tx, annotations.id, "gene", "gene_name").await?;
 
-        let features = find_features(&mut *tx, configuration.id).await?;
+        let features = find_features(&mut *tx, configuration_id).await?;
         assert!(features.is_empty());
 
         let names = [String::from("feature1"), String::from("feature2")];
         let lengths = [8, 13];
-        create_features(&mut tx, configuration.id, &names, &lengths).await?;
+        create_features(&mut tx, configuration_id, &names, &lengths).await?;
 
-        let features = find_features(&mut *tx, configuration.id).await?;
+        let features = find_features(&mut *tx, configuration_id).await?;
         assert_eq!(features.len(), names.len());
 
         Ok(())
@@ -151,14 +151,14 @@ mod tests {
 
         let annotations = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
 
-        let configuration =
+        let configuration_id =
             create_configuration(&mut tx, annotations.id, "gene", "gene_name").await?;
 
         let names = [String::from("feature1"), String::from("feature2")];
         let lengths = [8, 13];
-        create_features(&mut tx, configuration.id, &names, &lengths).await?;
+        create_features(&mut tx, configuration_id, &names, &lengths).await?;
 
-        let features = find_features(&mut *tx, configuration.id).await?;
+        let features = find_features(&mut *tx, configuration_id).await?;
         assert_eq!(features.len(), names.len());
 
         Ok(())

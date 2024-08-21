@@ -102,13 +102,13 @@ mod tests {
 
         let annotations = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
 
-        let configuration =
+        let configuration_id =
             create_configuration(&mut tx, annotations.id, "gene", "gene_name").await?;
 
         let sample = find_or_create_sample(&mut tx, "sample1").await?;
         create_run(
             &mut tx,
-            configuration.id,
+            configuration_id,
             sample.id,
             StrandSpecification::Reverse,
             "RNA-Seq",
@@ -116,7 +116,7 @@ mod tests {
         .await?;
 
         let sample_ids = [sample.id];
-        assert!(runs_exists(&mut *tx, configuration.id, &sample_ids).await?);
+        assert!(runs_exists(&mut *tx, configuration_id, &sample_ids).await?);
 
         let sample_ids = [1000];
         assert!(!runs_exists(&mut *tx, 1000, &sample_ids).await?);
@@ -130,7 +130,7 @@ mod tests {
 
         let annotations = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
 
-        let configuration =
+        let configuration_id =
             create_configuration(&mut tx, annotations.id, "gene", "gene_name").await?;
 
         let sample = find_or_create_sample(&mut tx, "sample1").await?;
@@ -138,7 +138,7 @@ mod tests {
 
         let run_ids = create_runs(
             &mut tx,
-            configuration.id,
+            configuration_id,
             &sample_ids,
             StrandSpecification::Reverse,
             "RNA-Seq",

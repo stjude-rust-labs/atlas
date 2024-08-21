@@ -29,7 +29,7 @@ pub(super) async fn import(config: ImportConfig) -> anyhow::Result<()> {
 
     info!(id = annotations.id, "loaded annotations");
 
-    let configuration = create_configuration(
+    let configuration_id = create_configuration(
         &mut tx,
         annotations.id,
         &config.feature_type,
@@ -37,7 +37,7 @@ pub(super) async fn import(config: ImportConfig) -> anyhow::Result<()> {
     )
     .await?;
 
-    info!(id = configuration.id, "imported configuration");
+    info!(id = configuration_id, "imported configuration");
 
     let features = read_features(&config.src, &config.feature_type, &config.feature_name).await?;
 
@@ -46,13 +46,13 @@ pub(super) async fn import(config: ImportConfig) -> anyhow::Result<()> {
 
     let lengths = calculate_feature_lengths(&features, &names)?;
 
-    create_features(&mut tx, configuration.id, &names, &lengths).await?;
+    create_features(&mut tx, configuration_id, &names, &lengths).await?;
 
     info!("imported {} features", names.len());
 
     tx.commit().await?;
 
-    println!("{}", configuration.id);
+    println!("{}", configuration_id);
 
     Ok(())
 }

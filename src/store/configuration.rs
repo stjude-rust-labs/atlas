@@ -47,18 +47,13 @@ pub async fn exists(pool: &PgPool, id: i32) -> sqlx::Result<bool> {
     .await
 }
 
-#[derive(Debug)]
-pub struct Configuration {
-    pub id: i32,
-}
-
 pub async fn create_configuration(
     tx: &mut Transaction<'_, Postgres>,
     annotations_id: i32,
     feature_type: &str,
     feature_name: &str,
-) -> sqlx::Result<Configuration> {
-    let configuration_id = sqlx::query_scalar!(
+) -> sqlx::Result<i32> {
+    sqlx::query_scalar!(
         "
         insert into configurations
             (annotation_id, feature_type, feature_name)
@@ -71,11 +66,7 @@ pub async fn create_configuration(
         feature_name,
     )
     .fetch_one(&mut **tx)
-    .await?;
-
-    Ok(Configuration {
-        id: configuration_id,
-    })
+    .await
 }
 
 #[cfg(test)]
@@ -119,16 +110,14 @@ mod tests {
         let gencode_21 = find_or_create_annotations(&mut tx, "GENCODE 21", "GRCh38").await?;
         let gencode_40 = find_or_create_annotations(&mut tx, "GENCODE 40", "GRCh38.p13").await?;
 
-        let configuration =
-            create_configuration(&mut tx, gencode_40.id, "gene", "gene_name").await?;
-        assert_eq!(configuration.id, 1);
+        let id = create_configuration(&mut tx, gencode_40.id, "gene", "gene_name").await?;
+        assert_eq!(id, 1);
 
-        let configuration = create_configuration(&mut tx, gencode_40.id, "exon", "gene_id").await?;
-        assert_eq!(configuration.id, 2);
+        let id = create_configuration(&mut tx, gencode_40.id, "exon", "gene_id").await?;
+        assert_eq!(id, 2);
 
-        let configuration =
-            create_configuration(&mut tx, gencode_21.id, "gene", "gene_name").await?;
-        assert_eq!(configuration.id, 3);
+        let id = create_configuration(&mut tx, gencode_21.id, "gene", "gene_name").await?;
+        assert_eq!(id, 3);
 
         assert!(matches!(
             create_configuration(&mut tx, gencode_40.id, "gene", "gene_name").await,

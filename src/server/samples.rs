@@ -50,8 +50,6 @@ async fn index(State(ctx): State<Context>) -> super::Result<Json<SamplesBody<Vec
 struct SampleFromQuery {
     name: String,
     counts_id: i32,
-    counts_genome_build: String,
-    counts_gene_model: String,
     counts_data_type: String,
     counts_configuration_id: i32,
     counts_strand_specification: StrandSpecification,
@@ -61,8 +59,6 @@ struct SampleFromQuery {
 #[serde(rename_all = "camelCase")]
 pub struct Run {
     id: i32,
-    genome_build: String,
-    gene_model: String,
     data_type: String,
     configuration_id: i32,
     strand_specification: StrandSpecification,
@@ -97,8 +93,6 @@ async fn show(
             select
                 samples.name,
                 runs.id as counts_id,
-                annotations.genome_build as counts_genome_build,
-                annotations.name as counts_gene_model,
                 runs.configuration_id as counts_configuration_id,
                 runs.strand_specification as "counts_strand_specification: _",
                 runs.data_type as counts_data_type
@@ -107,8 +101,6 @@ async fn show(
                 on runs.sample_id = samples.id
             inner join configurations
                 on runs.configuration_id = configurations.id
-            inner join annotations
-                on configurations.annotation_id = annotations.id
             where samples.id = $1
         "#,
         id
@@ -127,8 +119,6 @@ async fn show(
         .into_iter()
         .map(|row| Run {
             id: row.counts_id,
-            genome_build: row.counts_genome_build,
-            gene_model: row.counts_gene_model,
             data_type: row.counts_data_type,
             configuration_id: row.counts_configuration_id,
             strand_specification: row.counts_strand_specification,
@@ -199,15 +189,11 @@ mod tests {
                 "name": "sample_1",
                 "runs": [{
                     "id": 1,
-                    "genomeBuild": "GRCh38.p13",
-                    "geneModel": "GENCODE 39",
                     "configurationId": 1,
                     "strandSpecification": "reverse",
                     "dataType": "RNA-Seq",
                 }, {
                     "id": 2,
-                    "genomeBuild": "GRCh37.p13",
-                    "geneModel": "GENCODE 19",
                     "configurationId": 2,
                     "strandSpecification": "reverse",
                     "dataType": "RNA-Seq",

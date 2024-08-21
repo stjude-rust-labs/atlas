@@ -70,6 +70,11 @@ struct SampleWithCounts {
     runs: Vec<Run>,
 }
 
+#[derive(Serialize)]
+struct ShowResponse {
+    sample: SampleWithCounts,
+}
+
 /// Shows associated runs for a given sample.
 #[utoipa::path(
     get,
@@ -86,7 +91,7 @@ struct SampleWithCounts {
 async fn show(
     State(ctx): State<Context>,
     Path(id): Path<i32>,
-) -> super::Result<Json<SampleWithCounts>> {
+) -> super::Result<Json<ShowResponse>> {
     let rows = sqlx::query_as!(
         SampleFromQuery,
         r#"
@@ -125,7 +130,9 @@ async fn show(
         })
         .collect();
 
-    Ok(Json(SampleWithCounts { name, runs }))
+    Ok(Json(ShowResponse {
+        sample: SampleWithCounts { name, runs },
+    }))
 }
 
 #[cfg(test)]
@@ -186,18 +193,20 @@ mod tests {
         assert_eq!(
             actual,
             json!({
-                "name": "sample_1",
-                "runs": [{
-                    "id": 1,
-                    "configurationId": 1,
-                    "strandSpecification": "reverse",
-                    "dataType": "RNA-Seq",
-                }, {
-                    "id": 2,
-                    "configurationId": 2,
-                    "strandSpecification": "reverse",
-                    "dataType": "RNA-Seq",
-                }],
+                "sample": {
+                    "name": "sample_1",
+                    "runs": [{
+                        "id": 1,
+                        "configurationId": 1,
+                        "strandSpecification": "reverse",
+                        "dataType": "RNA-Seq",
+                    }, {
+                        "id": 2,
+                        "configurationId": 2,
+                        "strandSpecification": "reverse",
+                        "dataType": "RNA-Seq",
+                    }],
+                },
             })
         );
 

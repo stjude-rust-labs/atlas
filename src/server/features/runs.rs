@@ -28,6 +28,9 @@ struct Run {
     params(
         ("feature_id" = i32, Path, description = "Feature ID"),
     ),
+    responses(
+        (status = OK, description = "Run IDs associated with the given feature ID"),
+    ),
 )]
 async fn index(
     Path(feature_id): Path<i32>,

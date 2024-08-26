@@ -43,7 +43,7 @@ struct Feature {
     operation_id = "configurations-features-index",
     params(
         ("configuration_id" = i32, Path, description = "Configuration ID"),
-        ("q", Query, description = "A search pattern of the feature name")
+        ("q" = String, Query, description = "A search pattern of the feature name"),
     ),
     responses(
         (status = OK, description = "Features associated with the given configuration"),

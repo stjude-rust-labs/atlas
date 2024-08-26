@@ -13,6 +13,8 @@ use crate::{
     store::StrandSpecification,
 };
 
+const BATCH_CHUNK_SIZE: usize = 128;
+
 pub async fn import(config: ImportConfig) -> anyhow::Result<()> {
     let pool = PgPoolOptions::new().connect(&config.database_url).await?;
     sqlx::migrate!().run(&pool).await?;
@@ -81,32 +83,37 @@ async fn import_from_paths<P>(
 where
     P: AsRef<Path>,
 {
-    let mut chunk = Vec::with_capacity(srcs.len());
+    for src_chunk in srcs.chunks(BATCH_CHUNK_SIZE) {
+        let mut chunk = Vec::with_capacity(src_chunk.len());
 
-    for src in srcs {
-        let path = src.as_ref();
+        for src in src_chunk {
+            let path = src.as_ref();
 
-        let filename = path
-            .file_name()
-            .and_then(|name| name.to_str())
-            .ok_or_else(|| anyhow::anyhow!("invalid filename"))?;
-        // SAFETY: `str::Split` always has at least one item.
-        let sample_name = filename.split(sample_name_delimiter).next().unwrap();
+            let filename = path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .ok_or_else(|| anyhow::anyhow!("invalid filename"))?;
+            // SAFETY: `str::Split` always has at least one item.
+            let sample_name = filename.split(sample_name_delimiter).next().unwrap();
 
-        let mut reader = File::open(path).await.map(BufReader::new)?;
-        let counts = read_counts(&mut reader, format, feature_name, strand_specification).await?;
+            let mut reader = File::open(path).await.map(BufReader::new)?;
+            let counts =
+                read_counts(&mut reader, format, feature_name, strand_specification).await?;
 
-        chunk.push((sample_name.into(), counts));
+            chunk.push((sample_name.into(), counts));
+        }
+
+        import_batch(
+            tx,
+            configuration_id,
+            strand_specification,
+            data_type,
+            &chunk,
+        )
+        .await?;
     }
 
-    import_batch(
-        tx,
-        configuration_id,
-        strand_specification,
-        data_type,
-        &chunk,
-    )
-    .await?;
+    info!(sample_count = srcs.len(), "imported samples");
 
     Ok(())
 }
@@ -125,34 +132,42 @@ where
 {
     const DELIMITER: char = '\t';
 
-    let mut chunk = Vec::new();
+    let mut sample_count = 0;
 
-    for src in srcs {
-        let f = File::open(src).await.map(BufReader::new)?;
+    for src_chunk in srcs.chunks(BATCH_CHUNK_SIZE) {
+        let mut chunk = Vec::new();
 
-        let mut lines = f.lines();
+        for src in src_chunk {
+            let f = File::open(src).await.map(BufReader::new)?;
 
-        while let Some(line) = lines.next_line().await? {
-            let (sample_name, src) = line
-                .split_once(DELIMITER)
-                .ok_or_else(|| io::Error::from(io::ErrorKind::InvalidData))?;
+            let mut lines = f.lines();
 
-            let mut reader = File::open(src).await.map(BufReader::new)?;
-            let counts =
-                read_counts(&mut reader, format, feature_name, strand_specification).await?;
+            while let Some(line) = lines.next_line().await? {
+                let (sample_name, src) = line
+                    .split_once(DELIMITER)
+                    .ok_or_else(|| io::Error::from(io::ErrorKind::InvalidData))?;
 
-            chunk.push((sample_name.into(), counts));
+                let mut reader = File::open(src).await.map(BufReader::new)?;
+                let counts =
+                    read_counts(&mut reader, format, feature_name, strand_specification).await?;
+
+                chunk.push((sample_name.into(), counts));
+
+                sample_count += 1;
+            }
+
+            import_batch(
+                tx,
+                configuration_id,
+                strand_specification,
+                data_type,
+                &chunk,
+            )
+            .await?;
         }
     }
 
-    import_batch(
-        tx,
-        configuration_id,
-        strand_specification,
-        data_type,
-        &chunk,
-    )
-    .await?;
+    info!(sample_count, "imported samples");
 
     Ok(())
 }
@@ -207,8 +222,6 @@ async fn import_batch(
 
         create_counts(tx, run_id, &features, counts).await?;
     }
-
-    info!(sample_count = sample_ids.len(), "imported samples");
 
     Ok(())
 }

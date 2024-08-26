@@ -13,10 +13,7 @@ use crate::server::{self, Context, Error};
 pub fn router() -> Router<Context> {
     Router::new()
         .route("/configurations/:configuration_id/features", get(index))
-        .route(
-            "/configurations/:configuration_id/features/:feature_id",
-            get(show),
-        )
+        .route("/configurations/:configuration_id/features/:id", get(show))
 }
 
 #[derive(Deserialize)]
@@ -104,18 +101,18 @@ struct ShowResponse {
 /// Shows counts for samples with the given configuration ID and feature name.
 #[utoipa::path(
     get,
-    path = "/configurations/{configuration_id}/features/{feature_id}",
+    path = "/configurations/{configuration_id}/features/{id}",
     operation_id = "configurations-features-show",
     params(
         ("configuration_id" = i32, Path, description = "Configuration ID"),
-        ("feature_id" = i32, Path, description = "Feature ID"),
+        ("id" = i32, Path, description = "Feature ID"),
     ),
     responses(
         (status = OK, description = "Counts associated with the given configuration ID and feature ID"),
     ),
 )]
 async fn show(
-    Path((configuration_id, feature_id)): Path<(i32, i32)>,
+    Path((configuration_id, id)): Path<(i32, i32)>,
     State(ctx): State<Context>,
 ) -> server::Result<Json<ShowResponse>> {
     let counts = sqlx::query!(
@@ -134,7 +131,7 @@ async fn show(
             and features.id = $2
         ",
         configuration_id,
-        feature_id,
+        id,
     )
     .fetch(&ctx.pool)
     .map(|result| result.map(|record| (record.name, record.value)))

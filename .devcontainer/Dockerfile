@@ -22,5 +22,5 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- \
 RUN cargo install \
     --no-default-features \
     --features native-tls,postgres \
-    --version 0.8.0 \
+    --version 0.8.1 \
     sqlx-cli

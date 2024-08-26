@@ -1,7 +1,7 @@
 use serde::Serialize;
 use sqlx::{PgExecutor, PgPool, Postgres, Transaction};
 
-#[derive(Debug, Serialize, Eq, PartialEq, sqlx::FromRow)]
+#[derive(Debug, Serialize, Eq, PartialEq, sqlx::FromRow, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Annotation {
     name: String,
@@ -12,6 +12,7 @@ pub struct Annotation {
 #[serde(rename_all = "camelCase")]
 pub struct Configuration {
     id: i32,
+    #[schema(inline)]
     #[sqlx(flatten)]
     annotation: Annotation,
     feature_type: String,

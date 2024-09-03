@@ -1,17 +1,11 @@
 use sqlx::PgExecutor;
 
 #[cfg(test)]
-#[derive(Debug)]
-pub struct Sample {
-    pub id: i32,
-}
-
-#[cfg(test)]
 pub async fn find_or_create_sample(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     sample_name: &str,
-) -> sqlx::Result<Sample> {
-    let sample_id = sqlx::query_scalar!(
+) -> sqlx::Result<i32> {
+    sqlx::query_scalar!(
         "
         insert into samples (name) values ($1)
         on conflict (name) do update
@@ -21,9 +15,7 @@ pub async fn find_or_create_sample(
         sample_name
     )
     .fetch_one(&mut **tx)
-    .await?;
-
-    Ok(Sample { id: sample_id })
+    .await
 }
 
 pub async fn find_or_create_samples<'a, E>(
@@ -59,14 +51,14 @@ mod tests {
     async fn test_find_or_create_sample(pool: PgPool) -> sqlx::Result<()> {
         let mut tx = pool.begin().await?;
 
-        let sample = find_or_create_sample(&mut tx, "sample1").await?;
-        assert_eq!(sample.id, 1);
+        let sample_id = find_or_create_sample(&mut tx, "sample1").await?;
+        assert_eq!(sample_id, 1);
 
-        let sample = find_or_create_sample(&mut tx, "sample1").await?;
-        assert_eq!(sample.id, 1);
+        let sample_id = find_or_create_sample(&mut tx, "sample1").await?;
+        assert_eq!(sample_id, 1);
 
-        let sample = find_or_create_sample(&mut tx, "sample2").await?;
-        assert_eq!(sample.id, 3);
+        let sample_id = find_or_create_sample(&mut tx, "sample2").await?;
+        assert_eq!(sample_id, 3);
 
         Ok(())
     }

@@ -104,17 +104,17 @@ mod tests {
         let configuration_id =
             configuration::create(&mut tx, annotations.id, "gene", "gene_name").await?;
 
-        let sample = find_or_create_sample(&mut tx, "sample1").await?;
+        let sample_id = find_or_create_sample(&mut tx, "sample1").await?;
         create_run(
             &mut tx,
             configuration_id,
-            sample.id,
+            sample_id,
             StrandSpecification::Reverse,
             "RNA-Seq",
         )
         .await?;
 
-        let sample_ids = [sample.id];
+        let sample_ids = [sample_id];
         assert!(runs_exists(&mut *tx, configuration_id, &sample_ids).await?);
 
         let sample_ids = [1000];
@@ -132,8 +132,8 @@ mod tests {
         let configuration_id =
             configuration::create(&mut tx, annotations.id, "gene", "gene_name").await?;
 
-        let sample = find_or_create_sample(&mut tx, "sample1").await?;
-        let sample_ids = [sample.id];
+        let sample_id = find_or_create_sample(&mut tx, "sample1").await?;
+        let sample_ids = [sample_id];
 
         let run_ids = create_runs(
             &mut tx,

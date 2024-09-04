@@ -16,16 +16,18 @@ pub fn router() -> Router<Context> {
         .route("/samples/:id", get(show))
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 struct IndexResponse {
+    #[schema(inline)]
     samples: Vec<Sample>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 struct Sample {
     id: i32,
     name: String,
+    #[schema(inline)]
     #[serde(with = "time::serde::rfc3339")]
     created_at: OffsetDateTime,
 }
@@ -36,7 +38,7 @@ struct Sample {
     path = "/samples",
     operation_id = "samples-index",
     responses(
-        (status = OK, description = "Samples with runs"),
+        (status = OK, description = "Samples with runs", body = inline(IndexResponse)),
     )
 )]
 async fn index(State(ctx): State<Context>) -> super::Result<Json<IndexResponse>> {
@@ -56,7 +58,7 @@ struct SampleFromQuery {
     counts_strand_specification: StrandSpecification,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Run {
     id: i32,
@@ -65,15 +67,17 @@ pub struct Run {
     strand_specification: StrandSpecification,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 struct SampleWithCounts {
     id: i32,
     name: String,
+    #[schema(inline)]
     runs: Vec<Run>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 struct ShowResponse {
+    #[schema(inline)]
     sample: SampleWithCounts,
 }
 
@@ -86,7 +90,7 @@ struct ShowResponse {
         ("id" = i32, Path, description = "Sample ID"),
     ),
     responses(
-        (status = OK, description = "The sample has runs"),
+        (status = OK, description = "The sample has runs", body = inline(ShowResponse)),
         (status = NOT_FOUND, description = "The sample does not exist")
     ),
 )]

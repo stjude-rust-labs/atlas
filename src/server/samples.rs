@@ -17,8 +17,8 @@ pub fn router() -> Router<Context> {
 }
 
 #[derive(Serialize)]
-struct SamplesBody<T> {
-    samples: T,
+struct IndexResponse {
+    samples: Vec<Sample>,
 }
 
 #[derive(Serialize)]
@@ -39,12 +39,12 @@ struct Sample {
         (status = OK, description = "Samples with runs"),
     )
 )]
-async fn index(State(ctx): State<Context>) -> super::Result<Json<SamplesBody<Vec<Sample>>>> {
+async fn index(State(ctx): State<Context>) -> super::Result<Json<IndexResponse>> {
     let samples = sqlx::query_as!(Sample, r#"select id, name, created_at from samples"#)
         .fetch_all(&ctx.pool)
         .await?;
 
-    Ok(Json(SamplesBody { samples }))
+    Ok(Json(IndexResponse { samples }))
 }
 
 struct SampleFromQuery {

@@ -1,4 +1,20 @@
+use serde::Serialize;
 use sqlx::PgExecutor;
+
+#[derive(Debug, Eq, PartialEq, Serialize, utoipa::ToSchema)]
+pub struct Sample {
+    id: i32,
+    name: String,
+}
+
+pub async fn find<'a, E>(executor: E, id: i32) -> sqlx::Result<Option<Sample>>
+where
+    E: PgExecutor<'a>,
+{
+    sqlx::query_as!(Sample, "select id, name from samples where id = $1", id)
+        .fetch_optional(executor)
+        .await
+}
 
 #[cfg(test)]
 pub async fn find_or_create_sample(
@@ -46,6 +62,21 @@ mod tests {
     use sqlx::PgPool;
 
     use super::*;
+
+    #[sqlx::test(fixtures("sample_find"))]
+    async fn test_find(pool: PgPool) -> sqlx::Result<()> {
+        assert_eq!(
+            find(&pool, 1).await?,
+            Some(Sample {
+                id: 1,
+                name: String::from("sample_1"),
+            })
+        );
+
+        assert!(find(&pool, 3).await?.is_none());
+
+        Ok(())
+    }
 
     #[sqlx::test]
     async fn test_find_or_create_sample(pool: PgPool) -> sqlx::Result<()> {

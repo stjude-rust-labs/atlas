@@ -6,7 +6,7 @@ use axum::{
 use serde::Serialize;
 use time::OffsetDateTime;
 
-use crate::store::StrandSpecification;
+use crate::store::sample;
 
 use super::{Context, Error};
 
@@ -49,36 +49,10 @@ async fn index(State(ctx): State<Context>) -> super::Result<Json<IndexResponse>>
     Ok(Json(IndexResponse { samples }))
 }
 
-struct SampleFromQuery {
-    sample_id: i32,
-    sample_name: String,
-    counts_id: i32,
-    counts_data_type: String,
-    counts_configuration_id: i32,
-    counts_strand_specification: StrandSpecification,
-}
-
-#[derive(Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct Run {
-    id: i32,
-    data_type: String,
-    configuration_id: i32,
-    strand_specification: StrandSpecification,
-}
-
-#[derive(Serialize, utoipa::ToSchema)]
-struct SampleWithCounts {
-    id: i32,
-    name: String,
-    #[schema(inline)]
-    runs: Vec<Run>,
-}
-
 #[derive(Serialize, utoipa::ToSchema)]
 struct ShowResponse {
     #[schema(inline)]
-    sample: SampleWithCounts,
+    sample: sample::Sample,
 }
 
 /// Shows associated runs for a given sample.
@@ -98,49 +72,8 @@ async fn show(
     State(ctx): State<Context>,
     Path(id): Path<i32>,
 ) -> super::Result<Json<ShowResponse>> {
-    let rows = sqlx::query_as!(
-        SampleFromQuery,
-        r#"
-            select
-                samples.id as sample_id,
-                samples.name as sample_name,
-                runs.id as counts_id,
-                runs.configuration_id as counts_configuration_id,
-                runs.strand_specification as "counts_strand_specification: _",
-                runs.data_type as counts_data_type
-            from samples
-            inner join runs
-                on runs.sample_id = samples.id
-            inner join configurations
-                on runs.configuration_id = configurations.id
-            where samples.id = $1
-        "#,
-        id
-    )
-    .fetch_all(&ctx.pool)
-    .await?;
-
-    if rows.is_empty() {
-        return Err(Error::NotFound);
-    }
-
-    let first_row = rows.first().expect("missing first row");
-    let id = first_row.sample_id;
-    let name = first_row.sample_name.clone();
-
-    let runs = rows
-        .into_iter()
-        .map(|row| Run {
-            id: row.counts_id,
-            data_type: row.counts_data_type,
-            configuration_id: row.counts_configuration_id,
-            strand_specification: row.counts_strand_specification,
-        })
-        .collect();
-
-    Ok(Json(ShowResponse {
-        sample: SampleWithCounts { id, name, runs },
-    }))
+    let sample = sample::find(&ctx.pool, id).await?.ok_or(Error::NotFound)?;
+    Ok(Json(ShowResponse { sample }))
 }
 
 #[cfg(test)]
@@ -204,17 +137,6 @@ mod tests {
                 "sample": {
                     "id": 1,
                     "name": "sample_1",
-                    "runs": [{
-                        "id": 1,
-                        "configurationId": 1,
-                        "strandSpecification": "reverse",
-                        "dataType": "RNA-Seq",
-                    }, {
-                        "id": 2,
-                        "configurationId": 2,
-                        "strandSpecification": "reverse",
-                        "dataType": "RNA-Seq",
-                    }],
                 },
             })
         );

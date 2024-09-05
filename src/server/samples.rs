@@ -139,6 +139,7 @@ mod tests {
                 "sample": {
                     "id": 1,
                     "name": "sample_1",
+                    "createdAt": "2022-02-18T21:05:05Z",
                 },
             })
         );

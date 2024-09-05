@@ -1,19 +1,28 @@
 use serde::Serialize;
 use sqlx::PgExecutor;
+use time::OffsetDateTime;
 
 #[derive(Debug, Eq, PartialEq, Serialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct Sample {
     id: i32,
     name: String,
+    #[schema(inline)]
+    #[serde(with = "time::serde::rfc3339")]
+    created_at: OffsetDateTime,
 }
 
 pub async fn find<'a, E>(executor: E, id: i32) -> sqlx::Result<Option<Sample>>
 where
     E: PgExecutor<'a>,
 {
-    sqlx::query_as!(Sample, "select id, name from samples where id = $1", id)
-        .fetch_optional(executor)
-        .await
+    sqlx::query_as!(
+        Sample,
+        "select id, name, created_at from samples where id = $1",
+        id
+    )
+    .fetch_optional(executor)
+    .await
 }
 
 #[cfg(test)]
@@ -60,16 +69,21 @@ where
 #[cfg(test)]
 mod tests {
     use sqlx::PgPool;
+    use time::{Date, Month, Time};
 
     use super::*;
 
     #[sqlx::test(fixtures("sample_find"))]
-    async fn test_find(pool: PgPool) -> sqlx::Result<()> {
+    async fn test_find(pool: PgPool) -> Result<(), Box<dyn std::error::Error>> {
         assert_eq!(
             find(&pool, 1).await?,
             Some(Sample {
                 id: 1,
                 name: String::from("sample_1"),
+                created_at: OffsetDateTime::new_utc(
+                    Date::from_calendar_date(2022, Month::February, 18)?,
+                    Time::from_hms(21, 5, 5)?
+                ),
             })
         );
 

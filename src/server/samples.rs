@@ -147,7 +147,7 @@ mod tests {
     }
 
     #[sqlx::test(fixtures("samples"))]
-    async fn test_show_with_an_invalid_name(pool: PgPool) -> anyhow::Result<()> {
+    async fn test_show_with_an_invalid_id(pool: PgPool) -> anyhow::Result<()> {
         let request = Request::builder()
             .uri("/samples/1597")
             .body(Body::empty())?;

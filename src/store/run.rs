@@ -1,6 +1,38 @@
+use serde::Serialize;
 use sqlx::{PgExecutor, Postgres, Transaction};
 
 use super::StrandSpecification;
+
+#[derive(Serialize)]
+pub struct Run {
+    id: i32,
+    sample_id: i32,
+    configuration_id: i32,
+    strand_specification: StrandSpecification,
+    data_type: String,
+}
+
+pub async fn where_sample_id<'a, E>(executor: E, id: i32) -> sqlx::Result<Vec<Run>>
+where
+    E: PgExecutor<'a>,
+{
+    sqlx::query_as!(
+        Run,
+        r#"
+        select
+            id,
+            sample_id,
+            configuration_id,
+            strand_specification as "strand_specification: _",
+            data_type
+        from runs
+        where id = $1
+        "#,
+        id
+    )
+    .fetch_all(executor)
+    .await
+}
 
 pub async fn runs_exists<'a, E>(
     executor: E,

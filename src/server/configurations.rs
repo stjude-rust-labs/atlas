@@ -101,7 +101,7 @@ mod tests {
             json!({
                 "configurations": [{
                     "id": 1,
-                    "annotation": {
+                    "annotations": {
                         "name": "GENCODE 39",
                         "genomeBuild": "GRCh38.p13",
                     },
@@ -109,7 +109,7 @@ mod tests {
                     "featureName": "gene_name",
                 }, {
                     "id": 2,
-                    "annotation": {
+                    "annotations": {
                         "name": "GENCODE 19",
                         "genomeBuild": "GRCh37.p13",
                     },

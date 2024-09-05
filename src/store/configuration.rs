@@ -3,7 +3,7 @@ use sqlx::{PgExecutor, PgPool, Postgres, Transaction};
 
 #[derive(Debug, Serialize, Eq, PartialEq, sqlx::FromRow, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct Annotation {
+pub struct Annotations {
     name: String,
     genome_build: String,
 }
@@ -14,7 +14,7 @@ pub struct Configuration {
     id: i32,
     #[schema(inline)]
     #[sqlx(flatten)]
-    annotation: Annotation,
+    annotations: Annotations,
     feature_type: String,
     feature_name: String,
 }
@@ -108,7 +108,7 @@ mod tests {
             configurations,
             [Configuration {
                 id: 1,
-                annotation: Annotation {
+                annotations: Annotations {
                     name: String::from("GENCODE 40"),
                     genome_build: String::from("GRCh38.p13"),
                 },
@@ -126,7 +126,7 @@ mod tests {
 
         let expected = Configuration {
             id: 1,
-            annotation: Annotation {
+            annotations: Annotations {
                 name: String::from("GENCODE 40"),
                 genome_build: String::from("GRCh38.p13"),
             },

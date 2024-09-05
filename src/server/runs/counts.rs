@@ -46,7 +46,7 @@ struct Count {
 /// Shows counts for a given run.
 #[utoipa::path(
     get,
-    path = "/runs/{run_id}",
+    path = "/runs/{run_id}/counts",
     operation_id = "runs-counts-index",
     params(
         ("run_id" = i32, Path, description = "Run ID"),

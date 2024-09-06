@@ -1,6 +1,7 @@
 pub mod annotations;
 pub mod configuration;
 pub mod count;
+pub mod dataset;
 pub mod feature;
 pub mod run;
 pub mod sample;

@@ -1,4 +1,5 @@
 pub mod configuration;
+pub mod dataset;
 pub mod run;
 mod server;
 mod worker;
@@ -19,6 +20,9 @@ pub enum Commands {
     /// Manage configurations
     #[clap(subcommand)]
     Configuration(configuration::Command),
+    /// Manage datasets
+    #[clap(subcommand)]
+    Dataset(dataset::Command),
     /// Manage runs
     #[clap(subcommand)]
     Run(run::Command),

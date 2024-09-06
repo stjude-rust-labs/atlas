@@ -1,4 +1,20 @@
+use serde::Serialize;
 use sqlx::PgExecutor;
+
+#[derive(Serialize)]
+pub struct Dataset {
+    id: i32,
+    name: String,
+}
+
+pub async fn all<'a, E>(executor: E) -> sqlx::Result<Vec<Dataset>>
+where
+    E: PgExecutor<'a>,
+{
+    sqlx::query_as!(Dataset, "select id, name from datasets")
+        .fetch_all(executor)
+        .await
+}
 
 pub async fn create<'a, E>(executor: E, name: &str) -> sqlx::Result<i32>
 where

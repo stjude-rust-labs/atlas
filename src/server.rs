@@ -1,6 +1,7 @@
 mod analyses;
 mod configurations;
 mod counts;
+mod datasets;
 mod error;
 mod features;
 mod runs;
@@ -36,6 +37,7 @@ pub type Result<T> = std::result::Result<T, Error>;
         configurations::index,
         configurations::show,
         counts::index,
+        datasets::index,
         features::runs::index,
         runs::counts::index,
         samples::index,
@@ -83,6 +85,7 @@ fn router() -> Router<Context> {
         .merge(samples::router())
         .merge(runs::counts::router())
         .merge(features::runs::router())
+        .merge(datasets::router())
         .merge(counts::router())
         .merge(configurations::features::router())
         .merge(configurations::router())

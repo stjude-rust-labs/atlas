@@ -79,6 +79,14 @@ create table counts (
 
 create index counts_run_id_feature_id_idx on counts(run_id, feature_id);
 
+create table datasets (
+    id serial primary key,
+    name text not null,
+    created_at timestamptz not null default now(),
+
+    unique(name)
+);
+
 create type status as enum ('queued', 'running', 'success', 'failed');
 
 create table tasks (

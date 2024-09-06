@@ -87,6 +87,18 @@ create table datasets (
     unique(name)
 );
 
+create table datasets_runs (
+    id serial primary key,
+
+    dataset_id integer not null,
+    run_id integer not null,
+
+    foreign key (dataset_id) references datasets (id),
+    foreign key (run_id) references runs (id)
+);
+
+create index counts_dataset_id_run_id_idx on datasets_runs(dataset_id, run_id);
+
 create type status as enum ('queued', 'running', 'success', 'failed');
 
 create table tasks (

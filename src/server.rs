@@ -38,6 +38,7 @@ pub type Result<T> = std::result::Result<T, Error>;
         configurations::show,
         counts::index,
         datasets::index,
+        datasets::show,
         features::runs::index,
         runs::counts::index,
         samples::index,

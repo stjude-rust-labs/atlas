@@ -18,6 +18,15 @@ where
         .await
 }
 
+pub async fn find<'a, E>(executor: E, id: i32) -> sqlx::Result<Option<Dataset>>
+where
+    E: PgExecutor<'a>,
+{
+    sqlx::query_as!(Dataset, "select id, name from datasets where id = $1", id)
+        .fetch_optional(executor)
+        .await
+}
+
 pub async fn create<'a, E>(executor: E, name: &str) -> sqlx::Result<i32>
 where
     E: PgExecutor<'a>,

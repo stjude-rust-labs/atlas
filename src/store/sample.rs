@@ -12,6 +12,15 @@ pub struct Sample {
     created_at: OffsetDateTime,
 }
 
+pub async fn all<'a, E>(executor: E) -> sqlx::Result<Vec<Sample>>
+where
+    E: PgExecutor<'a>,
+{
+    sqlx::query_as!(Sample, r#"select id, name, created_at from samples"#)
+        .fetch_all(executor)
+        .await
+}
+
 pub async fn find<'a, E>(executor: E, id: i32) -> sqlx::Result<Option<Sample>>
 where
     E: PgExecutor<'a>,

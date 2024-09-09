@@ -6,9 +6,8 @@ use axum::{
     Json, Router,
 };
 use serde::Serialize;
-use time::OffsetDateTime;
 
-use crate::store::sample;
+use crate::store::sample::{self, Sample};
 
 use super::{Context, Error};
 
@@ -24,16 +23,6 @@ struct IndexResponse {
     samples: Vec<Sample>,
 }
 
-#[derive(Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-struct Sample {
-    id: i32,
-    name: String,
-    #[schema(inline)]
-    #[serde(with = "time::serde::rfc3339")]
-    created_at: OffsetDateTime,
-}
-
 /// Lists all samples with runs.
 #[utoipa::path(
     get,
@@ -44,17 +33,14 @@ struct Sample {
     )
 )]
 async fn index(State(ctx): State<Context>) -> super::Result<Json<IndexResponse>> {
-    let samples = sqlx::query_as!(Sample, r#"select id, name, created_at from samples"#)
-        .fetch_all(&ctx.pool)
-        .await?;
-
+    let samples = sample::all(&ctx.pool).await?;
     Ok(Json(IndexResponse { samples }))
 }
 
 #[derive(Serialize, utoipa::ToSchema)]
 struct ShowResponse {
     #[schema(inline)]
-    sample: sample::Sample,
+    sample: Sample,
 }
 
 /// Shows associated runs for a given sample.

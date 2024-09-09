@@ -10,7 +10,7 @@ use tracing::info;
 use crate::{
     cli::run::ImportConfig,
     counts::{feature_names_eq, reader::read_counts, Format},
-    store::StrandSpecification,
+    store::{dataset, StrandSpecification},
 };
 
 const BATCH_CHUNK_SIZE: usize = 128;
@@ -38,6 +38,7 @@ pub async fn import(config: ImportConfig) -> anyhow::Result<()> {
             &mut tx,
             &config.srcs,
             configuration_id,
+            config.dataset_id,
             config.format,
             &feature_name,
             config.strand_specification,
@@ -49,6 +50,7 @@ pub async fn import(config: ImportConfig) -> anyhow::Result<()> {
             &mut tx,
             &config.srcs,
             configuration_id,
+            config.dataset_id,
             &config.sample_name_delimiter,
             config.format,
             &feature_name,
@@ -74,6 +76,7 @@ async fn import_from_paths<P>(
     tx: &mut Transaction<'_, Postgres>,
     srcs: &[P],
     configuration_id: i32,
+    dataset_id: Option<i32>,
     sample_name_delimiter: &str,
     format: Option<Format>,
     feature_name: &str,
@@ -106,6 +109,7 @@ where
         import_batch(
             tx,
             configuration_id,
+            dataset_id,
             strand_specification,
             data_type,
             &chunk,
@@ -118,10 +122,12 @@ where
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn import_from_sample_sheets<P>(
     tx: &mut Transaction<'_, Postgres>,
     srcs: &[P],
     configuration_id: i32,
+    dataset_id: Option<i32>,
     format: Option<Format>,
     feature_name: &str,
     strand_specification: StrandSpecification,
@@ -159,6 +165,7 @@ where
             import_batch(
                 tx,
                 configuration_id,
+                dataset_id,
                 strand_specification,
                 data_type,
                 &chunk,
@@ -175,6 +182,7 @@ where
 async fn import_batch(
     tx: &mut Transaction<'_, Postgres>,
     configuration_id: i32,
+    dataset_id: Option<i32>,
     strand_specification: StrandSpecification,
     data_type: &str,
     chunk: &[(String, HashMap<String, u64>)],
@@ -212,6 +220,10 @@ async fn import_batch(
         data_type,
     )
     .await?;
+
+    if let Some(dataset_id) = dataset_id {
+        dataset::create_runs(&mut **tx, dataset_id, &run_ids).await?;
+    }
 
     for ((sample_name, counts), &run_id) in chunk.iter().zip(run_ids.iter()) {
         info!(name = sample_name, "loaded sample");

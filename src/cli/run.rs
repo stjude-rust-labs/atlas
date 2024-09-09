@@ -20,6 +20,12 @@ pub struct ImportConfig {
     #[clap(long)]
     pub configuration_id: i32,
 
+    /// The dataset ID.
+    ///
+    /// If set, all runs are added to the given dataset.
+    #[clap(long)]
+    pub dataset_id: Option<i32>,
+
     /// The strand specification used when counting features.
     #[clap(value_enum, long)]
     pub strand_specification: StrandSpecification,

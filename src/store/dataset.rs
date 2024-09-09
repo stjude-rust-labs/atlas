@@ -1,3 +1,5 @@
+use std::iter;
+
 use serde::Serialize;
 use sqlx::PgExecutor;
 
@@ -23,6 +25,25 @@ where
     sqlx::query_scalar!("insert into datasets (name) values ($1) returning id", name)
         .fetch_one(executor)
         .await
+}
+
+pub async fn create_runs<'a, E>(executor: E, dataset_id: i32, run_ids: &[i32]) -> sqlx::Result<()>
+where
+    E: PgExecutor<'a>,
+{
+    let dataset_ids: Vec<_> = iter::repeat(dataset_id).take(run_ids.len()).collect();
+
+    sqlx::query!(
+        "
+        insert into datasets_runs (dataset_id, run_id)
+        select * from unnest($1::integer[], $2::integer[])
+        ",
+        &dataset_ids[..],
+        run_ids,
+    )
+    .execute(executor)
+    .await
+    .map(|_| ())
 }
 
 #[cfg(test)]

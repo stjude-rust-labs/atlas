@@ -11,5 +11,7 @@ pub(super) async fn create(config: CreateConfig) -> anyhow::Result<()> {
 
     info!(id = dataset_id, "created dataset");
 
+    println!("{dataset_id}");
+
     Ok(())
 }

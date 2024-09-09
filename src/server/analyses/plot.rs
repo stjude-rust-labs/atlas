@@ -26,7 +26,7 @@ pub fn router() -> Router<Context> {
 #[derive(Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 struct CreateRequest {
-    configuration_id: i32,
+    dataset_id: i32,
     additional_runs: Option<HashMap<String, HashMap<String, i32>>>,
     #[schema(inline)]
     options: Option<create::Options>,
@@ -45,7 +45,7 @@ struct CreateResponse {
     request_body = inline(CreateRequest),
     responses(
         (status = OK, description = "The ID of the task submitted"),
-        (status = NOT_FOUND, description = "The configuration ID does not exist"),
+        (status = NOT_FOUND, description = "The dataset ID does not exist"),
         (status = INTERNAL_SERVER_ERROR, description = "The additional runs input is invalid"),
     ),
 )]
@@ -56,16 +56,16 @@ async fn create(
     use self::create::{merge_options, validate_run};
     use crate::{
         queue::{Message, PlotMessage},
-        store::configuration,
+        store::dataset,
     };
 
     let CreateRequest {
-        configuration_id,
+        dataset_id,
         additional_runs,
         options,
     } = body;
 
-    if !configuration::exists(&ctx.pool, configuration_id).await? {
+    if !dataset::exists(&ctx.pool, dataset_id).await? {
         return Err(Error::NotFound);
     }
 
@@ -73,6 +73,7 @@ async fn create(
         .map(|runs| runs.into_iter().collect())
         .unwrap_or_default();
 
+    let configuration_id = dataset::first_configuration_id(&ctx.pool, dataset_id).await?;
     let features = find_features(&ctx.pool, configuration_id).await?;
     let feature_names: HashSet<_> = features.into_iter().map(|(_, name)| name).collect();
 
@@ -163,8 +164,8 @@ mod tests {
     }
 
     #[sqlx::test]
-    async fn test_plot_with_invalid_configuration_id(pool: PgPool) -> anyhow::Result<()> {
-        let payload = json!({ "configurationId": -1 });
+    async fn test_plot_with_invalid_dataset_id(pool: PgPool) -> anyhow::Result<()> {
+        let payload = json!({ "datasetId": -1 });
         let body = Body::from(payload.to_string());
         let request = Request::post("/analyses/plot")
             .header(header::CONTENT_TYPE, "application/json")

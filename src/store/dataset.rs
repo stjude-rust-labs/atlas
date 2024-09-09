@@ -46,6 +46,39 @@ where
     .map(|_| ())
 }
 
+pub async fn exists<'a, E>(executor: E, id: i32) -> sqlx::Result<bool>
+where
+    E: PgExecutor<'a>,
+{
+    sqlx::query_scalar!(
+        r#"select exists(select 1 from datasets where id = $1) as "exists!""#,
+        id
+    )
+    .fetch_one(executor)
+    .await
+}
+
+pub async fn first_configuration_id<'a, E>(executor: E, id: i32) -> sqlx::Result<i32>
+where
+    E: PgExecutor<'a>,
+{
+    sqlx::query_scalar!(
+        "
+        select configuration_id
+        from runs
+        where id = (
+            select dataset_id
+            from datasets_runs
+            where dataset_id = $1
+            limit 1
+        )
+        ",
+        id
+    )
+    .fetch_one(executor)
+    .await
+}
+
 #[cfg(test)]
 mod tests {
     use sqlx::PgPool;
@@ -62,6 +95,13 @@ mod tests {
             Err(sqlx::Error::Database(e)) if e.is_unique_violation()
         ));
 
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures("dataset_exists"))]
+    async fn test_exists(pool: PgPool) -> sqlx::Result<()> {
+        assert!(exists(&pool, 1).await?);
+        assert!(!exists(&pool, 2).await?);
         Ok(())
     }
 }

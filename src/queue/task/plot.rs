@@ -15,12 +15,13 @@ struct Count {
 
 pub async fn plot(
     pool: &PgPool,
-    configuration_id: i32,
+    dataset_id: i32,
     additional_runs: &[(String, HashMap<String, i32>)],
     options: Options,
 ) -> Result<(Vec<String>, Vec<f64>, Vec<f64>), Error> {
-    use crate::store::feature;
+    use crate::store::{dataset, feature};
 
+    let configuration_id = dataset::first_configuration_id(pool, dataset_id).await?;
     let feature_count = feature::count(pool, configuration_id).await? as usize;
 
     let rows = sqlx::query_as!(

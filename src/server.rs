@@ -38,6 +38,7 @@ pub type Result<T> = std::result::Result<T, Error>;
         configurations::show,
         counts::index,
         datasets::index,
+        datasets::runs::index,
         datasets::show,
         features::runs::index,
         runs::counts::index,
@@ -86,6 +87,7 @@ fn router() -> Router<Context> {
         .merge(samples::router())
         .merge(runs::counts::router())
         .merge(features::runs::router())
+        .merge(datasets::runs::router())
         .merge(datasets::router())
         .merge(counts::router())
         .merge(configurations::features::router())

@@ -34,6 +34,30 @@ where
     .await
 }
 
+pub async fn where_dataset_id<'a, E>(executor: E, dataset_id: i32) -> sqlx::Result<Vec<Run>>
+where
+    E: PgExecutor<'a>,
+{
+    sqlx::query_as!(
+        Run,
+        r#"
+        select
+            runs.id,
+            sample_id,
+            configuration_id,
+            strand_specification as "strand_specification: _",
+            data_type
+        from runs
+        inner join datasets_runs
+            on runs.id = datasets_runs.run_id
+        where datasets_runs.dataset_id = $1
+        "#,
+        dataset_id
+    )
+    .fetch_all(executor)
+    .await
+}
+
 pub async fn runs_exists<'a, E>(
     executor: E,
     configuration_id: i32,

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, num::ParseIntError};
+use std::num::ParseIntError;
 
 use axum::{
     extract::{Query, State},
@@ -28,20 +28,27 @@ struct IndexQuery {
 
 #[derive(Serialize)]
 #[serde(untagged)]
-enum Counts {
-    Normalized(HashMap<String, f64>),
-    Raw(HashMap<String, i32>),
+enum Values {
+    Normalized(Vec<f64>),
+    Raw(Vec<i32>),
 }
 
 #[derive(Serialize)]
 struct Run {
     id: i32,
-    counts: Counts,
+    values: Values,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct Counts {
+    feature_names: Vec<String>,
+    runs: Vec<Run>,
 }
 
 #[derive(Serialize)]
 struct IndexBody {
-    runs: Vec<Run>,
+    counts: Counts,
 }
 
 pub fn router() -> Router<Context> {
@@ -123,15 +130,9 @@ async fn index(
                 .into_iter()
                 .zip(normalized_counts.axis_iter(Axis(0)))
             {
-                let counts = feature_names
-                    .iter()
-                    .zip(row)
-                    .map(|(name, count)| (name.clone(), *count))
-                    .collect();
-
                 runs.push(Run {
                     id,
-                    counts: Counts::Normalized(counts),
+                    values: Values::Normalized(row.to_vec()),
                 });
             }
         } else {
@@ -147,7 +148,7 @@ async fn index(
                     .map(|(name, count)| (name.clone(), *count))
                     .collect();
 
-                let normalized_counts = match normalization_method {
+                let normalized_counts_map = match normalization_method {
                     Normalize::Fpkm => {
                         crate::counts::normalization::fpkm::calculate_fpkms(&features, &counts)
                             .unwrap()
@@ -159,9 +160,14 @@ async fn index(
                     }
                 };
 
+                let normalized_counts = feature_names
+                    .iter()
+                    .map(|name| normalized_counts_map[name])
+                    .collect();
+
                 runs.push(Run {
                     id,
-                    counts: Counts::Normalized(normalized_counts),
+                    values: Values::Normalized(normalized_counts),
                 })
             }
         }
@@ -169,18 +175,17 @@ async fn index(
         let chunks = counts.chunks_exact(feature_names.len());
 
         for (id, chunk) in run_ids.into_iter().zip(chunks) {
-            let counts = feature_names
-                .iter()
-                .zip(chunk)
-                .map(|(name, count)| (name.clone(), *count))
-                .collect();
-
             runs.push(Run {
                 id,
-                counts: Counts::Raw(counts),
+                values: Values::Raw(chunk.to_vec()),
             });
         }
     }
 
-    Ok(Json(IndexBody { runs }))
+    Ok(Json(IndexBody {
+        counts: Counts {
+            feature_names,
+            runs,
+        },
+    }))
 }

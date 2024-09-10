@@ -92,6 +92,29 @@ where
     .await
 }
 
+pub async fn find_names_by_run_id<'a, E>(executor: E, run_id: i32) -> sqlx::Result<Vec<String>>
+where
+    E: PgExecutor<'a>,
+{
+    sqlx::query!(
+        r#"
+        select
+            features.name
+        from features
+        inner join configurations
+            on features.configuration_id = configurations.id
+        inner join runs
+            on configurations.id = runs.configuration_id
+        where runs.id = $1
+        "#,
+        run_id
+    )
+    .fetch(executor)
+    .map(|result| result.map(|row| row.name))
+    .try_collect()
+    .await
+}
+
 #[cfg(test)]
 mod tests {
     use sqlx::PgPool;

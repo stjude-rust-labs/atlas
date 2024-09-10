@@ -81,25 +81,8 @@ async fn index(
         return Err(Error::NotFound);
     }
 
-    let feature_names: Vec<_> = sqlx::query!(
-        r#"
-        select
-            features.name
-        from features
-        inner join configurations
-            on features.configuration_id = configurations.id
-        inner join runs
-            on configurations.id = runs.configuration_id
-        where runs.id = $1
-        "#,
-        // SAFETY: `run_ids` is non-empty.
-        run_ids[0]
-    )
-    .fetch_all(&ctx.pool)
-    .await?
-    .into_iter()
-    .map(|record| record.name)
-    .collect();
+    // SAFETY: `run_ids` is non-empty.
+    let feature_names = feature::find_names_by_run_id(&ctx.pool, run_ids[0]).await?;
 
     let counts: Vec<_> = sqlx::query!(
         r#"

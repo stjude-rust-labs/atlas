@@ -1,11 +1,8 @@
-use std::collections::HashMap;
-
 use axum::{
     extract::{Path, Query, State},
     routing::get,
     Json, Router,
 };
-use futures::{StreamExt, TryStreamExt};
 use serde::{Deserialize, Serialize};
 
 use crate::server::{self, Context, Error};
@@ -94,8 +91,21 @@ async fn index(
 }
 
 #[derive(Serialize)]
+struct Run {
+    id: i32,
+    count: i32,
+}
+
+#[derive(Serialize)]
+struct ShowFeature {
+    id: i32,
+    name: String,
+    runs: Vec<Run>,
+}
+
+#[derive(Serialize)]
 struct ShowResponse {
-    counts: HashMap<String, i32>,
+    feature: ShowFeature,
 }
 
 /// Shows counts for samples with the given configuration ID and feature name.
@@ -115,30 +125,46 @@ async fn show(
     Path((configuration_id, id)): Path<(i32, i32)>,
     State(ctx): State<Context>,
 ) -> server::Result<Json<ShowResponse>> {
-    let counts = sqlx::query!(
+    let rows = sqlx::query!(
         "
         select
-            samples.name,
+            features.name,
+            runs.id,
             counts.value
         from counts
+        inner join features
+            on features.id = counts.feature_id
         inner join runs
             on runs.id = counts.run_id
         inner join samples
             on samples.id = runs.sample_id
-        inner join features
-            on features.id = counts.feature_id
-        where runs.configuration_id = $1
-            and features.id = $2
+        where counts.feature_id = $1
+            and runs.configuration_id = $2
         ",
-        configuration_id,
         id,
+        configuration_id,
     )
-    .fetch(&ctx.pool)
-    .map(|result| result.map(|record| (record.name, record.value)))
-    .try_collect()
+    .fetch_all(&ctx.pool)
     .await?;
 
-    Ok(Json(ShowResponse { counts }))
+    if rows.is_empty() {
+        return Err(Error::NotFound);
+    }
+
+    // SAFETY: `rows` is non-empty.
+    let name = rows[0].name.clone();
+
+    let runs = rows
+        .into_iter()
+        .map(|row| Run {
+            id: row.id,
+            count: row.value,
+        })
+        .collect();
+
+    Ok(Json(ShowResponse {
+        feature: ShowFeature { id, name, runs },
+    }))
 }
 
 #[cfg(test)]
@@ -213,9 +239,16 @@ mod tests {
         assert_eq!(
             actual,
             json!({
-                "counts": {
-                    "sample1": 5,
-                    "sample2": 13,
+                "feature": {
+                    "id": 1,
+                    "name": "39_feature_1",
+                    "runs": [{
+                        "id": 1,
+                        "count": 5,
+                    }, {
+                        "id": 2,
+                        "count": 13,
+                    }],
                 }
             })
         );

@@ -1,5 +1,6 @@
 use std::iter;
 
+use futures::{StreamExt, TryStreamExt};
 use serde::Serialize;
 use sqlx::PgExecutor;
 
@@ -67,24 +68,23 @@ where
     .await
 }
 
-pub async fn first_configuration_id<'a, E>(executor: E, id: i32) -> sqlx::Result<i32>
+pub async fn configuration_ids<'a, E>(executor: E, id: i32) -> sqlx::Result<Vec<i32>>
 where
     E: PgExecutor<'a>,
 {
-    sqlx::query_scalar!(
+    sqlx::query!(
         "
-        select configuration_id
-        from runs
-        where id = (
-            select dataset_id
-            from datasets_runs
-            where dataset_id = $1
-            limit 1
-        )
+        select distinct(configuration_id)
+        from datasets_runs
+        inner join runs
+            on datasets_runs.run_id = runs.id
+        where datasets_runs.dataset_id = $1
         ",
         id
     )
-    .fetch_one(executor)
+    .fetch(executor)
+    .map(|result| result.map(|row| row.configuration_id))
+    .try_collect()
     .await
 }
 

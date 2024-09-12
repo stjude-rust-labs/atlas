@@ -21,7 +21,15 @@ pub async fn plot(
 ) -> Result<(Vec<String>, Vec<f64>, Vec<f64>), Error> {
     use crate::store::{dataset, feature};
 
-    let configuration_id = dataset::first_configuration_id(pool, dataset_id).await?;
+    let configuration_ids = dataset::configuration_ids(pool, dataset_id).await?;
+
+    if configuration_ids.len() != 1 {
+        return Err(Error::NonhomogeoneousDataset);
+    }
+
+    // SAFETY: `configuration_ids` is non-empty;
+    let configuration_id = configuration_ids[0];
+
     let feature_count = feature::count(pool, configuration_id).await? as usize;
 
     let rows = sqlx::query_as!(

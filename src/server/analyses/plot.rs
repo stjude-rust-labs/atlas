@@ -2,6 +2,7 @@ mod create;
 
 use std::collections::{HashMap, HashSet};
 
+use anyhow::anyhow;
 use axum::{
     extract::{Path, State},
     routing::{get, post},
@@ -73,7 +74,15 @@ async fn create(
         .map(|runs| runs.into_iter().collect())
         .unwrap_or_default();
 
-    let configuration_id = dataset::first_configuration_id(&ctx.pool, dataset_id).await?;
+    let configuration_ids = dataset::configuration_ids(&ctx.pool, dataset_id).await?;
+
+    if configuration_ids.len() != 1 {
+        return Err(Error::Anyhow(anyhow!("dataset is nonhomogeneous")));
+    }
+
+    // SAFETY: `configuration_ids` is non-empty.
+    let configuration_id = configuration_ids[0];
+
     let features = find_features(&ctx.pool, configuration_id).await?;
     let feature_names: HashSet<_> = features.into_iter().map(|(_, name)| name).collect();
 

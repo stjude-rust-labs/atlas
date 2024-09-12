@@ -2,7 +2,7 @@ use std::iter;
 
 use futures::{StreamExt, TryStreamExt};
 use serde::Serialize;
-use sqlx::PgExecutor;
+use sqlx::{postgres::PgQueryResult, PgExecutor};
 
 #[derive(Serialize)]
 pub struct Dataset {
@@ -65,6 +65,19 @@ where
         id
     )
     .fetch_one(executor)
+    .await
+}
+
+pub async fn add<'a, E>(executor: E, dataset_id: i32, run_id: i32) -> sqlx::Result<PgQueryResult>
+where
+    E: PgExecutor<'a>,
+{
+    sqlx::query!(
+        "insert into datasets_runs (dataset_id, run_id) values ($1, $2)",
+        dataset_id,
+        run_id
+    )
+    .execute(executor)
     .await
 }
 

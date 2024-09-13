@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use axum::{
     extract::{Path, Query, State},
     routing::get,
@@ -28,9 +26,22 @@ struct IndexQuery {
 
 #[derive(Serialize)]
 #[serde(untagged)]
-enum Counts {
-    Normalized(HashMap<String, f64>),
-    Raw(HashMap<String, i32>),
+enum Values {
+    Normalized(Vec<f64>),
+    Raw(Vec<i32>),
+}
+
+#[derive(Serialize)]
+struct Run {
+    id: i32,
+    values: Values,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct Counts {
+    feature_names: Vec<String>,
+    run: Run,
 }
 
 #[derive(Serialize)]
@@ -87,9 +98,10 @@ async fn index(
         return Err(Error::NotFound);
     }
 
-    let counts = rows.into_iter().map(|c| (c.name, c.value)).collect();
+    let feature_names: Vec<_> = rows.iter().map(|row| row.name.clone()).collect();
+    let counts = rows.into_iter().map(|row| (row.name, row.value)).collect();
 
-    if let Some(normalization_method) = params.normalize {
+    let values = if let Some(normalization_method) = params.normalize {
         let features = feature::find_lengths_by_run_id(&ctx.pool, run_id).await?;
 
         let normalized_counts = match normalization_method {
@@ -100,7 +112,7 @@ async fn index(
                 // Applying median of ratios to a single sample is a no-op.
                 counts
                     .into_iter()
-                    .map(|(name, count)| (name, count as f64))
+                    .map(|(name, value)| (name, f64::from(value)))
                     .collect()
             }
             Normalize::Tpm => {
@@ -108,14 +120,23 @@ async fn index(
             }
         };
 
-        Ok(Json(IndexBody {
-            counts: Counts::Normalized(normalized_counts),
-        }))
+        let values = feature_names
+            .iter()
+            .map(|name| normalized_counts[name])
+            .collect();
+
+        Values::Normalized(values)
     } else {
-        Ok(Json(IndexBody {
-            counts: Counts::Raw(counts),
-        }))
-    }
+        let values = feature_names.iter().map(|name| counts[name]).collect();
+        Values::Raw(values)
+    };
+
+    Ok(Json(IndexBody {
+        counts: Counts {
+            feature_names,
+            run: Run { id: run_id, values },
+        },
+    }))
 }
 
 #[cfg(test)]
@@ -125,7 +146,7 @@ mod tests {
         http::{Request, StatusCode},
     };
     use http_body_util::BodyExt;
-    use serde::Deserialize;
+    use serde_json::{json, Value};
     use sqlx::PgPool;
     use tower::ServiceExt;
 
@@ -139,11 +160,6 @@ mod tests {
 
     #[sqlx::test(fixtures("counts"))]
     async fn test_show(pool: PgPool) -> anyhow::Result<()> {
-        #[derive(Deserialize)]
-        struct CountsBody {
-            counts: HashMap<String, i32>,
-        }
-
         let request = Request::builder()
             .uri("/runs/1/counts")
             .body(Body::empty())?;
@@ -152,13 +168,20 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
 
         let body = response.into_body().collect().await?.to_bytes();
-        let actual: CountsBody = serde_json::from_slice(&body)?;
+        let actual: Value = serde_json::from_slice(&body)?;
 
-        let expected = [("feature_1".into(), 8), ("feature_2".into(), 0)]
-            .into_iter()
-            .collect();
-
-        assert_eq!(actual.counts, expected);
+        assert_eq!(
+            actual,
+            json!({
+                "counts": {
+                    "featureNames": ["feature_1", "feature_2"],
+                    "run": {
+                        "id": 1,
+                        "values": [8, 0],
+                    },
+                },
+            })
+        );
 
         Ok(())
     }

@@ -48,7 +48,7 @@ where
             strand_specification as "strand_specification: _",
             data_type
         from runs
-        where id = $1
+        where sample_id = $1
         "#,
         id
     )

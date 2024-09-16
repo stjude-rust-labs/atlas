@@ -12,6 +12,28 @@ pub struct Run {
     data_type: String,
 }
 
+pub async fn find<'a, E>(executor: E, id: i32) -> sqlx::Result<Option<Run>>
+where
+    E: PgExecutor<'a>,
+{
+    sqlx::query_as!(
+        Run,
+        r#"
+        select
+            id,
+            sample_id,
+            configuration_id,
+            strand_specification as "strand_specification: _",
+            data_type
+        from runs
+        where id = $1
+        "#,
+        id
+    )
+    .fetch_optional(executor)
+    .await
+}
+
 pub async fn where_sample_id<'a, E>(executor: E, id: i32) -> sqlx::Result<Vec<Run>>
 where
     E: PgExecutor<'a>,

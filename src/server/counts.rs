@@ -1,5 +1,6 @@
 use std::num::ParseIntError;
 
+use anyhow::anyhow;
 use axum::{
     extract::{Query, State},
     routing::get,
@@ -22,7 +23,8 @@ enum Normalize {
 
 #[derive(Debug, Deserialize)]
 struct IndexQuery {
-    run_ids: String,
+    run_ids: Option<String>,
+    dataset_id: Option<i32>,
     normalize: Option<Normalize>,
 }
 
@@ -75,14 +77,29 @@ async fn index(
 
     const DELIMITER: char = ',';
 
-    let run_ids: Vec<i32> = params
-        .run_ids
-        .split(DELIMITER)
-        .map(|s| {
-            s.parse()
-                .map_err(|e: ParseIntError| super::Error::Anyhow(e.into()))
-        })
-        .collect::<Result<_, _>>()?;
+    let run_ids: Vec<i32> = if let Some(run_ids) = params.run_ids {
+        run_ids
+            .split(DELIMITER)
+            .map(|s| {
+                s.parse()
+                    .map_err(|e: ParseIntError| super::Error::Anyhow(e.into()))
+            })
+            .collect::<Result<_, _>>()?
+    } else if let Some(dataset_id) = params.dataset_id {
+        sqlx::query!(
+            "select run_id from datasets_runs where dataset_id = $1",
+            dataset_id
+        )
+        .fetch_all(&ctx.pool)
+        .await?
+        .into_iter()
+        .map(|row| row.run_id)
+        .collect()
+    } else {
+        return Err(Error::Anyhow(anyhow!(
+            "missing either run_ids or dataset_id"
+        )));
+    };
 
     if run_ids.is_empty() {
         return Err(Error::NotFound);

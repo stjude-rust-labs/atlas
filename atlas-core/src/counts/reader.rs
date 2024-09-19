@@ -1,12 +1,25 @@
+mod format;
 mod htseq_count;
+mod star;
 
 use std::io::{self, BufRead};
 
-pub fn read<R>(reader: &mut R) -> io::Result<Vec<(String, u64)>>
+pub use self::format::Format;
+use crate::StrandSpecification;
+
+pub fn read<R>(
+    reader: &mut R,
+    format: Format,
+    feature_name: &str,
+    strand_specification: StrandSpecification,
+) -> io::Result<Vec<(String, u64)>>
 where
     R: BufRead,
 {
-    htseq_count::read(reader)
+    match format {
+        Format::HtseqCount => htseq_count::read(reader),
+        Format::Star => star::read(reader, feature_name, strand_specification),
+    }
 }
 
 fn read_line<R>(reader: &mut R, buf: &mut String) -> io::Result<usize>

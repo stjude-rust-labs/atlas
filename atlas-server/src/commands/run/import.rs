@@ -9,7 +9,7 @@ use tracing::info;
 
 use crate::{
     cli::run::ImportConfig,
-    counts::{feature_names_eq, reader::read_counts, Format},
+    counts::{feature_names_eq, Format},
     store::{dataset, StrandSpecification},
 };
 
@@ -99,9 +99,7 @@ where
             // SAFETY: `str::Split` always has at least one item.
             let sample_name = filename.split(sample_name_delimiter).next().unwrap();
 
-            let mut reader = File::open(path).await.map(BufReader::new)?;
-            let counts =
-                read_counts(&mut reader, format, feature_name, strand_specification).await?;
+            let counts = read_counts(path, format, feature_name, strand_specification).await?;
 
             chunk.push((sample_name.into(), counts));
         }
@@ -153,9 +151,7 @@ where
                     .split_once(DELIMITER)
                     .ok_or_else(|| io::Error::from(io::ErrorKind::InvalidData))?;
 
-                let mut reader = File::open(src).await.map(BufReader::new)?;
-                let counts =
-                    read_counts(&mut reader, format, feature_name, strand_specification).await?;
+                let counts = read_counts(src, format, feature_name, strand_specification).await?;
 
                 chunk.push((sample_name.into(), counts));
 
@@ -236,4 +232,31 @@ async fn import_batch(
     }
 
     Ok(())
+}
+
+async fn read_counts<P>(
+    src: P,
+    format: Option<Format>,
+    feature_name: &str,
+    strand_specification: StrandSpecification,
+) -> anyhow::Result<HashMap<String, u64>>
+where
+    P: AsRef<Path>,
+{
+    let src = src.as_ref().to_path_buf();
+    let feature_name = feature_name.to_owned();
+
+    let counts = tokio::task::spawn_blocking(move || {
+        let mut reader = std::fs::File::open(src).map(std::io::BufReader::new)?;
+
+        atlas_core::counts::reader::read(
+            &mut reader,
+            format.map(|f| f.into()),
+            &feature_name,
+            strand_specification.into(),
+        )
+    })
+    .await??;
+
+    Ok(counts.into_iter().collect())
 }

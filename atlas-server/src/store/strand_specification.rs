@@ -9,3 +9,13 @@ pub enum StrandSpecification {
     Forward,
     Reverse,
 }
+
+impl From<StrandSpecification> for atlas_core::StrandSpecification {
+    fn from(strand_specification: StrandSpecification) -> Self {
+        match strand_specification {
+            StrandSpecification::None => Self::None,
+            StrandSpecification::Forward => Self::Forward,
+            StrandSpecification::Reverse => Self::Reverse,
+        }
+    }
+}

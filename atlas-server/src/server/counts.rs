@@ -73,7 +73,9 @@ async fn index(
     State(ctx): State<Context>,
     Query(params): Query<IndexQuery>,
 ) -> super::Result<Json<IndexBody>> {
-    use crate::{counts::normalization::median_of_ratios, store::feature};
+    use atlas_core::counts::normalization::median_of_ratios;
+
+    use crate::store::feature;
 
     const DELIMITER: char = ',';
 
@@ -167,12 +169,12 @@ async fn index(
 
                 let normalized_counts_map = match normalization_method {
                     Normalize::Fpkm => {
-                        crate::counts::normalization::fpkm::calculate_fpkms(&features, &counts)
+                        atlas_core::counts::normalization::fpkm::calculate_fpkms(&features, &counts)
                             .unwrap()
                     }
                     Normalize::MedianOfRatios => unreachable!(),
                     Normalize::Tpm => {
-                        crate::counts::normalization::tpm::calculate_tpms(&features, &counts)
+                        atlas_core::counts::normalization::tpm::calculate_tpms(&features, &counts)
                             .unwrap()
                     }
                 };

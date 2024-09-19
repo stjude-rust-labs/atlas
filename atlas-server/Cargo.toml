@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.55"
+atlas-core = { path = "../atlas-core", version = "0.1.0" }
 axum = "0.7.1"
 bhtsne = { version = "0.5.2", default-features = false }
 clap = { version = "4.4.0", features = ["derive", "env"] }

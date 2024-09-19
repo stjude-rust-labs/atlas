@@ -106,7 +106,8 @@ async fn index(
 
         let normalized_counts = match normalization_method {
             Normalize::Fpkm => {
-                crate::counts::normalization::fpkm::calculate_fpkms(&features, &counts).unwrap()
+                atlas_core::counts::normalization::fpkm::calculate_fpkms(&features, &counts)
+                    .unwrap()
             }
             Normalize::MedianOfRatios => {
                 // Applying median of ratios to a single sample is a no-op.
@@ -116,7 +117,7 @@ async fn index(
                     .collect()
             }
             Normalize::Tpm => {
-                crate::counts::normalization::tpm::calculate_tpms(&features, &counts).unwrap()
+                atlas_core::counts::normalization::tpm::calculate_tpms(&features, &counts).unwrap()
             }
         };
 

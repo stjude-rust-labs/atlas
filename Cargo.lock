@@ -104,12 +104,16 @@ dependencies = [
 [[package]]
 name = "atlas-core"
 version = "0.1.0"
+dependencies = [
+ "ndarray",
+]
 
 [[package]]
 name = "atlas-server"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "atlas-core",
  "axum",
  "bhtsne",
  "clap",

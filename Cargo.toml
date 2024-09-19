@@ -1,35 +1,5 @@
-[package]
-name = "atlas"
-version = "0.1.0"
-authors = ["Michael Macias <michael.macias@stjude.org>"]
-edition = "2021"
-rust-version = "1.74.0"
-description = "Enables storing, querying, transforming, and visualizing of multidimensional count data"
-homepage = "https://github.com/stjude-rust-labs/atlas"
-repository = "https://github.com/stjude-rust-labs/atlas"
-
-[dependencies]
-anyhow = "1.0.55"
-axum = "0.7.1"
-bhtsne = { version = "0.5.2", default-features = false }
-clap = { version = "4.4.0", features = ["derive", "env"] }
-dotenvy = "0.15.0"
-futures = { version = "0.3.21", default-features = false, features = ["std"] }
-ndarray = "0.16.1"
-noodles = { version = "0.82.0", features = ["core", "gff"] }
-serde = { version = "1.0.136", features = ["derive"] }
-serde_json = "1.0.79"
-sqlx = { version = "0.8.0", features = ["json", "runtime-tokio", "postgres", "time", "tls-native-tls", "uuid"] }
-thiserror = "1.0.40"
-time = { version = "0.3.10", features = ["serde-human-readable"] }
-tokio = { version = "1.17.0", features = ["fs", "macros", "rt-multi-thread", "signal", "sync", "time"] }
-tower = "0.4.12"
-tower-http = { version = "0.5.0", features = ["add-extension", "fs", "trace", "util"] }
-tracing = "0.1.30"
-tracing-subscriber = "0.3.8"
-utoipa = { version = "4.1.0", features = ["time", "uuid"] }
-uuid = { version = "1.4.0", features = ["serde", "v4"] }
-
-[dev-dependencies]
-http-body-util = "0.1.0"
-hyper = "1.0.1"
+[workspace]
+members = [
+    "atlas-server",
+]
+resolver = "2"

@@ -102,7 +102,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "atlas"
+name = "atlas-server"
 version = "0.1.0"
 dependencies = [
  "anyhow",

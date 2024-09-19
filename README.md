@@ -17,7 +17,6 @@ After opening the project in the dev container,
 ```sh
 cp .env.example .env
 sqlx database setup
-psql --host localhost --username postgres atlas < tests/sql/seeds.sql
 cargo run -- server
 
 # open <local-address>/docs

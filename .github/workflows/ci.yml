@@ -34,6 +34,6 @@ jobs:
       - name: Setup database
         run: |
           cargo install sqlx-cli --no-default-features --features native-tls,postgres
-          sqlx database setup
+          sqlx database setup --source atlas-server/migrations
       - run: cargo clippy -- --deny warnings
       - run: cargo test

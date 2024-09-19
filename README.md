@@ -16,7 +16,7 @@ After opening the project in the dev container,
 
 ```sh
 cp .env.example .env
-sqlx database setup
+sqlx database setup --source atlas-server/migrations
 cargo run -- server
 
 # open <local-address>/docs

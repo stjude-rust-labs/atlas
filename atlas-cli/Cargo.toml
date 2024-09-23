@@ -1,0 +1,11 @@
+[package]
+name = "atlas-cli"
+version = "0.1.0"
+edition.workspace = true
+
+[[bin]]
+name = "atlas"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true

@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "atlas-cli",
     "atlas-core",
     "atlas-server",
 ]
@@ -9,5 +10,6 @@ resolver = "2"
 edition = "2021"
 
 [workspace.dependencies]
+anyhow = "1.0.55"
 thiserror = "1.0.40"
 tracing = "0.1.30"

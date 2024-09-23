@@ -102,6 +102,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "atlas-cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+]
+
+[[package]]
 name = "atlas-core"
 version = "0.1.0"
 dependencies = [

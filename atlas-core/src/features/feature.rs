@@ -21,7 +21,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_length() -> anyhow::Result<()> {
+    fn test_length() -> Result<(), noodles::core::position::TryFromIntError> {
         let feature = Feature::new(Position::try_from(5)?, Position::try_from(8)?);
         assert_eq!(feature.length(), 4);
         Ok(())

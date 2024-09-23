@@ -106,6 +106,8 @@ name = "atlas-core"
 version = "0.1.0"
 dependencies = [
  "ndarray",
+ "noodles",
+ "thiserror",
  "tracing",
 ]
 
@@ -123,7 +125,6 @@ dependencies = [
  "http-body-util",
  "hyper",
  "ndarray",
- "noodles",
  "serde",
  "serde_json",
  "sqlx",

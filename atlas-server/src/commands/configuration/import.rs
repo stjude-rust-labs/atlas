@@ -1,14 +1,11 @@
 use std::{collections::HashMap, path::Path};
 
+use atlas_core::features::{merge_features, Feature};
 use sqlx::postgres::PgPoolOptions;
 use tokio::io;
 use tracing::info;
 
-use crate::{
-    cli::configuration::ImportConfig,
-    features::{merge_features, Feature},
-    store::feature::create_features,
-};
+use crate::{cli::configuration::ImportConfig, store::feature::create_features};
 
 pub(super) async fn import(config: ImportConfig) -> anyhow::Result<()> {
     use crate::store::{annotations::find_or_create_annotations, configuration};
@@ -73,7 +70,7 @@ where
             io::{self, BufReader},
         };
 
-        use crate::features::read_features;
+        use atlas_core::features::read_features;
 
         let mut reader = File::open(src).map(BufReader::new)?;
 

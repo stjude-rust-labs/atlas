@@ -9,4 +9,5 @@ resolver = "2"
 edition = "2021"
 
 [workspace.dependencies]
+thiserror = "1.0.40"
 tracing = "0.1.30"

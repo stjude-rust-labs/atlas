@@ -106,6 +106,9 @@ name = "atlas-cli"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "atlas-core",
+ "clap",
+ "thiserror",
 ]
 
 [[package]]

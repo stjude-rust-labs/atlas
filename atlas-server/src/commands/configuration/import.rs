@@ -1,6 +1,6 @@
 use std::{collections::HashMap, path::Path};
 
-use atlas_core::features::{merge_features, Feature};
+use atlas_core::features::{calculate_feature_lengths, Feature};
 use sqlx::postgres::PgPoolOptions;
 use tokio::io;
 use tracing::info;
@@ -39,7 +39,11 @@ pub(super) async fn import(config: ImportConfig) -> anyhow::Result<()> {
     let mut names: Vec<_> = features.keys().cloned().collect();
     names.sort();
 
-    let lengths = calculate_feature_lengths(&features, &names)?;
+    let lengths: Vec<_> = calculate_feature_lengths(&features, &names)?
+        .into_iter()
+        .map(i32::try_from)
+        .collect::<Result<_, _>>()
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
     create_features(&mut tx, configuration_id, &names, &lengths).await?;
 
@@ -78,28 +82,4 @@ where
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
     })
     .await?
-}
-
-fn calculate_feature_lengths(
-    features: &HashMap<String, Vec<Feature>>,
-    names: &[String],
-) -> io::Result<Vec<i32>> {
-    let mut lengths = Vec::with_capacity(names.len());
-
-    for name in names {
-        let segments = features.get(name).unwrap();
-        let merged_segments = merge_features(segments);
-
-        let length: usize = merged_segments
-            .into_iter()
-            .map(|feature| feature.length())
-            .sum();
-
-        let length =
-            i32::try_from(length).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-
-        lengths.push(length);
-    }
-
-    Ok(lengths)
 }

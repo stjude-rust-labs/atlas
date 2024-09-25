@@ -91,6 +91,29 @@ pub fn merge_features(features: &[Feature]) -> Vec<Feature> {
     merged_features
 }
 
+pub fn calculate_feature_lengths(
+    features: &HashMap<String, Vec<Feature>>,
+    names: &[String],
+) -> io::Result<Vec<usize>> {
+    names
+        .iter()
+        .map(|name| {
+            let segments = features
+                .get(name)
+                .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "missing feature"))?;
+
+            let merged_segments = merge_features(segments);
+
+            let length = merged_segments
+                .into_iter()
+                .map(|feature| feature.length())
+                .sum();
+
+            Ok(length)
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use noodles::core::Position;

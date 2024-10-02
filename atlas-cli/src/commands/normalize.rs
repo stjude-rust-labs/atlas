@@ -40,7 +40,7 @@ pub fn normalize(args: normalize::Args) -> Result<(), NormalizeError> {
                 .collect::<Result<_, num::TryFromIntError>>()
                 .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
-            median_of_ratios::normalize_vec(1, features.len(), data)?
+            median_of_ratios::normalize_vec(1, names.len(), data)?
         }
         Method::Tpm => {
             let feature_lengths: Vec<_> = calculate_feature_lengths(&features, &names)?

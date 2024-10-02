@@ -1,6 +1,6 @@
 use std::{collections::HashMap, io};
 
-pub fn calculate_fpkms_map(
+pub fn normalize_map(
     feature_lengths: &HashMap<String, i32>,
     counts: &HashMap<String, i32>,
 ) -> io::Result<HashMap<String, f64>> {
@@ -14,7 +14,7 @@ pub fn calculate_fpkms_map(
 
     let counts: Vec<_> = feature_names.iter().map(|name| counts[*name]).collect();
 
-    let fpkms = calculate_fpkms(&feature_lengths, &counts);
+    let fpkms = normalize(&feature_lengths, &counts);
 
     Ok(feature_names
         .into_iter()
@@ -23,7 +23,7 @@ pub fn calculate_fpkms_map(
         .collect())
 }
 
-pub fn calculate_fpkms(feature_lengths: &[i32], counts: &[i32]) -> Vec<f64> {
+pub fn normalize(feature_lengths: &[i32], counts: &[i32]) -> Vec<f64> {
     let sum = counts.iter().copied().map(f64::from).sum();
 
     feature_lengths
@@ -45,7 +45,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_calculate_fpkms() {
+    fn test_normalize() {
         fn assert_approx_eq(a: f64, b: f64) {
             const EPSILON: f64 = 1e-9;
             assert!((a - b).abs() < EPSILON);
@@ -56,7 +56,7 @@ mod tests {
         let counts = [610, 2, 6765];
         let sum = 610.0 + 2.0 + 6765.0;
 
-        let values = calculate_fpkms(&feature_lengths, &counts);
+        let values = normalize(&feature_lengths, &counts);
 
         let expected = 610.0 * 1e9 / (17711.0 * sum);
         assert_approx_eq(values[0], expected);

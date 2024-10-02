@@ -31,7 +31,7 @@ pub fn normalize(args: normalize::Args) -> Result<(), NormalizeError> {
 
             let counts: Vec<_> = counts.into_iter().map(|value| value as i32).collect();
 
-            vec![fpkm::calculate_fpkms(&feature_lengths, &counts)]
+            vec![fpkm::normalize(&feature_lengths, &counts)]
         }
         Method::MedianOfRatios => {
             let data = counts

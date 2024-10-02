@@ -169,10 +169,8 @@ async fn index(
 
                 let normalized_counts_map = match normalization_method {
                     Normalize::Fpkm => {
-                        atlas_core::counts::normalization::fpkm::calculate_fpkms_map(
-                            &features, &counts,
-                        )
-                        .unwrap()
+                        atlas_core::counts::normalization::fpkm::normalize_map(&features, &counts)
+                            .unwrap()
                     }
                     Normalize::MedianOfRatios => unreachable!(),
                     Normalize::Tpm => {

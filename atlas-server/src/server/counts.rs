@@ -174,7 +174,7 @@ async fn index(
                     }
                     Normalize::MedianOfRatios => unreachable!(),
                     Normalize::Tpm => {
-                        atlas_core::counts::normalization::tpm::calculate_tpms(&features, &counts)
+                        atlas_core::counts::normalization::tpm::normalize(&features, &counts)
                             .unwrap()
                     }
                 };

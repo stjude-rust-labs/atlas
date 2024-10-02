@@ -1,6 +1,6 @@
 use std::{collections::HashMap, io};
 
-pub fn calculate_tpms(
+pub fn normalize(
     features: &HashMap<String, i32>,
     counts: &HashMap<String, i32>,
 ) -> io::Result<HashMap<String, f64>> {
@@ -37,7 +37,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_calculate_tpms() -> io::Result<()> {
+    fn test_normalize() -> io::Result<()> {
         fn assert_approx_eq(a: f64, b: f64) {
             const EPSILON: f64 = 1e-9;
             assert!((a - b).abs() < EPSILON);
@@ -59,7 +59,7 @@ mod tests {
         .into_iter()
         .collect();
 
-        let tpms = calculate_tpms(&features, &counts)?;
+        let tpms = normalize(&features, &counts)?;
 
         let sum = 610.0 / 17711.0 + 2.0 / 10946.0 + 6765.0 / 233.0;
 

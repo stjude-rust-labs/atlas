@@ -1,30 +1,39 @@
 use std::{collections::HashMap, io};
 
-pub fn calculate_fpkms(
-    features: &HashMap<String, i32>,
+pub fn calculate_fpkms_map(
+    feature_lengths: &HashMap<String, i32>,
     counts: &HashMap<String, i32>,
 ) -> io::Result<HashMap<String, f64>> {
-    let sum = sum_counts(counts);
+    let mut feature_names: Vec<_> = counts.keys().collect();
+    feature_names.sort();
 
-    counts
+    let feature_lengths: Vec<_> = feature_names
         .iter()
-        .map(|(name, count)| {
-            features
-                .get(name)
-                .map(|&length| {
-                    assert!(length > 0);
-                    (
-                        name.clone(),
-                        calculate_fpkm(f64::from(*count), f64::from(length), sum),
-                    )
-                })
-                .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "missing feature"))
-        })
-        .collect()
+        .map(|name| feature_lengths[*name])
+        .collect();
+
+    let counts: Vec<_> = feature_names.iter().map(|name| counts[*name]).collect();
+
+    let fpkms = calculate_fpkms(&feature_lengths, &counts);
+
+    Ok(feature_names
+        .into_iter()
+        .zip(fpkms)
+        .map(|(name, value)| (name.into(), value))
+        .collect())
 }
 
-fn sum_counts(counts: &HashMap<String, i32>) -> f64 {
-    counts.values().copied().map(f64::from).sum()
+pub fn calculate_fpkms(feature_lengths: &[i32], counts: &[i32]) -> Vec<f64> {
+    let sum = counts.iter().copied().map(f64::from).sum();
+
+    feature_lengths
+        .iter()
+        .zip(counts)
+        .map(|(length, count)| {
+            assert!(*length > 0);
+            calculate_fpkm(f64::from(*count), f64::from(*length), sum)
+        })
+        .collect()
 }
 
 fn calculate_fpkm(count: f64, length: f64, sum: f64) -> f64 {
@@ -36,44 +45,26 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_calculate_fpkms() -> io::Result<()> {
+    fn test_calculate_fpkms() {
         fn assert_approx_eq(a: f64, b: f64) {
             const EPSILON: f64 = 1e-9;
             assert!((a - b).abs() < EPSILON);
         }
 
-        let features = [
-            (String::from("f0"), 17711),
-            (String::from("f1"), 10946),
-            (String::from("f2"), 233),
-        ]
-        .into_iter()
-        .collect();
+        let feature_lengths = [17711, 10946, 233];
 
-        let counts = [
-            (String::from("f0"), 610),
-            (String::from("f1"), 2),
-            (String::from("f2"), 6765),
-        ]
-        .into_iter()
-        .collect();
-
-        let fpkms = calculate_fpkms(&features, &counts)?;
-
+        let counts = [610, 2, 6765];
         let sum = 610.0 + 2.0 + 6765.0;
 
-        let actual = fpkms["f0"];
+        let values = calculate_fpkms(&feature_lengths, &counts);
+
         let expected = 610.0 * 1e9 / (17711.0 * sum);
-        assert_approx_eq(actual, expected);
+        assert_approx_eq(values[0], expected);
 
-        let actual = fpkms["f1"];
         let expected = 2.0 * 1e9 / (10946.0 * sum);
-        assert_approx_eq(actual, expected);
+        assert_approx_eq(values[1], expected);
 
-        let actual = fpkms["f2"];
         let expected = 6765.0 * 1e9 / (233.0 * sum);
-        assert_approx_eq(actual, expected);
-
-        Ok(())
+        assert_approx_eq(values[2], expected);
     }
 }

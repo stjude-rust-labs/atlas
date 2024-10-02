@@ -7,8 +7,8 @@ use std::{
 };
 
 use atlas_core::{
-    counts::normalization::median_of_ratios,
-    features::{Feature, ReadFeaturesError},
+    counts::normalization::{fpkm, median_of_ratios},
+    features::{calculate_feature_lengths, Feature, ReadFeaturesError},
     StrandSpecification,
 };
 use thiserror::Error;
@@ -23,7 +23,16 @@ pub fn normalize(args: normalize::Args) -> Result<(), NormalizeError> {
     let names: Vec<_> = feature_counts.into_iter().map(|(name, _)| name).collect();
 
     let normalized_counts = match args.method {
-        Method::Fpkm => todo!(),
+        Method::Fpkm => {
+            let feature_lengths: Vec<_> = calculate_feature_lengths(&features, &names)?
+                .into_iter()
+                .map(|length| length as i32)
+                .collect();
+
+            let counts: Vec<_> = counts.into_iter().map(|value| value as i32).collect();
+
+            vec![fpkm::calculate_fpkms(&feature_lengths, &counts)]
+        }
         Method::MedianOfRatios => {
             let data = counts
                 .into_iter()

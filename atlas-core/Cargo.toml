@@ -5,6 +5,6 @@ edition.workspace = true
 
 [dependencies]
 ndarray = "0.16.1"
-noodles = { version = "0.82.0", features = ["core", "gff"] }
+noodles = { version = "0.83.0", features = ["core", "gff"] }
 thiserror.workspace = true
 tracing.workspace = true

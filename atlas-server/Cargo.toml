@@ -18,8 +18,8 @@ sqlx = { version = "0.8.0", features = ["json", "runtime-tokio", "postgres", "ti
 thiserror.workspace = true
 time = { version = "0.3.10", features = ["serde-human-readable"] }
 tokio = { version = "1.17.0", features = ["fs", "macros", "rt-multi-thread", "signal", "sync", "time"] }
-tower = "0.4.12"
-tower-http = { version = "0.5.0", features = ["add-extension", "fs", "trace", "util"] }
+tower = "0.5.1"
+tower-http = { version = "0.6.1", features = ["add-extension", "fs", "trace", "util"] }
 tracing.workspace = true
 tracing-subscriber = "0.3.8"
 utoipa = { version = "4.1.0", features = ["time", "uuid"] }

@@ -116,7 +116,7 @@ async fn index(
                     .collect()
             }
             Normalize::Tpm => {
-                atlas_core::counts::normalization::tpm::normalize(&features, &counts).unwrap()
+                atlas_core::counts::normalization::tpm::normalize_map(&features, &counts).unwrap()
             }
         };
 

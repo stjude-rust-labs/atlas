@@ -30,6 +30,7 @@ pub struct Args {
     #[arg(long, value_enum, default_value_t = Method::Tpm)]
     pub method: Method,
 
-    /// Input source (htseq-count or STAR).
-    pub src: PathBuf,
+    /// Input sources (htseq-count or STAR).
+    #[arg(required = true)]
+    pub srcs: Vec<PathBuf>,
 }

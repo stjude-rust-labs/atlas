@@ -19,12 +19,12 @@ const SEPARATOR: char = '\t';
 pub fn normalize(args: normalize::Args) -> Result<(), NormalizeError> {
     let features = read_features(&args.annotations, &args.feature_type, &args.feature_id)?;
 
+    let strand_specification = StrandSpecification::from(args.strand_specification);
+
     let samples: Vec<_> = args
         .srcs
         .iter()
-        .map(|src| {
-            read_counts(src, &args.feature_id, StrandSpecification::None) // FIXME: strand specification
-        })
+        .map(|src| read_counts(src, &args.feature_id, strand_specification))
         .collect::<io::Result<_>>()?;
 
     assert!(!samples.is_empty());

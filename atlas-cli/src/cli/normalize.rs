@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use atlas_core as core;
 use clap::{Parser, ValueEnum};
 
 #[derive(Clone, Copy, ValueEnum)]
@@ -10,6 +11,24 @@ pub enum Method {
     MedianOfRatios,
     /// Transcripts per million (TPM) mapped reads
     Tpm,
+}
+
+#[derive(Clone, Copy, Default, ValueEnum)]
+pub enum StrandSpecification {
+    None,
+    #[default]
+    Forward,
+    Reverse,
+}
+
+impl From<StrandSpecification> for core::StrandSpecification {
+    fn from(strand_specification: StrandSpecification) -> Self {
+        match strand_specification {
+            StrandSpecification::None => Self::None,
+            StrandSpecification::Forward => Self::Forward,
+            StrandSpecification::Reverse => Self::Reverse,
+        }
+    }
 }
 
 #[derive(Parser)]
@@ -29,6 +48,10 @@ pub struct Args {
     /// Normalization method.
     #[arg(long, value_enum, default_value_t = Method::Tpm)]
     pub method: Method,
+
+    /// Strand specification.
+    #[arg(long, value_enum, default_value_t = StrandSpecification::Forward)]
+    pub strand_specification: StrandSpecification,
 
     /// Input sources (htseq-count or STAR).
     #[arg(required = true)]

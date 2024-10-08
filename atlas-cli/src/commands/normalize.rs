@@ -21,15 +21,24 @@ pub fn normalize(args: normalize::Args) -> Result<(), NormalizeError> {
 
     let strand_specification = StrandSpecification::from(args.strand_specification);
 
-    let samples: Vec<_> = args
-        .srcs
-        .iter()
-        .map(|src| read_counts(src, &args.feature_id, strand_specification))
-        .collect::<io::Result<_>>()?;
+    let mut samples = Vec::with_capacity(args.srcs.len());
+    let mut feature_names: Option<Vec<_>> = None;
+
+    for src in &args.srcs {
+        let counts = read_counts(src, &args.feature_id, strand_specification)?;
+
+        if let Some(names) = &feature_names {
+            validate_feature_names(names, &counts)?;
+        } else {
+            feature_names = Some(counts.iter().map(|(name, _)| name.clone()).collect());
+        }
+
+        samples.push(counts);
+    }
 
     assert!(!samples.is_empty());
 
-    let names: Vec<_> = samples[0].iter().map(|(name, _)| name.clone()).collect();
+    let names = feature_names.unwrap();
 
     let normalized_counts: Vec<Vec<f64>> = match args.method {
         Method::Fpkm => {
@@ -119,6 +128,21 @@ where
 
     let mut reader = File::open(src).map(BufReader::new)?;
     reader::read(&mut reader, None, feature_id, strand_specification)
+}
+
+fn validate_feature_names(expected_names: &[String], counts: &[(String, u64)]) -> io::Result<()> {
+    let actual_names = counts.iter().map(|(name, _)| name);
+
+    for (expected_name, actual_name) in expected_names.iter().zip(actual_names) {
+        if actual_name != expected_name {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "features mismatch",
+            ));
+        }
+    }
+
+    Ok(())
 }
 
 fn write_multi_sample_normalized_counts<W>(

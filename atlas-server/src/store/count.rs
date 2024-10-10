@@ -16,7 +16,10 @@ pub async fn create_counts(
         let count = counts
             .get(name)
             .copied()
-            .ok_or_else(|| io::Error::from(io::ErrorKind::InvalidData))?;
+            .ok_or_else(|| io::Error::from(io::ErrorKind::InvalidData))
+            .and_then(|n| {
+                i32::try_from(n).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+            })?;
 
         if count == 0 {
             continue;
@@ -24,13 +27,13 @@ pub async fn create_counts(
 
         run_ids.push(run_id);
         feature_ids.push(*feature_id);
-        values.push(count as i64);
+        values.push(count);
     }
 
     sqlx::query!(
         "
         insert into counts (run_id, feature_id, value)
-        select * from unnest($1::integer[], $2::integer[], $3::bigint[])
+        select * from unnest($1::integer[], $2::integer[], $3::integer[])
         ",
         &run_ids[..],
         &feature_ids[..],

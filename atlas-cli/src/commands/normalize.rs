@@ -58,7 +58,7 @@ pub fn normalize(args: normalize::Args) -> Result<(), NormalizeError> {
         Method::MedianOfRatios => {
             let counts = samples
                 .iter()
-                .flat_map(|sample| sample.iter().map(|(_, n)| *n as u32))
+                .flat_map(|sample| sample.iter().map(|(_, n)| *n))
                 .collect();
 
             median_of_ratios::normalize_vec(samples.len(), names.len(), counts)?
@@ -120,7 +120,7 @@ fn read_counts<P>(
     src: P,
     feature_id: &str,
     strand_specification: StrandSpecification,
-) -> io::Result<Vec<(String, u64)>>
+) -> io::Result<Vec<(String, u32)>>
 where
     P: AsRef<Path>,
 {
@@ -130,7 +130,7 @@ where
     reader::read(&mut reader, None, feature_id, strand_specification)
 }
 
-fn validate_feature_names(expected_names: &[String], counts: &[(String, u64)]) -> io::Result<()> {
+fn validate_feature_names(expected_names: &[String], counts: &[(String, u32)]) -> io::Result<()> {
     let actual_names = counts.iter().map(|(name, _)| name);
 
     for (expected_name, actual_name) in expected_names.iter().zip(actual_names) {

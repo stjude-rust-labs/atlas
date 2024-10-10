@@ -6,7 +6,7 @@ pub async fn create_counts(
     tx: &mut Transaction<'_, Postgres>,
     run_id: i32,
     features: &Vec<(i32, String)>,
-    counts: &HashMap<String, u64>,
+    counts: &HashMap<String, u32>,
 ) -> anyhow::Result<()> {
     let mut run_ids = Vec::new();
     let mut feature_ids = Vec::new();

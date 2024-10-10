@@ -7,7 +7,7 @@ pub(super) fn read<R>(
     reader: &mut R,
     feature_name: &str,
     strand_specification: StrandSpecification,
-) -> io::Result<Vec<(String, u64)>>
+) -> io::Result<Vec<(String, u32)>>
 where
     R: BufRead,
 {
@@ -61,7 +61,7 @@ where
     Ok(())
 }
 
-fn parse_line(s: &str, name_index: usize, count_index: usize) -> io::Result<(String, u64)> {
+fn parse_line(s: &str, name_index: usize, count_index: usize) -> io::Result<(String, u32)> {
     const COLUMN_COUNT: usize = 9;
     const DELIMITER: char = '\t';
 

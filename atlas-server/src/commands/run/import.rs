@@ -181,7 +181,7 @@ async fn import_batch(
     dataset_id: Option<i32>,
     strand_specification: StrandSpecification,
     data_type: &str,
-    chunk: &[(String, HashMap<String, u64>)],
+    chunk: &[(String, HashMap<String, u32>)],
 ) -> anyhow::Result<()> {
     use crate::store::{
         count::create_counts,
@@ -239,7 +239,7 @@ async fn read_counts<P>(
     format: Option<Format>,
     feature_name: &str,
     strand_specification: StrandSpecification,
-) -> anyhow::Result<HashMap<String, u64>>
+) -> anyhow::Result<HashMap<String, u32>>
 where
     P: AsRef<Path>,
 {

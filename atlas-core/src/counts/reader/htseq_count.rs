@@ -2,7 +2,7 @@ use std::io::{self, BufRead};
 
 use super::read_line;
 
-pub(super) fn read<R>(reader: &mut R) -> io::Result<Vec<(String, u64)>>
+pub(super) fn read<R>(reader: &mut R) -> io::Result<Vec<(String, u32)>>
 where
     R: BufRead,
 {
@@ -29,7 +29,7 @@ where
     Ok(counts)
 }
 
-fn parse_line(s: &str) -> io::Result<(String, u64)> {
+fn parse_line(s: &str) -> io::Result<(String, u32)> {
     const DELIMITER: char = '\t';
 
     let (raw_name, raw_count) = s

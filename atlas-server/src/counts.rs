@@ -4,7 +4,7 @@ pub use self::format::Format;
 
 use std::collections::HashMap;
 
-pub fn feature_names_eq(features: &[(i32, String)], counts: &HashMap<String, u64>) -> bool {
+pub fn feature_names_eq(features: &[(i32, String)], counts: &HashMap<String, u32>) -> bool {
     if features.len() != counts.len() {
         return false;
     }

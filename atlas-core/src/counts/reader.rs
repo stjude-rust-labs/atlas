@@ -14,7 +14,7 @@ pub fn read<R>(
     format: Option<Format>,
     feature_name: &str,
     strand_specification: StrandSpecification,
-) -> io::Result<Vec<(String, u64)>>
+) -> io::Result<Vec<(String, u32)>>
 where
     R: BufRead,
 {

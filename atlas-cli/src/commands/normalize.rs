@@ -19,13 +19,14 @@ const SEPARATOR: char = '\t';
 pub fn normalize(args: normalize::Args) -> Result<(), NormalizeError> {
     let features = read_features(&args.annotations, &args.feature_type, &args.feature_id)?;
 
+    let format = args.format.map(|format| format.into());
     let strand_specification = StrandSpecification::from(args.strand_specification);
 
     let mut samples = Vec::with_capacity(args.srcs.len());
     let mut feature_names: Option<Vec<_>> = None;
 
     for src in &args.srcs {
-        let counts = read_counts(src, &args.feature_id, strand_specification)?;
+        let counts = read_counts(src, format, &args.feature_id, strand_specification)?;
 
         if let Some(names) = &feature_names {
             validate_feature_names(names, &counts)?;
@@ -118,6 +119,7 @@ where
 
 fn read_counts<P>(
     src: P,
+    format: Option<atlas_core::counts::reader::Format>,
     feature_id: &str,
     strand_specification: StrandSpecification,
 ) -> io::Result<Vec<(String, u32)>>
@@ -127,7 +129,7 @@ where
     use atlas_core::counts::reader;
 
     let mut reader = File::open(src).map(BufReader::new)?;
-    reader::read(&mut reader, None, feature_id, strand_specification)
+    reader::read(&mut reader, format, feature_id, strand_specification)
 }
 
 fn validate_feature_names(expected_names: &[String], counts: &[(String, u32)]) -> io::Result<()> {

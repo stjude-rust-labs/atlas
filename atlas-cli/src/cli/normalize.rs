@@ -31,6 +31,21 @@ impl From<StrandSpecification> for core::StrandSpecification {
     }
 }
 
+#[derive(Clone, Copy, ValueEnum)]
+pub enum Format {
+    HtseqCount,
+    Star,
+}
+
+impl From<Format> for core::counts::reader::Format {
+    fn from(format: Format) -> Self {
+        match format {
+            Format::HtseqCount => Self::HtseqCount,
+            Format::Star => Self::Star,
+        }
+    }
+}
+
 #[derive(Parser)]
 pub struct Args {
     /// Feature type.
@@ -52,6 +67,12 @@ pub struct Args {
     /// Strand specification.
     #[arg(long, value_enum, default_value_t = StrandSpecification::Forward)]
     pub strand_specification: StrandSpecification,
+
+    /// The input format.
+    ///
+    /// By default, the format is autodetected.
+    #[arg(long, value_enum)]
+    pub format: Option<Format>,
 
     /// Input sources (htseq-count or STAR).
     #[arg(required = true)]

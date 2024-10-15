@@ -29,6 +29,47 @@ where
     Ok(counts)
 }
 
+#[allow(dead_code)]
+pub(super) fn read_into<R>(
+    reader: &mut R,
+    names: &[String],
+    counts: &mut Vec<u32>,
+) -> io::Result<()>
+where
+    R: BufRead,
+{
+    let mut line = String::new();
+    let mut expected_names = names.iter();
+
+    while read_line(reader, &mut line)? != 0 {
+        if line.starts_with(HTSEQ_COUNT_META_PREFIX) {
+            break;
+        }
+
+        let (actual_name, count) = parse_line(&line)?;
+
+        if let Some(expected_name) = expected_names.next() {
+            if actual_name != expected_name {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("invalid feature name: expected {expected_name}, got {actual_name}"),
+                ));
+            }
+        } else {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("invalid feature name: expected None, got Some({actual_name})"),
+            ));
+        }
+
+        counts.push(count);
+
+        line.clear();
+    }
+
+    Ok(())
+}
+
 fn parse_line(s: &str) -> io::Result<(&str, u32)> {
     const DELIMITER: char = '\t';
 
@@ -54,6 +95,20 @@ mod tests {
         let actual = read(&mut reader)?;
         let expected = [(String::from("f0"), 8), (String::from("f1"), 13)];
         assert_eq!(actual, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn test_read_into() -> io::Result<()> {
+        let data = b"f0\t8\nf1\t13\n__no_feature\t0\nf2\t21\n";
+        let mut reader = &data[..];
+
+        let names = [String::from("f0"), String::from("f1")];
+        let mut counts = Vec::new();
+        read_into(&mut reader, &names, &mut counts)?;
+
+        assert_eq!(counts, [8, 13]);
+
         Ok(())
     }
 

@@ -40,8 +40,8 @@ where
             break;
         }
 
-        let entry = parse_line(&line, name_index, count_index)?;
-        counts.push(entry);
+        let (name, count) = parse_line(&line, name_index, count_index)?;
+        counts.push((name.into(), count));
     }
 
     Ok(counts)
@@ -61,7 +61,7 @@ where
     Ok(())
 }
 
-fn parse_line(s: &str, name_index: usize, count_index: usize) -> io::Result<(String, u32)> {
+fn parse_line(s: &str, name_index: usize, count_index: usize) -> io::Result<(&str, u32)> {
     const COLUMN_COUNT: usize = 9;
     const DELIMITER: char = '\t';
 
@@ -72,7 +72,7 @@ fn parse_line(s: &str, name_index: usize, count_index: usize) -> io::Result<(Str
 
     let mut fields = s.splitn(COLUMN_COUNT, DELIMITER);
 
-    let raw_name = fields
+    let name = fields
         .nth(name_index)
         .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "missing name column"))?;
 
@@ -84,7 +84,7 @@ fn parse_line(s: &str, name_index: usize, count_index: usize) -> io::Result<(Str
         .parse()
         .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
-    Ok((raw_name.into(), count))
+    Ok((name, count))
 }
 
 #[cfg(test)]
@@ -125,9 +125,9 @@ A1.1\tf1\tprotein_coding\t89\t55\t34\t0.0\t0.0\t0.0
     #[test]
     fn test_parse_line() -> io::Result<()> {
         let s = "A0.1\tf0\tprotein_coding\t21\t13\t8\t0.0\t0.0\t0.0";
-        assert_eq!(parse_line(s, 0, 3)?, (String::from("A0.1"), 21));
-        assert_eq!(parse_line(s, 0, 4)?, (String::from("A0.1"), 13));
-        assert_eq!(parse_line(s, 1, 5)?, (String::from("f0"), 8));
+        assert_eq!(parse_line(s, 0, 3)?, ("A0.1", 21));
+        assert_eq!(parse_line(s, 0, 4)?, ("A0.1", 13));
+        assert_eq!(parse_line(s, 1, 5)?, ("f0", 8));
 
         // missing name
         assert!(matches!(

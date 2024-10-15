@@ -2,12 +2,12 @@ use std::io::{self, BufRead};
 
 use super::read_line;
 
+const HTSEQ_COUNT_META_PREFIX: &str = "__";
+
 pub(super) fn read<R>(reader: &mut R) -> io::Result<Vec<(String, u32)>>
 where
     R: BufRead,
 {
-    const HTSEQ_COUNT_META_PREFIX: &str = "__";
-
     let mut line = String::new();
     let mut counts = Vec::new();
 
@@ -22,17 +22,17 @@ where
             break;
         }
 
-        let entry = parse_line(&line)?;
-        counts.push(entry);
+        let (name, count) = parse_line(&line)?;
+        counts.push((name.into(), count));
     }
 
     Ok(counts)
 }
 
-fn parse_line(s: &str) -> io::Result<(String, u32)> {
+fn parse_line(s: &str) -> io::Result<(&str, u32)> {
     const DELIMITER: char = '\t';
 
-    let (raw_name, raw_count) = s
+    let (name, raw_count) = s
         .split_once(DELIMITER)
         .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "invalid input"))?;
 
@@ -40,7 +40,7 @@ fn parse_line(s: &str) -> io::Result<(String, u32)> {
         .parse()
         .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
-    Ok((raw_name.into(), count))
+    Ok((name, count))
 }
 
 #[cfg(test)]
@@ -59,7 +59,7 @@ mod tests {
 
     #[test]
     fn test_parse_line() -> io::Result<()> {
-        assert_eq!(parse_line("f0\t8")?, (String::from("f0"), 8));
+        assert_eq!(parse_line("f0\t8")?, ("f0", 8));
 
         assert!(matches!(
             parse_line("f0 13"),

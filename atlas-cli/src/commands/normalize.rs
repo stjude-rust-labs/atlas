@@ -7,7 +7,7 @@ use std::{
 
 use atlas_core::{
     counts::normalization::{fpkm, median_of_ratios, tpm},
-    features::{calculate_feature_lengths, Feature, ReadFeaturesError},
+    features::{self, Feature, ReadFeaturesError},
     StrandSpecification,
 };
 use thiserror::Error;
@@ -46,28 +46,22 @@ pub fn normalize(args: normalize::Args) -> Result<(), NormalizeError> {
 
     let normalized_counts: Vec<Vec<f64>> = match args.method {
         Method::Fpkm => {
-            let feature_lengths: Vec<_> = calculate_feature_lengths(&features, &names)?
-                .into_iter()
-                .map(|length| length as u32)
-                .collect();
+            let lengths = calculate_feature_lengths(&features, &names)?;
 
             counts
                 .chunks_exact(names.len())
-                .map(|sample| fpkm::normalize(&feature_lengths, sample))
+                .map(|sample| fpkm::normalize(&lengths, sample))
                 .collect()
         }
         Method::MedianOfRatios => {
             median_of_ratios::normalize_vec(sample_count, names.len(), counts)?
         }
         Method::Tpm => {
-            let feature_lengths: Vec<_> = calculate_feature_lengths(&features, &names)?
-                .into_iter()
-                .map(|length| length as u32)
-                .collect();
+            let lengths = calculate_feature_lengths(&features, &names)?;
 
             counts
                 .chunks_exact(names.len())
-                .map(|sample| tpm::normalize(&feature_lengths, sample))
+                .map(|sample| tpm::normalize(&lengths, sample))
                 .collect()
         }
     };
@@ -147,6 +141,18 @@ where
         strand_specification,
         dst,
     )
+}
+
+fn calculate_feature_lengths(
+    features: &HashMap<String, Vec<Feature>>,
+    names: &[String],
+) -> io::Result<Vec<u32>> {
+    features::calculate_feature_lengths(features, names)?
+        .into_iter()
+        .map(|length| {
+            u32::try_from(length).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+        })
+        .collect()
 }
 
 fn write_multi_sample_normalized_counts<W>(

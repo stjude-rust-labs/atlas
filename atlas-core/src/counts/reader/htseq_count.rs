@@ -89,7 +89,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_read_counts() -> io::Result<()> {
+    fn test_read() -> io::Result<()> {
         let data = b"f0\t8\nf1\t13\n__no_feature\t0\nf2\t21\n";
         let mut reader = &data[..];
         let actual = read(&mut reader)?;

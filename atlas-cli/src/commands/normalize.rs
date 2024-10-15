@@ -17,9 +17,12 @@ use crate::cli::normalize::{self, Method};
 const SEPARATOR: char = '\t';
 
 pub fn normalize(args: normalize::Args) -> Result<(), NormalizeError> {
-    let features = read_features(&args.annotations, &args.feature_type, &args.feature_id)?;
-
+    let annotations_src = &args.annotations;
+    let feature_type = &args.feature_type;
     let feature_id = &args.feature_id;
+
+    let features = read_features(annotations_src, feature_type, feature_id)?;
+
     let format = args.format.map(|format| format.into());
     let strand_specification = StrandSpecification::from(args.strand_specification);
 

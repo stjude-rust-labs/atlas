@@ -38,6 +38,37 @@ where
     }
 }
 
+pub fn read_into<R>(
+    reader: &mut R,
+    format: Option<Format>,
+    names: &[String],
+    feature_name: &str,
+    strand_specification: StrandSpecification,
+    counts: &mut Vec<u32>,
+) -> io::Result<()>
+where
+    R: BufRead,
+{
+    let detected_format = detect_format(reader)?;
+
+    if let Some(expected_format) = format {
+        if detected_format != expected_format {
+            warn!(
+                expected = ?expected_format,
+                actual = ?detected_format,
+                "format mismatch"
+            );
+        }
+    }
+
+    let format = format.unwrap_or(detected_format);
+
+    match format {
+        Format::HtseqCount => htseq_count::read_into(reader, names, counts),
+        Format::Star => star::read_into(reader, names, feature_name, strand_specification, counts),
+    }
+}
+
 fn detect_format<R>(reader: &mut R) -> io::Result<Format>
 where
     R: BufRead,

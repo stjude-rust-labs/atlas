@@ -141,25 +141,18 @@ fn read_counts_into<P>(
 where
     P: AsRef<Path>,
 {
-    let counts = read_counts(src, format, feature_id, strand_specification)?;
-    validate_feature_names(feature_names, &counts)?;
-    dst.extend(counts.iter().map(|(_, value)| value));
-    Ok(())
-}
+    use atlas_core::counts::reader;
 
-fn validate_feature_names(expected_names: &[String], counts: &[(String, u32)]) -> io::Result<()> {
-    let actual_names = counts.iter().map(|(name, _)| name);
+    let mut reader = File::open(src).map(BufReader::new)?;
 
-    for (expected_name, actual_name) in expected_names.iter().zip(actual_names) {
-        if actual_name != expected_name {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "features mismatch",
-            ));
-        }
-    }
-
-    Ok(())
+    reader::read_into(
+        &mut reader,
+        format,
+        feature_names,
+        feature_id,
+        strand_specification,
+        dst,
+    )
 }
 
 fn write_multi_sample_normalized_counts<W>(

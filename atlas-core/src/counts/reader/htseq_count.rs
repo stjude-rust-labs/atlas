@@ -29,7 +29,6 @@ where
     Ok(counts)
 }
 
-#[allow(dead_code)]
 pub(super) fn read_into<R>(
     reader: &mut R,
     names: &[String],

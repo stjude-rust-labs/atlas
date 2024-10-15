@@ -19,27 +19,30 @@ const SEPARATOR: char = '\t';
 pub fn normalize(args: normalize::Args) -> Result<(), NormalizeError> {
     let features = read_features(&args.annotations, &args.feature_type, &args.feature_id)?;
 
+    let feature_id = &args.feature_id;
     let format = args.format.map(|format| format.into());
     let strand_specification = StrandSpecification::from(args.strand_specification);
 
-    let mut samples = Vec::with_capacity(args.srcs.len());
-    let mut feature_names: Option<Vec<_>> = None;
+    let sample_count = args.srcs.len();
+    let mut srcs = args.srcs.iter();
 
-    for src in &args.srcs {
-        let counts = read_counts(src, format, &args.feature_id, strand_specification)?;
+    // SAFETY: `srcs` is nonempty.
+    let src = srcs.next().unwrap();
+    let counts = read_counts(src, format, feature_id, strand_specification)?;
 
-        if let Some(names) = &feature_names {
-            validate_feature_names(names, &counts)?;
-        } else {
-            feature_names = Some(counts.iter().map(|(name, _)| name.clone()).collect());
-        }
+    let names: Vec<_> = counts.iter().map(|(name, _)| name.clone()).collect();
+    let mut counts: Vec<_> = counts.into_iter().map(|(_, value)| value).collect();
 
-        samples.push(counts);
+    for src in srcs {
+        read_counts_into(
+            src,
+            format,
+            feature_id,
+            strand_specification,
+            names.as_ref(),
+            &mut counts,
+        )?;
     }
-
-    assert!(!samples.is_empty());
-
-    let names = feature_names.unwrap();
 
     let normalized_counts: Vec<Vec<f64>> = match args.method {
         Method::Fpkm => {
@@ -48,21 +51,16 @@ pub fn normalize(args: normalize::Args) -> Result<(), NormalizeError> {
                 .map(|length| length as i32)
                 .collect();
 
-            samples
-                .iter()
+            counts
+                .chunks_exact(names.len())
                 .map(|sample| {
-                    let counts: Vec<_> = sample.iter().map(|(_, value)| *value as i32).collect();
+                    let counts: Vec<_> = sample.iter().map(|value| *value as i32).collect();
                     fpkm::normalize(&feature_lengths, &counts)
                 })
                 .collect()
         }
         Method::MedianOfRatios => {
-            let counts = samples
-                .iter()
-                .flat_map(|sample| sample.iter().map(|(_, n)| *n))
-                .collect();
-
-            median_of_ratios::normalize_vec(samples.len(), names.len(), counts)?
+            median_of_ratios::normalize_vec(sample_count, names.len(), counts)?
         }
         Method::Tpm => {
             let feature_lengths: Vec<_> = calculate_feature_lengths(&features, &names)?
@@ -70,10 +68,10 @@ pub fn normalize(args: normalize::Args) -> Result<(), NormalizeError> {
                 .map(|length| length as i32)
                 .collect();
 
-            samples
-                .iter()
+            counts
+                .chunks_exact(names.len())
                 .map(|sample| {
-                    let counts: Vec<_> = sample.iter().map(|(_, value)| *value as i32).collect();
+                    let counts: Vec<_> = sample.iter().map(|value| *value as i32).collect();
                     tpm::normalize(&feature_lengths, &counts)
                 })
                 .collect()
@@ -130,6 +128,23 @@ where
 
     let mut reader = File::open(src).map(BufReader::new)?;
     reader::read(&mut reader, format, feature_id, strand_specification)
+}
+
+fn read_counts_into<P>(
+    src: P,
+    format: Option<atlas_core::counts::reader::Format>,
+    feature_id: &str,
+    strand_specification: StrandSpecification,
+    feature_names: &[String],
+    dst: &mut Vec<u32>,
+) -> io::Result<()>
+where
+    P: AsRef<Path>,
+{
+    let counts = read_counts(src, format, feature_id, strand_specification)?;
+    validate_feature_names(feature_names, &counts)?;
+    dst.extend(counts.iter().map(|(_, value)| value));
+    Ok(())
 }
 
 fn validate_feature_names(expected_names: &[String], counts: &[(String, u32)]) -> io::Result<()> {

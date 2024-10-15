@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use axum::{
     extract::{Path, Query, State},
     routing::get,
@@ -99,23 +101,32 @@ async fn index(
     }
 
     let feature_names: Vec<_> = rows.iter().map(|row| row.name.clone()).collect();
-    let counts = rows.into_iter().map(|row| (row.name, row.value)).collect();
 
     let values = if let Some(normalization_method) = params.normalize {
         let features = feature::find_lengths_by_run_id(&ctx.pool, run_id).await?;
 
         let normalized_counts = match normalization_method {
             Normalize::Fpkm => {
+                let features = features
+                    .into_iter()
+                    .map(|(name, count)| (name, count as u32))
+                    .collect();
+
+                let counts = rows
+                    .into_iter()
+                    .map(|row| (row.name, row.value as u32))
+                    .collect();
+
                 atlas_core::counts::normalization::fpkm::normalize_map(&features, &counts).unwrap()
             }
             Normalize::MedianOfRatios => {
                 // Applying median of ratios to a single sample is a no-op.
-                counts
-                    .into_iter()
-                    .map(|(name, value)| (name, f64::from(value)))
+                rows.into_iter()
+                    .map(|row| (row.name, f64::from(row.value)))
                     .collect()
             }
             Normalize::Tpm => {
+                let counts = rows.into_iter().map(|row| (row.name, row.value)).collect();
                 atlas_core::counts::normalization::tpm::normalize_map(&features, &counts).unwrap()
             }
         };
@@ -127,6 +138,7 @@ async fn index(
 
         Values::Normalized(values)
     } else {
+        let counts: HashMap<_, _> = rows.into_iter().map(|row| (row.name, row.value)).collect();
         let values = feature_names.iter().map(|name| counts[name]).collect();
         Values::Raw(values)
     };

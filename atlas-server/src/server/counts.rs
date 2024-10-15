@@ -161,19 +161,30 @@ async fn index(
             let features = feature::find_lengths_by_run_id(&ctx.pool, run_ids[0]).await?;
 
             for (id, chunk) in run_ids.into_iter().zip(chunks) {
-                let counts = feature_names
-                    .iter()
-                    .zip(chunk)
-                    .map(|(name, count)| (name.clone(), *count))
-                    .collect();
-
                 let normalized_counts_map = match normalization_method {
                     Normalize::Fpkm => {
+                        let features = features
+                            .iter()
+                            .map(|(name, length)| (name.clone(), *length as u32))
+                            .collect();
+
+                        let counts = feature_names
+                            .iter()
+                            .zip(chunk)
+                            .map(|(name, count)| (name.clone(), *count as u32))
+                            .collect();
+
                         atlas_core::counts::normalization::fpkm::normalize_map(&features, &counts)
                             .unwrap()
                     }
                     Normalize::MedianOfRatios => unreachable!(),
                     Normalize::Tpm => {
+                        let counts = feature_names
+                            .iter()
+                            .zip(chunk)
+                            .map(|(name, count)| (name.clone(), *count))
+                            .collect();
+
                         atlas_core::counts::normalization::tpm::normalize_map(&features, &counts)
                             .unwrap()
                     }

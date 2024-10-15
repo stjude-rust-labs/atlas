@@ -1,8 +1,8 @@
 use std::{collections::HashMap, io};
 
 pub fn normalize_map(
-    feature_lengths: &HashMap<String, i32>,
-    counts: &HashMap<String, i32>,
+    feature_lengths: &HashMap<String, u32>,
+    counts: &HashMap<String, u32>,
 ) -> io::Result<HashMap<String, f64>> {
     let mut feature_names: Vec<_> = counts.keys().collect();
     feature_names.sort();
@@ -23,7 +23,7 @@ pub fn normalize_map(
         .collect())
 }
 
-pub fn normalize(feature_lengths: &[i32], counts: &[i32]) -> Vec<f64> {
+pub fn normalize(feature_lengths: &[u32], counts: &[u32]) -> Vec<f64> {
     let sum = counts.iter().copied().map(f64::from).sum();
 
     feature_lengths

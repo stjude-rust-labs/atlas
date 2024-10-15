@@ -48,15 +48,12 @@ pub fn normalize(args: normalize::Args) -> Result<(), NormalizeError> {
         Method::Fpkm => {
             let feature_lengths: Vec<_> = calculate_feature_lengths(&features, &names)?
                 .into_iter()
-                .map(|length| length as i32)
+                .map(|length| length as u32)
                 .collect();
 
             counts
                 .chunks_exact(names.len())
-                .map(|sample| {
-                    let counts: Vec<_> = sample.iter().map(|value| *value as i32).collect();
-                    fpkm::normalize(&feature_lengths, &counts)
-                })
+                .map(|sample| fpkm::normalize(&feature_lengths, sample))
                 .collect()
         }
         Method::MedianOfRatios => {

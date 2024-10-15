@@ -158,16 +158,15 @@ async fn index(
             let chunks = counts.chunks_exact(feature_names.len());
 
             // SAFETY: `run_ids` is non-empty.
-            let features = feature::find_lengths_by_run_id(&ctx.pool, run_ids[0]).await?;
+            let features = feature::find_lengths_by_run_id(&ctx.pool, run_ids[0])
+                .await?
+                .into_iter()
+                .map(|(name, length)| (name.clone(), length as u32))
+                .collect();
 
             for (id, chunk) in run_ids.into_iter().zip(chunks) {
                 let normalized_counts_map = match normalization_method {
                     Normalize::Fpkm => {
-                        let features = features
-                            .iter()
-                            .map(|(name, length)| (name.clone(), *length as u32))
-                            .collect();
-
                         let counts = feature_names
                             .iter()
                             .zip(chunk)
@@ -182,7 +181,7 @@ async fn index(
                         let counts = feature_names
                             .iter()
                             .zip(chunk)
-                            .map(|(name, count)| (name.clone(), *count))
+                            .map(|(name, count)| (name.clone(), *count as u32))
                             .collect();
 
                         atlas_core::counts::normalization::tpm::normalize_map(&features, &counts)

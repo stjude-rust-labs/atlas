@@ -103,15 +103,14 @@ async fn index(
     let feature_names: Vec<_> = rows.iter().map(|row| row.name.clone()).collect();
 
     let values = if let Some(normalization_method) = params.normalize {
-        let features = feature::find_lengths_by_run_id(&ctx.pool, run_id).await?;
+        let features = feature::find_lengths_by_run_id(&ctx.pool, run_id)
+            .await?
+            .into_iter()
+            .map(|(name, count)| (name, count as u32))
+            .collect();
 
         let normalized_counts = match normalization_method {
             Normalize::Fpkm => {
-                let features = features
-                    .into_iter()
-                    .map(|(name, count)| (name, count as u32))
-                    .collect();
-
                 let counts = rows
                     .into_iter()
                     .map(|row| (row.name, row.value as u32))
@@ -126,7 +125,11 @@ async fn index(
                     .collect()
             }
             Normalize::Tpm => {
-                let counts = rows.into_iter().map(|row| (row.name, row.value)).collect();
+                let counts = rows
+                    .into_iter()
+                    .map(|row| (row.name, row.value as u32))
+                    .collect();
+
                 atlas_core::counts::normalization::tpm::normalize_map(&features, &counts).unwrap()
             }
         };

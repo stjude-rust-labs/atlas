@@ -42,7 +42,7 @@ pub fn normalize(args: normalize::Args) -> Result<(), NormalizeError> {
             format,
             feature_id,
             strand_specification,
-            names.as_ref(),
+            &names,
             &mut counts,
         )?;
     }

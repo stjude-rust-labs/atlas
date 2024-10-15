@@ -47,6 +47,66 @@ where
     Ok(counts)
 }
 
+#[allow(dead_code)]
+pub(super) fn read_into<R>(
+    reader: &mut R,
+    names: &[String],
+    feature_name: &str,
+    strand_specification: StrandSpecification,
+    counts: &mut Vec<u32>,
+) -> io::Result<()>
+where
+    R: BufRead,
+{
+    let name_index = match feature_name {
+        "gene_id" => 0,
+        "gene_name" => 1,
+        _ => {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "invalid feature name",
+            ))
+        }
+    };
+
+    let count_index = match strand_specification {
+        StrandSpecification::None => 3,
+        StrandSpecification::Forward => 4,
+        StrandSpecification::Reverse => 5,
+    };
+
+    let mut line = String::new();
+    let mut expected_names = names.iter();
+
+    consume_meta(reader, &mut line)?;
+
+    line.clear();
+
+    while read_line(reader, &mut line)? != 0 {
+        let (actual_name, count) = dbg!(parse_line(&line, name_index, count_index))?;
+
+        if let Some(expected_name) = expected_names.next() {
+            if actual_name != expected_name {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("invalid feature name: expected {expected_name}, got {actual_name}"),
+                ));
+            }
+        } else {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("invalid feature name: expected None, got Some({actual_name})"),
+            ));
+        }
+
+        counts.push(count);
+
+        line.clear();
+    }
+
+    Ok(())
+}
+
 fn consume_meta<R>(reader: &mut R, buf: &mut String) -> io::Result<()>
 where
     R: BufRead,
@@ -118,6 +178,60 @@ A1.1\tf1\tprotein_coding\t89\t55\t34\t0.0\t0.0\t0.0
         let actual = read(&mut reader, "gene_id", StrandSpecification::Reverse)?;
         let expected = [(String::from("A0.1"), 8), (String::from("A1.1"), 34)];
         assert_eq!(actual, expected);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_read_into() -> io::Result<()> {
+        const DATA: &[u8] = b"\
+# gene-model: GENCODE v46
+gene_id\tgene_name\tgene_type\tunstranded\tstranded_first\tstranded_second\ttpm_unstranded\tfpkm_unstranded\tfpkm_uq_unstranded
+N_unmapped\t\t\t0\t0\t0\t\t\t
+N_multimapping\t\t\t0\t0\t0\t\t\t
+N_noFeature\t\t\t0\t0\t0\t\t\t
+N_ambiguous\t\t\t0\t0\t0\t\t\t
+A0.1\tf0\tprotein_coding\t21\t13\t8\t0.0\t0.0\t0.0
+A1.1\tf1\tprotein_coding\t89\t55\t34\t0.0\t0.0\t0.0
+";
+
+        let mut counts = Vec::new();
+
+        counts.clear();
+        let mut reader = DATA;
+        let names = [String::from("f0"), String::from("f1")];
+        read_into(
+            &mut reader,
+            &names,
+            "gene_name",
+            StrandSpecification::None,
+            &mut counts,
+        )?;
+        assert_eq!(counts, [21, 89]);
+
+        counts.clear();
+        let mut reader = DATA;
+        let names = [String::from("f0"), String::from("f1")];
+        read_into(
+            &mut reader,
+            &names,
+            "gene_name",
+            StrandSpecification::Forward,
+            &mut counts,
+        )?;
+        assert_eq!(counts, [13, 55]);
+
+        counts.clear();
+        let mut reader = DATA;
+        let names = [String::from("A0.1"), String::from("A1.1")];
+        read_into(
+            &mut reader,
+            &names,
+            "gene_id",
+            StrandSpecification::Reverse,
+            &mut counts,
+        )?;
+        assert_eq!(counts, [8, 34]);
 
         Ok(())
     }

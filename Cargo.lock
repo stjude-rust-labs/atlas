@@ -109,6 +109,8 @@ dependencies = [
  "atlas-core",
  "clap",
  "thiserror",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

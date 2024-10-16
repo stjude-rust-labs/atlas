@@ -1,6 +1,8 @@
 mod cli;
 mod commands;
 
+use std::io;
+
 use clap::Parser;
 
 use self::{
@@ -9,6 +11,8 @@ use self::{
 };
 
 fn main() -> anyhow::Result<()> {
+    tracing_subscriber::fmt().with_writer(io::stderr).init();
+
     let cli = Cli::parse();
 
     match cli.command {

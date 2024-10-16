@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use atlas_core as core;
 use clap::{Parser, ValueEnum};
 
-#[derive(Clone, Copy, ValueEnum)]
+#[derive(Clone, Copy, Debug, ValueEnum)]
 pub enum Method {
     /// Fragments per kilobase per million (FPKM) mapped reads.
     Fpkm,

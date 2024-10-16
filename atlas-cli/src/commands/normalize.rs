@@ -11,6 +11,7 @@ use atlas_core::{
     StrandSpecification,
 };
 use thiserror::Error;
+use tracing::info;
 
 use crate::cli::normalize::{self, Method};
 
@@ -21,13 +22,22 @@ pub fn normalize(args: normalize::Args) -> Result<(), NormalizeError> {
     let feature_type = &args.feature_type;
     let feature_id = &args.feature_id;
 
+    info!(
+        src = ?annotations_src,
+        feature_type, feature_id, "reading features"
+    );
+
     let features = read_features(annotations_src, feature_type, feature_id)?;
+
+    info!(feature_count = features.len(), "read features");
 
     let format = args.format.map(|format| format.into());
     let strand_specification = StrandSpecification::from(args.strand_specification);
 
     let sample_count = args.srcs.len();
     let mut srcs = args.srcs.iter();
+
+    info!(sample_count, "reading samples");
 
     // SAFETY: `srcs` is nonempty.
     let src = srcs.next().unwrap();
@@ -47,7 +57,11 @@ pub fn normalize(args: normalize::Args) -> Result<(), NormalizeError> {
         )?;
     }
 
-    let normalized_counts: Vec<Vec<f64>> = match args.method {
+    let normalization_method = args.method;
+
+    info!(?normalization_method, "normalizing counts");
+
+    let normalized_counts: Vec<Vec<f64>> = match normalization_method {
         Method::Fpkm => {
             let lengths = calculate_feature_lengths(&features, &names)?;
 
@@ -79,6 +93,8 @@ pub fn normalize(args: normalize::Args) -> Result<(), NormalizeError> {
     } else {
         write_single_sample_normalized_counts(&mut writer, &names, &normalized_counts[0])?;
     }
+
+    info!("done");
 
     Ok(())
 }

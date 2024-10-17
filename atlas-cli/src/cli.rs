@@ -1,4 +1,5 @@
 pub mod normalize;
+pub mod quantify;
 
 use clap::{Parser, Subcommand};
 
@@ -6,6 +7,8 @@ use clap::{Parser, Subcommand};
 pub enum Command {
     /// Normalize feature counts.
     Normalize(normalize::Args),
+    /// Gene expression quantification.
+    Quantify(quantify::Args),
 }
 
 #[derive(Parser)]

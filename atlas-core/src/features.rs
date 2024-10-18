@@ -46,9 +46,10 @@ where
             continue;
         }
 
+        let reference_sequence_name = record.reference_sequence_name();
         let start = record.start()?;
         let end = record.end()?;
-        let feature = Feature::new(start, end);
+        let feature = Feature::new(reference_sequence_name, start, end);
 
         let attributes = record.attributes();
         let id = attributes
@@ -74,11 +75,11 @@ pub fn merge_features(features: &[Feature]) -> Vec<Feature> {
     features.sort_unstable();
 
     let mut merged_features = Vec::with_capacity(features.len());
-    let mut current_feature = features[0];
+    let mut current_feature = features[0].clone();
 
-    for next_feature in features.iter().copied().skip(1) {
+    for next_feature in features.iter().skip(1) {
         if next_feature.start > current_feature.end {
-            merged_features.push(current_feature);
+            merged_features.push(current_feature.clone());
             current_feature.start = next_feature.start;
             current_feature.end = next_feature.end;
         } else if current_feature.end < next_feature.end {
@@ -86,7 +87,7 @@ pub fn merge_features(features: &[Feature]) -> Vec<Feature> {
         }
     }
 
-    merged_features.push(current_feature);
+    merged_features.push(current_feature.clone());
 
     merged_features
 }
@@ -137,13 +138,14 @@ sq0	.	exon	13	21	.	.	.	ID=3.0;gene_name=r2
             (
                 String::from("r1"),
                 vec![
-                    Feature::new(Position::try_from(1)?, Position::try_from(5)?),
-                    Feature::new(Position::try_from(3)?, Position::try_from(8)?),
+                    Feature::new("sq0", Position::try_from(1)?, Position::try_from(5)?),
+                    Feature::new("sq0", Position::try_from(3)?, Position::try_from(8)?),
                 ],
             ),
             (
                 String::from("r2"),
                 vec![Feature::new(
+                    "sq0",
                     Position::try_from(13)?,
                     Position::try_from(21)?,
                 )],
@@ -160,20 +162,20 @@ sq0	.	exon	13	21	.	.	.	ID=3.0;gene_name=r2
     #[test]
     fn test_merge_features() -> Result<(), noodles::core::position::TryFromIntError> {
         let features = [
-            Feature::new(Position::try_from(2)?, Position::try_from(5)?),
-            Feature::new(Position::try_from(3)?, Position::try_from(4)?),
-            Feature::new(Position::try_from(5)?, Position::try_from(7)?),
-            Feature::new(Position::try_from(9)?, Position::try_from(12)?),
-            Feature::new(Position::try_from(10)?, Position::try_from(15)?),
-            Feature::new(Position::try_from(16)?, Position::try_from(21)?),
+            Feature::new("sq0", Position::try_from(2)?, Position::try_from(5)?),
+            Feature::new("sq0", Position::try_from(3)?, Position::try_from(4)?),
+            Feature::new("sq0", Position::try_from(5)?, Position::try_from(7)?),
+            Feature::new("sq0", Position::try_from(9)?, Position::try_from(12)?),
+            Feature::new("sq0", Position::try_from(10)?, Position::try_from(15)?),
+            Feature::new("sq0", Position::try_from(16)?, Position::try_from(21)?),
         ];
 
         let actual = merge_features(&features);
 
         let expected = [
-            Feature::new(Position::try_from(2)?, Position::try_from(7)?),
-            Feature::new(Position::try_from(9)?, Position::try_from(15)?),
-            Feature::new(Position::try_from(16)?, Position::try_from(21)?),
+            Feature::new("sq0", Position::try_from(2)?, Position::try_from(7)?),
+            Feature::new("sq0", Position::try_from(9)?, Position::try_from(15)?),
+            Feature::new("sq0", Position::try_from(16)?, Position::try_from(21)?),
         ];
 
         assert_eq!(actual, expected);

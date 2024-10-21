@@ -108,6 +108,7 @@ dependencies = [
  "anyhow",
  "atlas-core",
  "clap",
+ "noodles",
  "thiserror",
  "tracing",
  "tracing-subscriber",

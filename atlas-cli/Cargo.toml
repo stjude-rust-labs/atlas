@@ -11,6 +11,7 @@ path = "src/main.rs"
 anyhow.workspace = true
 atlas-core = { path = "../atlas-core", version = "0.1.0" }
 clap = { workspace = true, features = ["derive"] }
+noodles = { workspace = true, features = ["core"] }
 thiserror.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true

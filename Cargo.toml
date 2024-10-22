@@ -12,6 +12,7 @@ edition = "2021"
 [workspace.dependencies]
 anyhow = "1.0.55"
 clap = "4.4.0"
+indexmap = "2.6.0"
 noodles = "0.84.0"
 thiserror = "1.0.40"
 tracing = "0.1.30"

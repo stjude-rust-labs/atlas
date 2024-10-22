@@ -15,4 +15,7 @@ pub struct Args {
     /// Input annotations file (GFF3).
     #[arg(long)]
     pub annotations: PathBuf,
+
+    /// Source input (BAM).
+    pub src: PathBuf,
 }

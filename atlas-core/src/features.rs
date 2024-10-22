@@ -5,6 +5,7 @@ use std::{
     io::{self, BufRead},
 };
 
+use indexmap::IndexSet;
 use thiserror::Error;
 
 pub use self::feature::Feature;
@@ -19,11 +20,12 @@ pub enum ReadFeaturesError {
     InvalidAttribute,
 }
 
+#[allow(clippy::type_complexity)]
 pub fn read_features<R>(
     reader: &mut R,
     feature_type: &str,
     feature_id: &str,
-) -> Result<HashMap<String, Vec<Feature>>, ReadFeaturesError>
+) -> Result<(IndexSet<String>, HashMap<String, Vec<Feature>>), ReadFeaturesError>
 where
     R: BufRead,
 {
@@ -32,6 +34,7 @@ where
         lazy::{record::attributes::field::Value, Line},
     };
 
+    let mut reference_sequence_names = IndexSet::new();
     let mut features: HashMap<String, Vec<Feature>> = HashMap::new();
 
     let mut reader = gff::io::Reader::new(reader);
@@ -47,9 +50,20 @@ where
         }
 
         let reference_sequence_name = record.reference_sequence_name();
+
+        let reference_sequence_id = match reference_sequence_names
+            .get_index_of(reference_sequence_name)
+        {
+            Some(id) => id,
+            None => {
+                let (id, _) = reference_sequence_names.insert_full(reference_sequence_name.into());
+                id
+            }
+        };
+
         let start = record.start()?;
         let end = record.end()?;
-        let feature = Feature::new(reference_sequence_name, start, end);
+        let feature = Feature::new(reference_sequence_id, start, end);
 
         let attributes = record.attributes();
         let id = attributes
@@ -65,7 +79,7 @@ where
         segments.push(feature);
     }
 
-    Ok(features)
+    Ok((reference_sequence_names, features))
 }
 
 pub fn merge_features(features: &[Feature]) -> Vec<Feature> {
@@ -132,20 +146,20 @@ sq0	.	exon	13	21	.	.	.	ID=3.0;gene_name=r2
 ";
 
         let mut reader = DATA;
-        let actual = read_features(&mut reader, "exon", "gene_name")?;
+        let (_, actual) = read_features(&mut reader, "exon", "gene_name")?;
 
         let expected = [
             (
                 String::from("r1"),
                 vec![
-                    Feature::new("sq0", Position::try_from(1)?, Position::try_from(5)?),
-                    Feature::new("sq0", Position::try_from(3)?, Position::try_from(8)?),
+                    Feature::new(0, Position::try_from(1)?, Position::try_from(5)?),
+                    Feature::new(0, Position::try_from(3)?, Position::try_from(8)?),
                 ],
             ),
             (
                 String::from("r2"),
                 vec![Feature::new(
-                    "sq0",
+                    0,
                     Position::try_from(13)?,
                     Position::try_from(21)?,
                 )],
@@ -162,20 +176,20 @@ sq0	.	exon	13	21	.	.	.	ID=3.0;gene_name=r2
     #[test]
     fn test_merge_features() -> Result<(), noodles::core::position::TryFromIntError> {
         let features = [
-            Feature::new("sq0", Position::try_from(2)?, Position::try_from(5)?),
-            Feature::new("sq0", Position::try_from(3)?, Position::try_from(4)?),
-            Feature::new("sq0", Position::try_from(5)?, Position::try_from(7)?),
-            Feature::new("sq0", Position::try_from(9)?, Position::try_from(12)?),
-            Feature::new("sq0", Position::try_from(10)?, Position::try_from(15)?),
-            Feature::new("sq0", Position::try_from(16)?, Position::try_from(21)?),
+            Feature::new(0, Position::try_from(2)?, Position::try_from(5)?),
+            Feature::new(0, Position::try_from(3)?, Position::try_from(4)?),
+            Feature::new(0, Position::try_from(5)?, Position::try_from(7)?),
+            Feature::new(0, Position::try_from(9)?, Position::try_from(12)?),
+            Feature::new(0, Position::try_from(10)?, Position::try_from(15)?),
+            Feature::new(0, Position::try_from(16)?, Position::try_from(21)?),
         ];
 
         let actual = merge_features(&features);
 
         let expected = [
-            Feature::new("sq0", Position::try_from(2)?, Position::try_from(7)?),
-            Feature::new("sq0", Position::try_from(9)?, Position::try_from(15)?),
-            Feature::new("sq0", Position::try_from(16)?, Position::try_from(21)?),
+            Feature::new(0, Position::try_from(2)?, Position::try_from(7)?),
+            Feature::new(0, Position::try_from(9)?, Position::try_from(15)?),
+            Feature::new(0, Position::try_from(16)?, Position::try_from(21)?),
         ];
 
         assert_eq!(actual, expected);

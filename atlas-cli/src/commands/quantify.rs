@@ -9,14 +9,15 @@ use atlas_core::{
     collections::IntervalTree,
     features::{Feature, ReadFeaturesError},
 };
-use noodles::core::Position;
+use indexmap::IndexSet;
+use noodles::{bam, core::Position, sam};
 use thiserror::Error;
 use tracing::info;
 
 use crate::cli::quantify;
 
 type Features = HashMap<String, Vec<Feature>>;
-type IntervalTrees<'f> = HashMap<String, IntervalTree<Position, &'f str>>;
+type IntervalTrees<'f> = Vec<IntervalTree<Position, &'f str>>;
 
 pub fn quantify(args: quantify::Args) -> Result<(), QuantifyError> {
     let annotations_src = &args.annotations;
@@ -28,12 +29,25 @@ pub fn quantify(args: quantify::Args) -> Result<(), QuantifyError> {
         feature_type, feature_id, "reading features"
     );
 
-    let features = read_features(annotations_src, feature_type, feature_id)?;
+    let (reference_sequence_names, features) =
+        read_features(annotations_src, feature_type, feature_id)?;
+
+    let src = &args.src;
+
+    info!(src = ?src, "reading alignment header");
+
+    let mut reader = bam::io::reader::Builder.build_from_path(src)?;
+    let header = reader.read_header()?;
+
+    info!(
+        reference_sequence_count = header.reference_sequences().len(),
+        "read alignment header"
+    );
 
     info!(feature_count = features.len(), "read features");
     info!("building interval trees");
 
-    let interval_trees = build_interval_trees(&features);
+    let interval_trees = build_interval_trees(&header, &reference_sequence_names, &features);
 
     info!(
         interval_tree_count = interval_trees.len(),
@@ -51,36 +65,51 @@ pub enum QuantifyError {
     InvalidFeatures(#[from] ReadFeaturesError),
 }
 
-fn read_features<P>(src: P, feature_type: &str, feature_id: &str) -> Result<Features, QuantifyError>
+fn read_features<P>(
+    src: P,
+    feature_type: &str,
+    feature_id: &str,
+) -> Result<(IndexSet<String>, Features), QuantifyError>
 where
     P: AsRef<Path>,
 {
     use atlas_core::features::read_features;
 
     let mut reader = File::open(src).map(BufReader::new)?;
-    let features = read_features(&mut reader, feature_type, feature_id)?;
-    Ok(features)
+    let (reference_sequence_names, features) =
+        read_features(&mut reader, feature_type, feature_id)?;
+    Ok((reference_sequence_names, features))
 }
 
-fn build_interval_trees(features: &Features) -> IntervalTrees<'_> {
-    let mut interval_trees = IntervalTrees::default();
+fn build_interval_trees<'f>(
+    header: &sam::Header,
+    reference_sequence_names: &IndexSet<String>,
+    features: &'f Features,
+) -> IntervalTrees<'f> {
+    let reference_sequences = header.reference_sequences();
+
+    let mut interval_trees = Vec::new();
+    interval_trees.resize_with(reference_sequences.len(), IntervalTree::default);
 
     for (name, segments) in features {
         for feature in segments {
-            let reference_sequence_name = &feature.reference_sequence_name;
+            let reference_sequenceid = feature.reference_sequence_id;
+            let reference_sequence_name = reference_sequence_names
+                .get_index(reference_sequenceid)
+                .unwrap();
 
-            let tree = if let Some(tree) = interval_trees.get_mut(reference_sequence_name) {
-                tree
-            } else {
-                interval_trees
-                    .entry(reference_sequence_name.into())
-                    .or_default()
+            let Some(i) = reference_sequences.get_index_of(reference_sequence_name.as_bytes())
+            else {
+                continue;
             };
+
+            // SAFETY: `interval_trees.len() == reference_sequences.len()`.
+            let tree = &mut interval_trees[i];
 
             let start = feature.start;
             let end = feature.end;
 
-            tree.insert(start..=end, name)
+            tree.insert(start..=end, name.as_str())
         }
     }
 

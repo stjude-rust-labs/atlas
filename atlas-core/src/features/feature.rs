@@ -2,18 +2,15 @@ use noodles::core::Position;
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Feature {
-    pub reference_sequence_name: String,
+    pub reference_sequence_id: usize,
     pub start: Position,
     pub end: Position,
 }
 
-impl<'f> Feature {
-    pub fn new<N>(reference_sequence_name: N, start: Position, end: Position) -> Self
-    where
-        N: Into<String>,
-    {
+impl Feature {
+    pub fn new(reference_sequence_id: usize, start: Position, end: Position) -> Self {
         Self {
-            reference_sequence_name: reference_sequence_name.into(),
+            reference_sequence_id,
             start,
             end,
         }
@@ -30,7 +27,7 @@ mod tests {
 
     #[test]
     fn test_length() -> Result<(), noodles::core::position::TryFromIntError> {
-        let feature = Feature::new("sq0", Position::try_from(5)?, Position::try_from(8)?);
+        let feature = Feature::new(0, Position::try_from(5)?, Position::try_from(8)?);
         assert_eq!(feature.length(), 4);
         Ok(())
     }

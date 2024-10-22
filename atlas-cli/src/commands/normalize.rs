@@ -118,7 +118,7 @@ where
     use atlas_core::features::read_features;
 
     let mut reader = File::open(src).map(BufReader::new)?;
-    let features = read_features(&mut reader, feature_type, feature_id)?;
+    let (_, features) = read_features(&mut reader, feature_type, feature_id)?;
     Ok(features)
 }
 

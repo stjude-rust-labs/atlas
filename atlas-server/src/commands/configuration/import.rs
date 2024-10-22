@@ -78,8 +78,10 @@ where
 
         let mut reader = File::open(src).map(BufReader::new)?;
 
-        read_features(&mut reader, &feature_type, &feature_name)
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+        let (_, features) = read_features(&mut reader, &feature_type, &feature_name)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+
+        Ok(features)
     })
     .await?
 }

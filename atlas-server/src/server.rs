@@ -101,5 +101,5 @@ fn router() -> Router<Context> {
 pub fn api_doc_router() -> Router<Context> {
     Router::new()
         .route("/openapi.json", get(Json(ApiDoc::openapi())))
-        .nest_service("/docs", ServeFile::new("static/docs.html"))
+        .nest_service("/docs", ServeFile::new("atlas-server/static/docs.html"))
 }

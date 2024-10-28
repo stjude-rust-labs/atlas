@@ -32,6 +32,8 @@ pub fn quantify(args: quantify::Args) -> Result<(), QuantifyError> {
     let (reference_sequence_names, features) =
         read_features(annotations_src, feature_type, feature_id)?;
 
+    info!(feature_count = features.len(), "read features");
+
     let src = &args.src;
 
     info!(src = ?src, "reading alignment header");
@@ -44,7 +46,6 @@ pub fn quantify(args: quantify::Args) -> Result<(), QuantifyError> {
         "read alignment header"
     );
 
-    info!(feature_count = features.len(), "read features");
     info!("building interval trees");
 
     let interval_trees = build_interval_trees(&header, &reference_sequence_names, &features);

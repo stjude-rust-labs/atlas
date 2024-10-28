@@ -86,7 +86,7 @@ pub fn merge_features(features: &[Feature]) -> Vec<Feature> {
     assert!(!features.is_empty());
 
     let mut features = features.to_vec();
-    features.sort_unstable();
+    features.sort_unstable_by_key(|feature| feature.start);
 
     let mut merged_features = Vec::with_capacity(features.len());
     let mut current_feature = features[0].clone();

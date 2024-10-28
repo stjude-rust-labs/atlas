@@ -1,6 +1,6 @@
 use noodles::core::Position;
 
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Feature {
     pub reference_sequence_id: usize,
     pub start: Position,

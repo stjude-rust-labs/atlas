@@ -1,3 +1,5 @@
+mod specification;
+
 use std::{
     collections::HashMap,
     fs::File,
@@ -10,14 +12,15 @@ use atlas_core::{
     features::{Feature, ReadFeaturesError},
 };
 use indexmap::IndexSet;
-use noodles::{bam, core::Position, sam};
+use noodles::{bam, core::Position, gff::record::Strand, sam};
 use thiserror::Error;
 use tracing::info;
 
 use crate::cli::quantify;
 
 type Features = HashMap<String, Vec<Feature>>;
-type IntervalTrees<'f> = Vec<IntervalTree<Position, &'f str>>;
+type Entry<'f> = (&'f str, Strand);
+type IntervalTrees<'f> = Vec<IntervalTree<Position, Entry<'f>>>;
 
 pub fn quantify(args: quantify::Args) -> Result<(), QuantifyError> {
     let annotations_src = &args.annotations;
@@ -53,6 +56,17 @@ pub fn quantify(args: quantify::Args) -> Result<(), QuantifyError> {
     info!(
         interval_tree_count = interval_trees.len(),
         "built interval trees"
+    );
+
+    info!("detecting library type");
+
+    let (library_layout, strand_specification) =
+        specification::detect(&mut reader, &interval_trees)?;
+
+    info!(
+        ?library_layout,
+        ?strand_specification,
+        "detected library layout"
     );
 
     todo!()
@@ -94,9 +108,15 @@ fn build_interval_trees<'f>(
 
     for (name, segments) in features {
         for feature in segments {
-            let reference_sequenceid = feature.reference_sequence_id;
+            let Feature {
+                reference_sequence_id,
+                start,
+                end,
+                strand,
+            } = *feature;
+
             let reference_sequence_name = reference_sequence_names
-                .get_index(reference_sequenceid)
+                .get_index(reference_sequence_id)
                 .unwrap();
 
             let Some(i) = reference_sequences.get_index_of(reference_sequence_name.as_bytes())
@@ -107,10 +127,7 @@ fn build_interval_trees<'f>(
             // SAFETY: `interval_trees.len() == reference_sequences.len()`.
             let tree = &mut interval_trees[i];
 
-            let start = feature.start;
-            let end = feature.end;
-
-            tree.insert(start..=end, name.as_str())
+            tree.insert(start..=end, (name.as_str(), strand));
         }
     }
 

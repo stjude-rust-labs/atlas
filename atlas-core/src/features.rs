@@ -63,7 +63,8 @@ where
 
         let start = record.start()?;
         let end = record.end()?;
-        let feature = Feature::new(reference_sequence_id, start, end);
+        let strand = record.strand()?;
+        let feature = Feature::new(reference_sequence_id, start, end, strand);
 
         let attributes = record.attributes();
         let id = attributes
@@ -131,7 +132,7 @@ pub fn calculate_feature_lengths(
 
 #[cfg(test)]
 mod tests {
-    use noodles::core::Position;
+    use noodles::{core::Position, gff::record::Strand};
 
     use super::*;
 
@@ -139,10 +140,10 @@ mod tests {
     fn test_read_features() -> Result<(), Box<dyn std::error::Error>> {
         const DATA: &[u8] = b"\
 ##gff-version 3
-sq0	.	exon	1	5	.	.	.	ID=1.0;gene_name=r1
-sq0	.	exon	3	8	.	.	.	ID=1.1;gene_name=r1
+sq0	.	exon	1	5	.	+	.	ID=1.0;gene_name=r1
+sq0	.	exon	3	8	.	+	.	ID=1.1;gene_name=r1
 sq0	.	gene	1	8	.	.	.	ID=2.0;gene_name=r1
-sq0	.	exon	13	21	.	.	.	ID=3.0;gene_name=r2
+sq0	.	exon	13	21	.	-	.	ID=3.0;gene_name=r2
 ";
 
         let mut reader = DATA;
@@ -152,8 +153,18 @@ sq0	.	exon	13	21	.	.	.	ID=3.0;gene_name=r2
             (
                 String::from("r1"),
                 vec![
-                    Feature::new(0, Position::try_from(1)?, Position::try_from(5)?),
-                    Feature::new(0, Position::try_from(3)?, Position::try_from(8)?),
+                    Feature::new(
+                        0,
+                        Position::try_from(1)?,
+                        Position::try_from(5)?,
+                        Strand::Forward,
+                    ),
+                    Feature::new(
+                        0,
+                        Position::try_from(3)?,
+                        Position::try_from(8)?,
+                        Strand::Forward,
+                    ),
                 ],
             ),
             (
@@ -162,6 +173,7 @@ sq0	.	exon	13	21	.	.	.	ID=3.0;gene_name=r2
                     0,
                     Position::try_from(13)?,
                     Position::try_from(21)?,
+                    Strand::Reverse,
                 )],
             ),
         ]
@@ -175,21 +187,23 @@ sq0	.	exon	13	21	.	.	.	ID=3.0;gene_name=r2
 
     #[test]
     fn test_merge_features() -> Result<(), noodles::core::position::TryFromIntError> {
+        const STRAND: Strand = Strand::None;
+
         let features = [
-            Feature::new(0, Position::try_from(2)?, Position::try_from(5)?),
-            Feature::new(0, Position::try_from(3)?, Position::try_from(4)?),
-            Feature::new(0, Position::try_from(5)?, Position::try_from(7)?),
-            Feature::new(0, Position::try_from(9)?, Position::try_from(12)?),
-            Feature::new(0, Position::try_from(10)?, Position::try_from(15)?),
-            Feature::new(0, Position::try_from(16)?, Position::try_from(21)?),
+            Feature::new(0, Position::try_from(2)?, Position::try_from(5)?, STRAND),
+            Feature::new(0, Position::try_from(3)?, Position::try_from(4)?, STRAND),
+            Feature::new(0, Position::try_from(5)?, Position::try_from(7)?, STRAND),
+            Feature::new(0, Position::try_from(9)?, Position::try_from(12)?, STRAND),
+            Feature::new(0, Position::try_from(10)?, Position::try_from(15)?, STRAND),
+            Feature::new(0, Position::try_from(16)?, Position::try_from(21)?, STRAND),
         ];
 
         let actual = merge_features(&features);
 
         let expected = [
-            Feature::new(0, Position::try_from(2)?, Position::try_from(7)?),
-            Feature::new(0, Position::try_from(9)?, Position::try_from(15)?),
-            Feature::new(0, Position::try_from(16)?, Position::try_from(21)?),
+            Feature::new(0, Position::try_from(2)?, Position::try_from(7)?, STRAND),
+            Feature::new(0, Position::try_from(9)?, Position::try_from(15)?, STRAND),
+            Feature::new(0, Position::try_from(16)?, Position::try_from(21)?, STRAND),
         ];
 
         assert_eq!(actual, expected);

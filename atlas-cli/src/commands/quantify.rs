@@ -73,7 +73,8 @@ pub fn quantify(args: quantify::Args) -> Result<(), QuantifyError> {
         "detected library layout"
     );
 
-    let filter = Filter;
+    let min_mapping_quality = args.min_mapping_quality;
+    let filter = Filter::new(min_mapping_quality);
 
     let mut reader = bam::io::reader::Builder.build_from_path(src)?;
     reader.read_header()?;

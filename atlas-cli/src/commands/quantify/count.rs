@@ -6,10 +6,10 @@ use std::{
 use atlas_core::collections::IntervalTree;
 use noodles::{bam, core::Position};
 
-use super::{match_intervals::MatchIntervals, Entry, IntervalTrees};
+use super::{match_intervals::MatchIntervals, Entry, Filter, IntervalTrees};
 
 #[expect(dead_code)]
-enum Event<'f> {
+pub(super) enum Event<'f> {
     Hit(&'f str),
     Miss,
     Ambiguous,
@@ -50,6 +50,7 @@ impl<'f> Context<'f> {
 
 pub(super) fn count_single_records<'f, R>(
     interval_trees: &IntervalTrees<'f>,
+    filter: &'f Filter,
     mut reader: bam::io::Reader<R>,
 ) -> io::Result<Context<'f>>
 where
@@ -59,7 +60,7 @@ where
     let mut record = bam::Record::default();
 
     while reader.read_record(&mut record)? != 0 {
-        let event = count_single_record(interval_trees, &record)?;
+        let event = count_single_record(interval_trees, filter, &record)?;
         ctx.add_event(event);
     }
 
@@ -68,8 +69,13 @@ where
 
 fn count_single_record<'f>(
     interval_trees: &IntervalTrees<'f>,
+    filter: &'f Filter,
     record: &bam::Record,
 ) -> io::Result<Event<'f>> {
+    if let Some(event) = filter.filter(record)? {
+        return Ok(event);
+    }
+
     let reference_sequence_id = record
         .reference_sequence_id()
         .transpose()?

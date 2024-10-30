@@ -1,3 +1,5 @@
+mod count;
+mod match_intervals;
 mod specification;
 
 use std::{
@@ -16,6 +18,7 @@ use noodles::{bam, core::Position, gff::record::Strand, sam};
 use thiserror::Error;
 use tracing::info;
 
+use self::{count::count_single_records, specification::LibraryLayout};
 use crate::cli::quantify;
 
 type Features = HashMap<String, Vec<Feature>>;
@@ -68,6 +71,14 @@ pub fn quantify(args: quantify::Args) -> Result<(), QuantifyError> {
         ?strand_specification,
         "detected library layout"
     );
+
+    let mut reader = bam::io::reader::Builder.build_from_path(src)?;
+    reader.read_header()?;
+
+    let _ctx = match library_layout {
+        LibraryLayout::Single => count_single_records(&interval_trees, reader)?,
+        LibraryLayout::Multiple => todo!(),
+    };
 
     todo!()
 }

@@ -63,3 +63,37 @@ impl<'r> Iterator for MatchIntervals<'r> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_next() -> Result<(), Box<dyn std::error::Error>> {
+        let mut ops = [
+            Ok(Op::new(Kind::Match, 1)),
+            Ok(Op::new(Kind::Insertion, 2)),
+            Ok(Op::new(Kind::Deletion, 3)),
+            Ok(Op::new(Kind::Skip, 4)),
+            Ok(Op::new(Kind::SoftClip, 5)),
+            Ok(Op::new(Kind::HardClip, 6)),
+            Ok(Op::new(Kind::Pad, 7)),
+            Ok(Op::new(Kind::SequenceMatch, 8)),
+            Ok(Op::new(Kind::SequenceMismatch, 9)),
+        ]
+        .into_iter();
+
+        let intervals = MatchIntervals::new(&mut ops, Position::MIN);
+        let actual: Vec<_> = intervals.collect::<io::Result<_>>()?;
+
+        let expected = [
+            Position::try_from(1)?..=Position::try_from(1)?,
+            Position::try_from(9)?..=Position::try_from(16)?,
+            Position::try_from(17)?..=Position::try_from(25)?,
+        ];
+
+        assert_eq!(actual, expected);
+
+        Ok(())
+    }
+}

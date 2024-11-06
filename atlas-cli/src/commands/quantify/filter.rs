@@ -1,6 +1,9 @@
 use std::io;
 
-use noodles::{bam, sam::alignment::record::MappingQuality};
+use noodles::{
+    bam,
+    sam::alignment::record::{Flags, MappingQuality},
+};
 
 use super::count::Event;
 
@@ -20,6 +23,10 @@ impl Filter {
 
         if flags.is_unmapped() {
             return Ok(Some(Event::Unmapped));
+        }
+
+        if flags.intersects(Flags::SECONDARY) {
+            return Ok(Some(Event::Skip));
         }
 
         if !is_unique_record(record)? {

@@ -8,7 +8,6 @@ use noodles::{bam, core::Position};
 
 use super::{match_intervals::MatchIntervals, Entry, Filter, IntervalTrees};
 
-#[expect(dead_code)]
 pub(super) enum Event<'f> {
     Hit(&'f str),
     Miss,

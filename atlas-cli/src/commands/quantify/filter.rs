@@ -19,13 +19,15 @@ impl Filter {
     }
 
     pub(super) fn filter(&self, record: &bam::Record) -> io::Result<Option<Event<'_>>> {
+        const SKIPPABLES: Flags = Flags::SECONDARY.union(Flags::SUPPLEMENTARY);
+
         let flags = record.flags();
 
         if flags.is_unmapped() {
             return Ok(Some(Event::Unmapped));
         }
 
-        if flags.intersects(Flags::SECONDARY) {
+        if flags.intersects(SKIPPABLES) {
             return Ok(Some(Event::Skip));
         }
 

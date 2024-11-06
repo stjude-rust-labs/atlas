@@ -20,7 +20,7 @@ use thiserror::Error;
 use tracing::info;
 
 use self::{
-    count::{count_single_records, Counts},
+    count::{count_single_records, Context, Counts},
     filter::Filter,
     specification::LibraryLayout,
 };
@@ -95,8 +95,9 @@ pub fn quantify(args: quantify::Args) -> Result<(), QuantifyError> {
     feature_names.sort();
 
     write_counts(&mut writer, &feature_names, &ctx.hits)?;
+    write_metadata(&mut writer, &ctx)?;
 
-    todo!()
+    Ok(())
 }
 
 #[derive(Debug, Error)]
@@ -161,17 +162,31 @@ fn build_interval_trees<'f>(
     interval_trees
 }
 
+const DELIMITER: char = '\t';
+
 fn write_counts<W>(writer: &mut W, feature_names: &[&String], counts: &Counts) -> io::Result<()>
 where
     W: Write,
 {
-    const DELIMITER: char = '\t';
     const MISSING: u64 = 0;
 
     for name in feature_names {
         let count = counts.get(name.as_str()).copied().unwrap_or(MISSING);
         writeln!(writer, "{name}{DELIMITER}{count}")?;
     }
+
+    Ok(())
+}
+
+fn write_metadata<W>(writer: &mut W, ctx: &Context) -> io::Result<()>
+where
+    W: Write,
+{
+    writeln!(writer, "__no_feature{DELIMITER}{}", ctx.miss)?;
+    writeln!(writer, "__ambiguous{DELIMITER}{}", ctx.ambiguous)?;
+    writeln!(writer, "__too_low_aQual{DELIMITER}{}", ctx.low_quality)?;
+    writeln!(writer, "__not_aligned{DELIMITER}{}", ctx.unmapped)?;
+    writeln!(writer, "__alignment_not_unique{DELIMITER}{}", ctx.nonunique)?;
 
     Ok(())
 }
@@ -194,6 +209,34 @@ mod tests {
         write_counts(&mut buf, &feature_names, &counts)?;
 
         assert_eq!(buf, b"f0\t13\nf1\t8\nf2\t5\n");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_write_metadata() -> io::Result<()> {
+        let mut buf = Vec::new();
+
+        let ctx = Context {
+            hits: HashMap::new(),
+            miss: 2,
+            ambiguous: 3,
+            low_quality: 5,
+            unmapped: 8,
+            nonunique: 13,
+        };
+
+        write_metadata(&mut buf, &ctx)?;
+
+        let expected = b"\
+__no_feature\t2
+__ambiguous\t3
+__too_low_aQual\t5
+__not_aligned\t8
+__alignment_not_unique\t13
+";
+
+        assert_eq!(buf, expected);
 
         Ok(())
     }

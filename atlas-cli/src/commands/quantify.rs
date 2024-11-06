@@ -83,6 +83,8 @@ pub fn quantify(args: quantify::Args) -> Result<(), QuantifyError> {
     let mut reader = bam::io::reader::Builder.build_from_path(src)?;
     reader.read_header()?;
 
+    info!("counting features");
+
     let ctx = match library_layout {
         LibraryLayout::Single => count_single_records(&interval_trees, &filter, reader)?,
         LibraryLayout::Multiple => todo!(),

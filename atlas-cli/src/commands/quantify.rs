@@ -6,7 +6,7 @@ mod specification;
 use std::{
     collections::HashMap,
     fs::File,
-    io::{self, BufReader},
+    io::{self, BufReader, BufWriter, Write},
     path::Path,
 };
 
@@ -19,7 +19,11 @@ use noodles::{bam, core::Position, gff::record::Strand, sam};
 use thiserror::Error;
 use tracing::info;
 
-use self::{count::count_single_records, filter::Filter, specification::LibraryLayout};
+use self::{
+    count::{count_single_records, Counts},
+    filter::Filter,
+    specification::LibraryLayout,
+};
 use crate::cli::quantify;
 
 type Features = HashMap<String, Vec<Feature>>;
@@ -79,10 +83,18 @@ pub fn quantify(args: quantify::Args) -> Result<(), QuantifyError> {
     let mut reader = bam::io::reader::Builder.build_from_path(src)?;
     reader.read_header()?;
 
-    let _ctx = match library_layout {
+    let ctx = match library_layout {
         LibraryLayout::Single => count_single_records(&interval_trees, &filter, reader)?,
         LibraryLayout::Multiple => todo!(),
     };
+
+    let stdout = io::stdout().lock();
+    let mut writer = BufWriter::new(stdout);
+
+    let mut feature_names: Vec<_> = features.keys().collect();
+    feature_names.sort();
+
+    write_counts(&mut writer, &feature_names, &ctx.hits)?;
 
     todo!()
 }
@@ -147,4 +159,42 @@ fn build_interval_trees<'f>(
     }
 
     interval_trees
+}
+
+fn write_counts<W>(writer: &mut W, feature_names: &[&String], counts: &Counts) -> io::Result<()>
+where
+    W: Write,
+{
+    const DELIMITER: char = '\t';
+    const MISSING: u64 = 0;
+
+    for name in feature_names {
+        let count = counts.get(name.as_str()).copied().unwrap_or(MISSING);
+        writeln!(writer, "{name}{DELIMITER}{count}")?;
+    }
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_write_counts() -> io::Result<()> {
+        let mut buf = Vec::new();
+
+        let feature_names = [
+            &String::from("f0"),
+            &String::from("f1"),
+            &String::from("f2"),
+        ];
+
+        let counts = [("f1", 8), ("f0", 13), ("f2", 5)].into_iter().collect();
+        write_counts(&mut buf, &feature_names, &counts)?;
+
+        assert_eq!(buf, b"f0\t13\nf1\t8\nf2\t5\n");
+
+        Ok(())
+    }
 }

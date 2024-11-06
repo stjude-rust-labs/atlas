@@ -34,7 +34,9 @@ impl<'r> Iterator for MatchIntervals<'r> {
 
             let len = op.len();
 
-            assert!(len > 0);
+            if len == 0 {
+                continue;
+            }
 
             match op.kind() {
                 Kind::Match | Kind::SequenceMatch | Kind::SequenceMismatch => {
@@ -71,6 +73,7 @@ mod tests {
     #[test]
     fn test_next() -> Result<(), Box<dyn std::error::Error>> {
         let mut ops = [
+            Ok(Op::new(Kind::Match, 0)),
             Ok(Op::new(Kind::Match, 1)),
             Ok(Op::new(Kind::Insertion, 2)),
             Ok(Op::new(Kind::Deletion, 3)),

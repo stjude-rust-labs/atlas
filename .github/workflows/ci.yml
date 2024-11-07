@@ -4,13 +4,13 @@ on: [push, pull_request]
 
 jobs:
   format:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - run: cargo fmt -- --check
 
   test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     # https://docs.github.com/en/actions/using-containerized-services/creating-postgresql-service-containers
     services:

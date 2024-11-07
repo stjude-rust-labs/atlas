@@ -1,6 +1,7 @@
 mod count;
 mod filter;
 mod match_intervals;
+mod segmented_reads;
 mod specification;
 
 use std::{

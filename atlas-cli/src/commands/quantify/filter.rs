@@ -7,6 +7,8 @@ use noodles::{
 
 use super::count::Event;
 
+const SKIPPABLES: Flags = Flags::SECONDARY.union(Flags::SUPPLEMENTARY);
+
 pub(super) struct Filter {
     min_mapping_quality: MappingQuality,
 }
@@ -19,8 +21,6 @@ impl Filter {
     }
 
     pub(super) fn filter(&self, record: &bam::Record) -> io::Result<Option<Event<'_>>> {
-        const SKIPPABLES: Flags = Flags::SECONDARY.union(Flags::SUPPLEMENTARY);
-
         let flags = record.flags();
 
         if flags.is_unmapped() {
@@ -36,6 +36,42 @@ impl Filter {
         }
 
         if let Some(mapping_quality) = record.mapping_quality() {
+            if mapping_quality < self.min_mapping_quality {
+                return Ok(Some(Event::LowQuality));
+            }
+        }
+
+        Ok(None)
+    }
+
+    #[expect(dead_code)]
+    pub(super) fn filter_segments(
+        &self,
+        r1: &bam::Record,
+        r2: &bam::Record,
+    ) -> io::Result<Option<Event<'_>>> {
+        let f1 = r1.flags();
+        let f2 = r2.flags();
+
+        if f1.is_unmapped() && f2.is_unmapped() {
+            return Ok(Some(Event::Unmapped));
+        }
+
+        if f1.intersects(SKIPPABLES) || f2.intersects(SKIPPABLES) {
+            return Ok(Some(Event::Skip));
+        }
+
+        if is_unique_record(r1)? && is_unique_record(r2)? {
+            return Ok(Some(Event::Nonunique));
+        }
+
+        if let Some(mapping_quality) = r1.mapping_quality() {
+            if mapping_quality < self.min_mapping_quality {
+                return Ok(Some(Event::LowQuality));
+            }
+        }
+
+        if let Some(mapping_quality) = r2.mapping_quality() {
             if mapping_quality < self.min_mapping_quality {
                 return Ok(Some(Event::LowQuality));
             }

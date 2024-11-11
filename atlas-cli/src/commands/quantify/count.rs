@@ -6,7 +6,9 @@ use std::{
 use atlas_core::collections::IntervalTree;
 use noodles::{bam, core::Position};
 
-use super::{match_intervals::MatchIntervals, Entry, Filter, IntervalTrees};
+use super::{
+    match_intervals::MatchIntervals, segmented_reads::SegmentedReads, Entry, Filter, IntervalTrees,
+};
 
 pub(super) enum Event<'f> {
     Hit(&'f str),
@@ -105,6 +107,38 @@ fn count_single_record<'f>(
     } else {
         Ok(Event::Ambiguous)
     }
+}
+
+pub(super) fn count_segmented_records<'f, R>(
+    interval_trees: &IntervalTrees<'f>,
+    filter: &'f Filter,
+    reader: bam::io::Reader<R>,
+) -> io::Result<Context<'f>>
+where
+    R: Read,
+{
+    let mut ctx = Context::default();
+    let mut reads = SegmentedReads::new(reader);
+
+    while let Some((r1, r2)) = reads.try_next()? {
+        let event = count_segmented_records_inner(interval_trees, filter, &r1, &r2)?;
+        ctx.add_event(event);
+    }
+
+    Ok(ctx)
+}
+
+fn count_segmented_records_inner<'f>(
+    _interval_trees: &IntervalTrees<'f>,
+    filter: &'f Filter,
+    r1: &bam::Record,
+    r2: &bam::Record,
+) -> io::Result<Event<'f>> {
+    if let Some(event) = filter.filter_segments(r1, r2)? {
+        return Ok(event);
+    }
+
+    todo!()
 }
 
 fn intersect<'f>(

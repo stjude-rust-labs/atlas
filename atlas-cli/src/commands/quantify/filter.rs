@@ -44,7 +44,6 @@ impl Filter {
         Ok(None)
     }
 
-    #[expect(dead_code)]
     pub(super) fn filter_segments(
         &self,
         r1: &bam::Record,

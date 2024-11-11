@@ -21,7 +21,7 @@ use thiserror::Error;
 use tracing::info;
 
 use self::{
-    count::{count_single_records, Context, Counts},
+    count::{count_segmented_records, count_single_records, Context, Counts},
     filter::Filter,
     specification::LibraryLayout,
 };
@@ -88,7 +88,7 @@ pub fn quantify(args: quantify::Args) -> Result<(), QuantifyError> {
 
     let ctx = match library_layout {
         LibraryLayout::Single => count_single_records(&interval_trees, &filter, reader)?,
-        LibraryLayout::Multiple => todo!(),
+        LibraryLayout::Multiple => count_segmented_records(&interval_trees, &filter, reader)?,
     };
 
     let stdout = io::stdout().lock();

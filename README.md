@@ -2,9 +2,9 @@
 
 ## Prerequisites
 
-  * [Rust](https://www.rust-lang.org/)
-  * [PostgreSQL](https://www.postgresql.org/)
-  * [sqlx-cli](https://github.com/launchbadge/sqlx/tree/main/sqlx-cli) (`cargo install sqlx-cli --no-default-features --features native-tls,postgres`)
+- [Rust](https://www.rust-lang.org/)
+- [PostgreSQL](https://www.postgresql.org/)
+- [sqlx-cli](https://github.com/launchbadge/sqlx/tree/main/sqlx-cli) (`cargo install sqlx-cli --no-default-features --features native-tls,postgres`)
 
 ## Development quickstart
 
@@ -21,6 +21,12 @@ cargo run -- server
 
 # open <local-address>/docs
 ```
+
+## Legal
+
+Please see [the disclaimer](https://github.com/stjude-rust-labs#disclaimer) that
+applies to all crates and command line tools made available by St. Jude Rust
+Labs.
 
 [GitHub Codespaces]: https://github.com/features/codespaces
 [Visual Studio Code]: https://code.visualstudio.com/

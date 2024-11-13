@@ -96,7 +96,8 @@ fn count_single_record<'f>(
 
     let intervals = MatchIntervals::new(&mut ops, alignment_start);
 
-    let intersections = intersect(interval_tree, intervals)?;
+    let mut intersections = HashSet::new();
+    intersect(&mut intersections, interval_tree, intervals)?;
 
     if intersections.is_empty() {
         Ok(Event::Miss)
@@ -142,18 +143,17 @@ fn count_segmented_records_inner<'f>(
 }
 
 fn intersect<'f>(
+    intersections: &mut HashSet<&'f str>,
     interval_tree: &IntervalTree<Position, Entry<'f>>,
     intervals: MatchIntervals<'_>,
-) -> io::Result<HashSet<&'f str>> {
-    let mut set = HashSet::new();
-
+) -> io::Result<()> {
     for result in intervals {
         let interval = result?;
 
         for (_, (name, _)) in interval_tree.find(interval) {
-            set.insert(*name);
+            intersections.insert(*name);
         }
     }
 
-    Ok(set)
+    Ok(())
 }

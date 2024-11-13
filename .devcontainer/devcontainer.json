@@ -4,6 +4,11 @@
   "dockerComposeFile": "compose.yaml",
   "service": "devcontainer",
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+
+  "mounts": [
+    "source=${localWorkspaceFolderBasename}-target,target=${containerWorkspaceFolder}/target,type=volume"
+  ],
+  "postCreateCommand": "sudo chown vscode:vscode target",
   "postStartCommand": "git config --global --add safe.directory ${containerWorkspaceFolder}",
 
   "forwardPorts": [3000, 5432],
@@ -24,9 +29,6 @@
       ],
       "settings": {
         "rust-analyzer": {
-          "cargo": {
-            "targetDir": "/tmp/atlas/target"
-          },
           "check": {
             "command": "clippy"
           }

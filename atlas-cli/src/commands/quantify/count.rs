@@ -106,7 +106,7 @@ where
 }
 
 fn count_segmented_records_inner<'f>(
-    _interval_trees: &IntervalTrees<'f>,
+    interval_trees: &IntervalTrees<'f>,
     filter: &'f Filter,
     r1: &bam::Record,
     r2: &bam::Record,
@@ -115,7 +115,17 @@ fn count_segmented_records_inner<'f>(
         return Ok(event);
     }
 
-    todo!()
+    let mut intersections = HashSet::new();
+
+    if let Some(event) = count_record(interval_trees, r1, &mut intersections)? {
+        return Ok(event);
+    }
+
+    if let Some(event) = count_record(interval_trees, r2, &mut intersections)? {
+        return Ok(event);
+    }
+
+    Ok(resolve_intersections(&intersections))
 }
 
 fn count_record<'f>(

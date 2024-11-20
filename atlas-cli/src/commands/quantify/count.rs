@@ -83,15 +83,7 @@ fn count_single_record<'f>(
         return Ok(event);
     }
 
-    if intersections.is_empty() {
-        Ok(Event::Miss)
-    } else if intersections.len() == 1 {
-        // SAFETY: `intersections` is non-empty.
-        let name = intersections.iter().next().unwrap();
-        Ok(Event::Hit(name))
-    } else {
-        Ok(Event::Ambiguous)
-    }
+    Ok(resolve_intersections(&intersections))
 }
 
 pub(super) fn count_segmented_records<'f, R>(
@@ -169,4 +161,16 @@ fn intersect<'f>(
     }
 
     Ok(())
+}
+
+fn resolve_intersections<'f>(intersections: &HashSet<&'f str>) -> Event<'f> {
+    if intersections.is_empty() {
+        Event::Miss
+    } else if intersections.len() == 1 {
+        // SAFETY: `intersections` is non-empty.
+        let name = intersections.iter().next().unwrap();
+        Event::Hit(name)
+    } else {
+        Event::Ambiguous
+    }
 }

@@ -77,27 +77,11 @@ fn count_single_record<'f>(
         return Ok(event);
     }
 
-    let reference_sequence_id = record
-        .reference_sequence_id()
-        .transpose()?
-        .expect("missing reference sequence ID");
-
-    let Some(interval_tree) = interval_trees.get(reference_sequence_id) else {
-        return Ok(Event::Miss);
-    };
-
-    let cigar = record.cigar();
-    let mut ops = cigar.iter();
-
-    let alignment_start = record
-        .alignment_start()
-        .transpose()?
-        .expect("missing alignment start");
-
-    let intervals = MatchIntervals::new(&mut ops, alignment_start);
-
     let mut intersections = HashSet::new();
-    intersect(&mut intersections, interval_tree, intervals)?;
+
+    if let Some(event) = count_record(interval_trees, record, &mut intersections)? {
+        return Ok(event);
+    }
 
     if intersections.is_empty() {
         Ok(Event::Miss)
@@ -140,6 +124,35 @@ fn count_segmented_records_inner<'f>(
     }
 
     todo!()
+}
+
+fn count_record<'f>(
+    interval_trees: &IntervalTrees<'f>,
+    record: &bam::Record,
+    intersections: &mut HashSet<&'f str>,
+) -> io::Result<Option<Event<'f>>> {
+    let reference_sequence_id = record
+        .reference_sequence_id()
+        .transpose()?
+        .expect("missing reference sequence ID");
+
+    let Some(interval_tree) = interval_trees.get(reference_sequence_id) else {
+        return Ok(Some(Event::Miss));
+    };
+
+    let cigar = record.cigar();
+    let mut ops = cigar.iter();
+
+    let alignment_start = record
+        .alignment_start()
+        .transpose()?
+        .expect("missing alignment start");
+
+    let intervals = MatchIntervals::new(&mut ops, alignment_start);
+
+    intersect(intersections, interval_tree, intervals)?;
+
+    Ok(None)
 }
 
 fn intersect<'f>(

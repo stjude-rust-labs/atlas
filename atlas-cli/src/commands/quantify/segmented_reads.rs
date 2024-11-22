@@ -58,7 +58,6 @@ impl<R> SegmentedReads<R>
 where
     R: Read,
 {
-    #[allow(dead_code)]
     pub(super) fn new(reader: bam::io::Reader<R>) -> Self {
         Self {
             reader,
@@ -66,7 +65,6 @@ where
         }
     }
 
-    #[allow(dead_code)]
     pub(super) fn try_next(&mut self) -> io::Result<Option<(bam::Record, bam::Record)>> {
         use std::collections::hash_map::Entry;
 

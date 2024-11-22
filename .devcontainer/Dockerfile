@@ -4,7 +4,7 @@ FROM mcr.microsoft.com/devcontainers/base:debian-12
 
 ENV PATH=/home/vscode/.cargo/bin:${PATH}
 
-RUN <<EOS
+RUN bash -e <<EOS
 apt-get update
 apt-get install --yes ca-certificates libssl-dev pkg-config postgresql-client
 rm -rf /var/lib/apt/lists/*

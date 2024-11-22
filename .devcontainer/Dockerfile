@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.8
+# syntax=docker/dockerfile:1
 
 FROM mcr.microsoft.com/devcontainers/base:debian-12
 

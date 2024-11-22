@@ -90,7 +90,11 @@ fn is_unique_record(record: &bam::Record) -> io::Result<bool> {
     };
 
     match value.as_int() {
-        Some(n) => Ok(n == 1), // TODO: `n` == 0.
+        Some(n) => {
+            // A unique record should have an alignment hit count (`NH`) of 1, but htseq-count
+            // 0.12.3 seems to also allow this be 0 or negative.
+            Ok(n <= 1)
+        }
         None => Err(io::Error::new(
             io::ErrorKind::InvalidData,
             format!(
@@ -134,6 +138,12 @@ mod tests {
 
             Ok(record)
         }
+
+        let record = build_record(Value::from(-1))?;
+        assert!(is_unique_record(&record)?);
+
+        let record = build_record(Value::from(0))?;
+        assert!(is_unique_record(&record)?);
 
         let record = build_record(Value::from(1))?;
         assert!(is_unique_record(&record)?);

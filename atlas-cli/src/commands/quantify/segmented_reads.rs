@@ -6,6 +6,8 @@ use std::{
 use noodles::{bam, sam::alignment::record::Flags};
 use thiserror::Error;
 
+const FILTERS: Flags = Flags::SECONDARY.union(Flags::SUPPLEMENTARY);
+
 #[derive(Clone, Copy, Eq, Hash, PartialEq)]
 enum SegmentPosition {
     First,
@@ -75,6 +77,12 @@ where
                 return Ok(None);
             }
 
+            let flags = record.flags();
+
+            if flags.intersects(FILTERS) {
+                continue;
+            }
+
             let name = record.name().unwrap_or_default();
 
             match self.cache.entry(name.to_vec()) {
@@ -82,7 +90,7 @@ where
                     if is_mate(&record, entry.get())? {
                         let mate = entry.remove();
 
-                        let segment_position = SegmentPosition::try_from(record.flags())
+                        let segment_position = SegmentPosition::try_from(flags)
                             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
                         return match segment_position {

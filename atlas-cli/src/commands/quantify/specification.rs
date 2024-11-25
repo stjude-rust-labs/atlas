@@ -16,7 +16,7 @@ pub(super) enum LibraryLayout {
     Multiple,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum StrandSpecification {
     None,
     Forward,

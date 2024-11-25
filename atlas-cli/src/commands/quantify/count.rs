@@ -7,7 +7,8 @@ use atlas_core::collections::IntervalTree;
 use noodles::{bam, core::Position};
 
 use super::{
-    match_intervals::MatchIntervals, segmented_reads::SegmentedReads, Entry, Filter, IntervalTrees,
+    match_intervals::MatchIntervals, segmented_reads::SegmentedReads,
+    specification::StrandSpecification, Entry, Filter, IntervalTrees,
 };
 
 pub(super) enum Event<'f> {
@@ -52,6 +53,7 @@ impl<'f> Context<'f> {
 pub(super) fn count_single_records<'f, R>(
     interval_trees: &IntervalTrees<'f>,
     filter: &'f Filter,
+    strand_specification: StrandSpecification,
     mut reader: bam::io::Reader<R>,
 ) -> io::Result<Context<'f>>
 where
@@ -61,7 +63,7 @@ where
     let mut record = bam::Record::default();
 
     while reader.read_record(&mut record)? != 0 {
-        let event = count_single_record(interval_trees, filter, &record)?;
+        let event = count_single_record(interval_trees, filter, strand_specification, &record)?;
         ctx.add_event(event);
     }
 
@@ -71,6 +73,7 @@ where
 fn count_single_record<'f>(
     interval_trees: &IntervalTrees<'f>,
     filter: &'f Filter,
+    strand_specification: StrandSpecification,
     record: &bam::Record,
 ) -> io::Result<Event<'f>> {
     if let Some(event) = filter.filter(record)? {
@@ -79,7 +82,12 @@ fn count_single_record<'f>(
 
     let mut intersections = HashSet::new();
 
-    if let Some(event) = count_record(interval_trees, record, &mut intersections)? {
+    if let Some(event) = count_record(
+        interval_trees,
+        strand_specification,
+        record,
+        &mut intersections,
+    )? {
         return Ok(event);
     }
 
@@ -89,6 +97,7 @@ fn count_single_record<'f>(
 pub(super) fn count_segmented_records<'f, R>(
     interval_trees: &IntervalTrees<'f>,
     filter: &'f Filter,
+    strand_specification: StrandSpecification,
     reader: bam::io::Reader<R>,
 ) -> io::Result<Context<'f>>
 where
@@ -98,7 +107,9 @@ where
     let mut reads = SegmentedReads::new(reader);
 
     while let Some((r1, r2)) = reads.try_next()? {
-        let event = count_segmented_records_inner(interval_trees, filter, &r1, &r2)?;
+        let event =
+            count_segmented_records_inner(interval_trees, filter, strand_specification, &r1, &r2)?;
+
         ctx.add_event(event);
     }
 
@@ -108,6 +119,7 @@ where
 fn count_segmented_records_inner<'f>(
     interval_trees: &IntervalTrees<'f>,
     filter: &'f Filter,
+    strand_specification: StrandSpecification,
     r1: &bam::Record,
     r2: &bam::Record,
 ) -> io::Result<Event<'f>> {
@@ -117,11 +129,13 @@ fn count_segmented_records_inner<'f>(
 
     let mut intersections = HashSet::new();
 
-    if let Some(event) = count_record(interval_trees, r1, &mut intersections)? {
+    if let Some(event) = count_record(interval_trees, strand_specification, r1, &mut intersections)?
+    {
         return Ok(event);
     }
 
-    if let Some(event) = count_record(interval_trees, r2, &mut intersections)? {
+    if let Some(event) = count_record(interval_trees, strand_specification, r2, &mut intersections)?
+    {
         return Ok(event);
     }
 
@@ -130,6 +144,7 @@ fn count_segmented_records_inner<'f>(
 
 fn count_record<'f>(
     interval_trees: &IntervalTrees<'f>,
+    strand_specification: StrandSpecification,
     record: &bam::Record,
     intersections: &mut HashSet<&'f str>,
 ) -> io::Result<Option<Event<'f>>> {
@@ -152,7 +167,15 @@ fn count_record<'f>(
 
     let intervals = MatchIntervals::new(&mut ops, alignment_start);
 
-    intersect(intersections, interval_tree, intervals)?;
+    let is_reverse_complemented = record.flags().is_reverse_complemented();
+
+    intersect(
+        intersections,
+        interval_tree,
+        intervals,
+        strand_specification,
+        is_reverse_complemented,
+    )?;
 
     Ok(None)
 }
@@ -161,12 +184,21 @@ fn intersect<'f>(
     intersections: &mut HashSet<&'f str>,
     interval_tree: &IntervalTree<Position, Entry<'f>>,
     intervals: MatchIntervals<'_>,
+    strand_specification: StrandSpecification,
+    is_reverse_complemented: bool,
 ) -> io::Result<()> {
+    use noodles::gff::record::Strand;
+
     for result in intervals {
         let interval = result?;
 
-        for (_, (name, _)) in interval_tree.find(interval) {
-            intersections.insert(*name);
+        for (_, (name, strand)) in interval_tree.find(interval) {
+            if strand_specification == StrandSpecification::None
+                || (*strand == Strand::Reverse && is_reverse_complemented)
+                || (*strand == Strand::Forward && !is_reverse_complemented)
+            {
+                intersections.insert(*name);
+            }
         }
     }
 

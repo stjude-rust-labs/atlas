@@ -47,10 +47,10 @@ pub fn quantify(args: quantify::Args) -> Result<(), QuantifyError> {
     info!(feature_count = features.len(), "read features");
 
     let src = &args.src;
+    let mut reader = bam::io::reader::Builder.build_from_path(src)?;
 
     info!(src = ?src, "reading alignment header");
 
-    let mut reader = bam::io::reader::Builder.build_from_path(src)?;
     let header = reader.read_header()?;
 
     info!(

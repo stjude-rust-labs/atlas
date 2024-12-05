@@ -60,7 +60,7 @@ impl Filter {
             return Ok(Some(Event::Skip));
         }
 
-        if is_unique_record(r1)? && is_unique_record(r2)? {
+        if !is_unique_record(r1)? || !is_unique_record(r2)? {
             return Ok(Some(Event::Nonunique));
         }
 

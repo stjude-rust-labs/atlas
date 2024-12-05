@@ -224,6 +224,8 @@ fn count_segmented_record(
                 counts.reverse += 1;
             }
         }
+
+        counts.matches += 1;
     }
 
     Ok(())

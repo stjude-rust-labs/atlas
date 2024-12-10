@@ -12,7 +12,7 @@ anyhow.workspace = true
 atlas-core = { path = "../atlas-core", version = "0.1.0" }
 clap = { workspace = true, features = ["derive"] }
 indexmap.workspace = true
-noodles = { workspace = true, features = ["bam", "core", "gff", "sam"] }
+noodles = { workspace = true, features = ["bam", "bgzf", "core", "gff", "sam"] }
 thiserror.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true

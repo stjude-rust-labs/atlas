@@ -8,7 +8,9 @@ use std::{
     collections::HashMap,
     fs::File,
     io::{self, BufReader, BufWriter, Write},
+    num::NonZeroUsize,
     path::Path,
+    thread,
 };
 
 use atlas_core::{
@@ -16,7 +18,7 @@ use atlas_core::{
     features::{Feature, ReadFeaturesError},
 };
 use indexmap::IndexSet;
-use noodles::{bam, core::Position, gff::record::Strand, sam};
+use noodles::{bam, bgzf, core::Position, gff::record::Strand, sam};
 use thiserror::Error;
 use tracing::info;
 
@@ -81,7 +83,12 @@ pub fn quantify(args: quantify::Args) -> Result<(), QuantifyError> {
     let min_mapping_quality = args.min_mapping_quality;
     let filter = Filter::new(min_mapping_quality);
 
-    let mut reader = bam::io::reader::Builder.build_from_path(src)?;
+    let decoder = File::open(src).map(|f| {
+        let worker_count = thread::available_parallelism().unwrap_or(NonZeroUsize::MIN);
+        bgzf::MultithreadedReader::with_worker_count(worker_count, f)
+    })?;
+
+    let mut reader = bam::io::Reader::from(decoder);
     reader.read_header()?;
 
     info!("counting features");

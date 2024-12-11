@@ -65,6 +65,10 @@ where
         }
     }
 
+    pub(super) fn unmatched_records(self) -> impl ExactSizeIterator<Item = bam::Record> {
+        self.cache.into_values()
+    }
+
     pub(super) fn try_next(&mut self) -> io::Result<Option<(bam::Record, bam::Record)>> {
         use std::collections::hash_map::Entry;
 

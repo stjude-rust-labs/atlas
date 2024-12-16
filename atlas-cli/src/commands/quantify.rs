@@ -18,7 +18,7 @@ use atlas_core::{
     features::{Feature, ReadFeaturesError},
 };
 use indexmap::IndexSet;
-use noodles::{bam, bgzf, core::Position, gff::record::Strand, sam};
+use noodles::{bam, bgzf, core::Position, gff::record_buf::Strand, sam};
 use thiserror::Error;
 use tracing::info;
 

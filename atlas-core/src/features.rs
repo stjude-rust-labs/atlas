@@ -29,19 +29,16 @@ pub fn read_features<R>(
 where
     R: BufRead,
 {
-    use noodles::gff::{
-        self,
-        lazy::{record::attributes::field::Value, Line},
-    };
+    use noodles::gff::{self, record::attributes::field::Value};
 
     let mut reference_sequence_names = IndexSet::new();
     let mut features: HashMap<String, Vec<Feature>> = HashMap::new();
 
     let mut reader = gff::io::Reader::new(reader);
-    let mut line = Line::default();
+    let mut line = gff::Line::default();
 
-    while reader.read_lazy_line(&mut line)? != 0 {
-        let Line::Record(ref record) = line else {
+    while reader.read_line(&mut line)? != 0 {
+        let Some(record) = line.as_record().transpose()? else {
             continue;
         };
 
@@ -132,7 +129,7 @@ pub fn calculate_feature_lengths(
 
 #[cfg(test)]
 mod tests {
-    use noodles::{core::Position, gff::record::Strand};
+    use noodles::{core::Position, gff::record_buf::Strand};
 
     use super::*;
 

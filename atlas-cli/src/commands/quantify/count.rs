@@ -200,7 +200,7 @@ fn intersect<'f>(
     strand_specification: StrandSpecification,
     is_reverse_complemented: bool,
 ) -> io::Result<()> {
-    use noodles::gff::record::Strand;
+    use noodles::gff::record_buf::Strand;
 
     for result in intervals {
         let interval = result?;

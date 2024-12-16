@@ -7,7 +7,7 @@ use noodles::{
 
 use super::count::Event;
 
-const SKIPPABLES: Flags = Flags::SECONDARY.union(Flags::SUPPLEMENTARY);
+const NONPRIMARY: Flags = Flags::SECONDARY.union(Flags::SUPPLEMENTARY);
 
 pub(super) struct Filter {
     min_mapping_quality: MappingQuality,
@@ -27,7 +27,7 @@ impl Filter {
             return Ok(Some(Event::Unmapped));
         }
 
-        if flags.intersects(SKIPPABLES) {
+        if flags.intersects(NONPRIMARY) {
             return Ok(Some(Event::Skip));
         }
 
@@ -56,7 +56,7 @@ impl Filter {
             return Ok(Some(Event::Unmapped));
         }
 
-        if f1.intersects(SKIPPABLES) || f2.intersects(SKIPPABLES) {
+        if f1.intersects(NONPRIMARY) || f2.intersects(NONPRIMARY) {
             return Ok(Some(Event::Skip));
         }
 

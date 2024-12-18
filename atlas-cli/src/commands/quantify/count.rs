@@ -4,7 +4,7 @@ use std::{
 };
 
 use atlas_core::collections::IntervalTree;
-use noodles::{bam, core::Position};
+use noodles::{bam, core::Position, gff::record_buf::strand};
 use tracing::warn;
 
 use super::{
@@ -180,7 +180,10 @@ fn count_record<'f>(
 
     let intervals = MatchIntervals::new(&mut ops, alignment_start);
 
-    let is_reverse_complemented = record.flags().is_reverse_complemented();
+    let is_reverse_complemented = resolve_is_reverse_complemented(
+        record.flags().is_reverse_complemented(),
+        strand_specification,
+    );
 
     intersect(
         intersections,
@@ -227,5 +230,16 @@ fn resolve_intersections<'f>(intersections: &HashSet<&'f str>) -> Event<'f> {
         Event::Hit(name)
     } else {
         Event::Ambiguous
+    }
+}
+
+fn resolve_is_reverse_complemented(
+    is_reverse_complemented: bool,
+    strand_specification: StrandSpecification,
+) -> bool {
+    if strand_specification == StrandSpecification::Reverse {
+        !is_reverse_complemented
+    } else {
+        is_reverse_complemented
     }
 }

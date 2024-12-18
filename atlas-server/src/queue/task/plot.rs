@@ -3,6 +3,7 @@ mod options;
 
 use std::collections::HashMap;
 
+use atlas_core::counts::dimension_reduction::tsne;
 use sqlx::PgPool;
 
 pub use self::{error::Error, options::Options};
@@ -84,7 +85,7 @@ pub async fn plot(
         });
     }
 
-    let embedding = transform(options.perplexity, options.theta, raw_counts, feature_count);
+    let embedding = tsne::transform(options.perplexity, options.theta, raw_counts, feature_count);
 
     let mut xs = Vec::with_capacity(sample_count);
     let mut ys = Vec::with_capacity(sample_count);
@@ -101,30 +102,6 @@ pub async fn plot(
 fn is_perplexity_too_large(perplexity: f64, sample_count: usize) -> bool {
     let n = sample_count as f64;
     sample_count > 0 && (n - 1.0 < 3.0 * perplexity)
-}
-
-fn transform(perplexity: f64, theta: f64, counts: Vec<i32>, feature_count: usize) -> Vec<f64> {
-    fn euclidean_distance(a: &&[f64], b: &&[f64]) -> f64 {
-        a.iter()
-            .zip(b.iter())
-            .map(|(p, q)| (p - q).powi(2))
-            .sum::<f64>()
-            .sqrt()
-    }
-
-    let sum: u64 = counts.iter().map(|n| *n as u64).sum();
-
-    let normalized_counts: Vec<_> = counts
-        .into_iter()
-        .map(|count| (count as f64) / (sum as f64))
-        .collect();
-
-    let data: Vec<_> = normalized_counts.chunks(feature_count).collect();
-
-    bhtsne::tSNE::new(&data)
-        .perplexity(perplexity)
-        .barnes_hut(theta, euclidean_distance)
-        .embedding()
 }
 
 #[cfg(test)]

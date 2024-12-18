@@ -4,7 +4,7 @@ use std::{
 };
 
 use atlas_core::collections::IntervalTree;
-use noodles::{bam, core::Position, gff::record_buf::strand};
+use noodles::{bam, core::Position};
 use tracing::warn;
 
 use super::{

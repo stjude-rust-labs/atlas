@@ -83,9 +83,15 @@ fn count_single_record<'f>(
 
     let mut intersections = HashSet::new();
 
+    let is_reverse_complemented = resolve_is_reverse_complemented(
+        record.flags().is_reverse_complemented(),
+        strand_specification,
+    );
+
     if let Some(event) = count_record(
         interval_trees,
         strand_specification,
+        is_reverse_complemented,
         record,
         &mut intersections,
     )? {
@@ -142,13 +148,31 @@ fn count_segmented_records_inner<'f>(
 
     let mut intersections = HashSet::new();
 
-    if let Some(event) = count_record(interval_trees, strand_specification, r1, &mut intersections)?
-    {
+    let r1_is_reverse_complemented =
+        resolve_is_reverse_complemented(r1.flags().is_reverse_complemented(), strand_specification);
+
+    if let Some(event) = count_record(
+        interval_trees,
+        strand_specification,
+        r1_is_reverse_complemented,
+        r1,
+        &mut intersections,
+    )? {
         return Ok(event);
     }
 
-    if let Some(event) = count_record(interval_trees, strand_specification, r2, &mut intersections)?
-    {
+    let r2_is_reverse_complemented = !resolve_is_reverse_complemented(
+        r2.flags().is_reverse_complemented(),
+        strand_specification,
+    );
+
+    if let Some(event) = count_record(
+        interval_trees,
+        strand_specification,
+        r2_is_reverse_complemented,
+        r2,
+        &mut intersections,
+    )? {
         return Ok(event);
     }
 
@@ -158,6 +182,7 @@ fn count_segmented_records_inner<'f>(
 fn count_record<'f>(
     interval_trees: &IntervalTrees<'f>,
     strand_specification: StrandSpecification,
+    is_reverse_complemented: bool,
     record: &bam::Record,
     intersections: &mut HashSet<&'f str>,
 ) -> io::Result<Option<Event<'f>>> {
@@ -179,11 +204,6 @@ fn count_record<'f>(
         .expect("missing alignment start");
 
     let intervals = MatchIntervals::new(&mut ops, alignment_start);
-
-    let is_reverse_complemented = resolve_is_reverse_complemented(
-        record.flags().is_reverse_complemented(),
-        strand_specification,
-    );
 
     intersect(
         intersections,

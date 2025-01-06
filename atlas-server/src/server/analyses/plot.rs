@@ -21,7 +21,7 @@ use crate::{
 pub fn router() -> Router<Context> {
     Router::new()
         .route("/analyses/plot", post(create))
-        .route("/analyses/plot/:id", get(show))
+        .route("/analyses/plot/{id}", get(show))
 }
 
 #[derive(Deserialize, ToSchema)]

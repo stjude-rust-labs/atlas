@@ -8,7 +8,7 @@ use serde::Serialize;
 use crate::server::{self, Context};
 
 pub fn router() -> Router<Context> {
-    Router::new().route("/features/:feature_id/runs", get(index))
+    Router::new().route("/features/{feature_id}/runs", get(index))
 }
 
 #[derive(Serialize)]

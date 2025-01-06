@@ -9,8 +9,11 @@ use crate::server::{self, Context, Error};
 
 pub fn router() -> Router<Context> {
     Router::new()
-        .route("/configurations/:configuration_id/features", get(index))
-        .route("/configurations/:configuration_id/features/:id", get(show))
+        .route("/configurations/{configuration_id}/features", get(index))
+        .route(
+            "/configurations/{configuration_id}/features/{id}",
+            get(show),
+        )
 }
 
 #[derive(Deserialize)]

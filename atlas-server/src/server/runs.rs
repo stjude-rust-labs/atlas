@@ -11,7 +11,7 @@ use super::{Context, Error};
 use crate::store::run::{self, Run};
 
 pub fn router() -> Router<Context> {
-    Router::new().route("/runs/:id", get(show))
+    Router::new().route("/runs/{id}", get(show))
 }
 
 #[derive(Serialize)]

@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use crate::server::{self, Context, Error};
 
 pub fn router() -> Router<Context> {
-    Router::new().route("/runs/:run_id/counts", get(index))
+    Router::new().route("/runs/{run_id}/counts", get(index))
 }
 
 #[derive(Debug, Deserialize)]

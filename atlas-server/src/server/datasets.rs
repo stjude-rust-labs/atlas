@@ -16,7 +16,7 @@ use crate::{
 pub fn router() -> Router<Context> {
     Router::new()
         .route("/datasets", get(index))
-        .route("/datasets/:id", get(show))
+        .route("/datasets/{id}", get(show))
 }
 
 #[derive(Serialize)]

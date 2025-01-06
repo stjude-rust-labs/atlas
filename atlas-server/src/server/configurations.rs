@@ -13,7 +13,7 @@ use crate::store::configuration::{self, Configuration};
 pub fn router() -> Router<Context> {
     Router::new()
         .route("/configurations", get(index))
-        .route("/configurations/:id", get(show))
+        .route("/configurations/{id}", get(show))
 }
 
 #[derive(Serialize, utoipa::ToSchema)]

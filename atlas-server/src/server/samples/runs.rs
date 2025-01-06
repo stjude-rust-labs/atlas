@@ -11,7 +11,7 @@ use crate::{
 };
 
 pub fn router() -> Router<Context> {
-    Router::new().route("/samples/:sample_id/runs", get(index))
+    Router::new().route("/samples/{sample_id}/runs", get(index))
 }
 
 #[derive(Serialize)]

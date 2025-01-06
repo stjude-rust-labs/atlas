@@ -14,7 +14,7 @@ use super::{Context, Error};
 pub fn router() -> Router<Context> {
     Router::new()
         .route("/samples", get(index))
-        .route("/samples/:id", get(show))
+        .route("/samples/{id}", get(show))
 }
 
 #[derive(Serialize, utoipa::ToSchema)]

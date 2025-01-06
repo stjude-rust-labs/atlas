@@ -7,7 +7,7 @@ use clap::Parser;
 
 use self::{
     cli::{Cli, Command},
-    commands::{normalize, quantify},
+    commands::{normalize, quantify, transform},
 };
 
 fn main() -> anyhow::Result<()> {
@@ -18,6 +18,7 @@ fn main() -> anyhow::Result<()> {
     match cli.command {
         Command::Normalize(args) => normalize(args)?,
         Command::Quantify(args) => quantify(args)?,
+        Command::Transform(args) => transform(args)?,
     }
 
     Ok(())

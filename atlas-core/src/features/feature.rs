@@ -1,4 +1,4 @@
-use noodles::{core::Position, gff::record_buf::Strand};
+use noodles::{core::Position, gff::record::Strand};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Feature {

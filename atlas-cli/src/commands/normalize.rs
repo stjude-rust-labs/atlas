@@ -6,7 +6,7 @@ use std::{
 };
 
 use atlas_core::{
-    counts::normalization::{fpkm, median_of_ratios, tpm},
+    counts::normalization::{fpkm, median_of_ratios, tmm, tpm},
     features::{self, Feature, ReadFeaturesError},
     StrandSpecification,
 };
@@ -73,6 +73,7 @@ pub fn normalize(args: normalize::Args) -> Result<(), NormalizeError> {
         Method::MedianOfRatios => {
             median_of_ratios::normalize_vec(sample_count, names.len(), counts)?
         }
+        Method::Tmm => tmm::normalize_vec(sample_count, names.len(), counts)?,
         Method::Tpm => {
             let lengths = calculate_feature_lengths(&features, &names)?;
 

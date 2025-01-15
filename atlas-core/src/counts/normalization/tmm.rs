@@ -8,10 +8,26 @@
 //! [edgeR]: https://bioconductor.org/packages/release/bioc/html/edgeR.html
 //! [10.1186/gb-2010-11-3-r25]: https://doi.org/10.1186/gb-2010-11-3-r25
 
-use std::collections::HashSet;
+use std::{collections::HashSet, io};
 
-use ndarray::{Array2, ArrayView1, ArrayView2, ArrayViewMut2};
+use ndarray::{Array2, ArrayView1, ArrayView2, ArrayViewMut2, Axis};
 use tracing::info;
+
+pub fn normalize_vec(
+    sample_count: usize,
+    feature_count: usize,
+    data: Vec<u32>,
+) -> io::Result<Vec<Vec<f64>>> {
+    let matrix = Array2::from_shape_vec((sample_count, feature_count), data)
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+
+    let normalized_matrix = normalize(matrix);
+
+    Ok(normalized_matrix
+        .axis_iter(Axis(0))
+        .map(|row| row.to_vec())
+        .collect())
+}
 
 pub fn normalize(data: Array2<u32>) -> Array2<f64> {
     let mut data = data.mapv(f64::from);

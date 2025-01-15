@@ -9,6 +9,8 @@ pub enum Method {
     Fpkm,
     /// Median of ratios.
     MedianOfRatios,
+    /// Trimmed mean of M-values (TMM).
+    Tmm,
     /// Transcripts per million (TPM) mapped reads
     Tpm,
 }

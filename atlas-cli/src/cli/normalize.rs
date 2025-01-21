@@ -67,6 +67,8 @@ pub struct Args {
     pub method: Method,
 
     /// Strand specification.
+    ///
+    /// This is only used if the input format is STAR.
     #[arg(long, value_enum, default_value_t = StrandSpecification::Forward)]
     pub strand_specification: StrandSpecification,
 

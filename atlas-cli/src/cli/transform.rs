@@ -13,5 +13,6 @@ pub struct Args {
     pub theta: f64,
 
     /// Input sources.
+    #[arg(required = true)]
     pub srcs: Vec<PathBuf>,
 }

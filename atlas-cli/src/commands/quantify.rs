@@ -25,9 +25,9 @@ use tracing::info;
 use self::{
     count::{Context, Counts, count_segmented_records, count_single_records},
     filter::Filter,
-    specification::LibraryLayout,
+    specification::{LibraryLayout, StrandSpecification},
 };
-use crate::cli::quantify;
+use crate::cli::quantify::{self, StrandSpecificationOption};
 
 type Features = HashMap<String, Vec<Feature>>;
 type Entry<'f> = (&'f str, Strand);
@@ -71,13 +71,18 @@ pub fn quantify(args: quantify::Args) -> Result<(), QuantifyError> {
 
     info!("detecting library type");
 
-    let (library_layout, strand_specification) =
+    let (library_layout, detected_strand_specification) =
         specification::detect(&mut reader, &interval_trees)?;
 
     info!(
         ?library_layout,
-        ?strand_specification,
+        strand_specification = ?detected_strand_specification,
         "detected library layout"
+    );
+
+    let strand_specification = strand_specification_from_option_or(
+        args.strand_specification,
+        detected_strand_specification,
     );
 
     let min_mapping_quality = args.min_mapping_quality;
@@ -178,6 +183,18 @@ fn build_interval_trees<'f>(
     }
 
     interval_trees
+}
+
+fn strand_specification_from_option_or(
+    option: StrandSpecificationOption,
+    detected_strand_specification: StrandSpecification,
+) -> StrandSpecification {
+    match option {
+        StrandSpecificationOption::None => StrandSpecification::None,
+        StrandSpecificationOption::Forward => StrandSpecification::Forward,
+        StrandSpecificationOption::Reverse => StrandSpecification::Reverse,
+        StrandSpecificationOption::Auto => detected_strand_specification,
+    }
 }
 
 const DELIMITER: char = '\t';

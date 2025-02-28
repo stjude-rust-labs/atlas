@@ -1,7 +1,15 @@
 use std::path::PathBuf;
 
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use noodles::sam::alignment::record::MappingQuality;
+
+#[derive(Clone, Copy, Debug, ValueEnum)]
+pub enum StrandSpecificationOption {
+    None,
+    Forward,
+    Reverse,
+    Auto,
+}
 
 #[derive(Parser)]
 pub struct Args {
@@ -20,6 +28,10 @@ pub struct Args {
     /// Record mapping quality threshold.
     #[arg(long, value_parser = parse_mapping_quality, default_value = "10")]
     pub min_mapping_quality: MappingQuality,
+
+    /// Strand specification.
+    #[arg(long, value_enum, default_value_t = StrandSpecificationOption::Auto)]
+    pub strand_specification: StrandSpecificationOption,
 
     /// Output destination.
     ///

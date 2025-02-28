@@ -1,9 +1,9 @@
 pub mod runs;
 
 use axum::{
+    Json, Router,
     extract::{Path, State},
     routing::get,
-    Json, Router,
 };
 use serde::Serialize;
 

@@ -18,7 +18,7 @@ where
             return Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
                 "invalid feature name",
-            ))
+            ));
         }
     };
 
@@ -64,7 +64,7 @@ where
             return Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
                 "invalid feature name",
-            ))
+            ));
         }
     };
 

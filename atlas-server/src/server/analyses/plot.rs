@@ -4,9 +4,9 @@ use std::collections::{HashMap, HashSet};
 
 use anyhow::anyhow;
 use axum::{
+    Json, Router,
     extract::{Path, State},
     routing::{get, post},
-    Json, Router,
 };
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -159,7 +159,7 @@ async fn show(State(ctx): State<Context>, Path(task_id): Path<Uuid>) -> server::
 #[cfg(test)]
 mod tests {
     use axum::body::Body;
-    use hyper::{header, Request, StatusCode};
+    use hyper::{Request, StatusCode, header};
     use serde_json::json;
     use sqlx::PgPool;
     use tower::ServiceExt;

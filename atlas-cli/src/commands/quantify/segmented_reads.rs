@@ -143,7 +143,7 @@ mod tests {
         sam::{
             self,
             alignment::io::Write,
-            header::record::value::{map::ReferenceSequence, Map},
+            header::record::value::{Map, map::ReferenceSequence},
         },
     };
 

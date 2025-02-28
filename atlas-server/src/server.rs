@@ -7,16 +7,16 @@ mod features;
 mod runs;
 mod samples;
 
-use axum::{routing::get, Json, Router};
+use axum::{Json, Router, routing::get};
 use sqlx::PgPool;
 use tokio::{net::TcpListener, signal};
 use tower::ServiceBuilder;
-use tower_http::{services::ServeFile, ServiceBuilderExt};
+use tower_http::{ServiceBuilderExt, services::ServeFile};
 use tracing::info;
 use utoipa::OpenApi;
 
 pub use self::error::Error;
-use super::{cli::ServerConfig, store, Queue};
+use super::{Queue, cli::ServerConfig, store};
 
 pub type Result<T> = std::result::Result<T, Error>;
 

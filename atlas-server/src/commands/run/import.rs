@@ -1,6 +1,6 @@
 use std::{collections::HashMap, io, path::Path};
 
-use sqlx::{postgres::PgPoolOptions, Postgres, Transaction};
+use sqlx::{Postgres, Transaction, postgres::PgPoolOptions};
 use tokio::{
     fs::File,
     io::{AsyncBufReadExt, BufReader},
@@ -9,8 +9,8 @@ use tracing::info;
 
 use crate::{
     cli::run::ImportConfig,
-    counts::{feature_names_eq, Format},
-    store::{dataset, StrandSpecification},
+    counts::{Format, feature_names_eq},
+    store::{StrandSpecification, dataset},
 };
 
 const BATCH_CHUNK_SIZE: usize = 128;

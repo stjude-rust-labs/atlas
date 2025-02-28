@@ -6,9 +6,9 @@ use std::{
 };
 
 use atlas_core::{
+    StrandSpecification,
     counts::normalization::{fpkm, median_of_ratios, tmm, tpm},
     features::{self, Feature, ReadFeaturesError},
-    StrandSpecification,
 };
 use thiserror::Error;
 use tracing::info;

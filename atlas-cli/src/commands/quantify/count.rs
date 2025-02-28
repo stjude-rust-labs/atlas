@@ -8,8 +8,8 @@ use noodles::{bam, core::Position};
 use tracing::warn;
 
 use super::{
-    match_intervals::MatchIntervals, segmented_reads::SegmentedReads,
-    specification::StrandSpecification, Entry, Filter, IntervalTrees,
+    Entry, Filter, IntervalTrees, match_intervals::MatchIntervals, segmented_reads::SegmentedReads,
+    specification::StrandSpecification,
 };
 
 pub(super) enum Event<'f> {

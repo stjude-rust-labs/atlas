@@ -2,9 +2,9 @@ use std::num::ParseIntError;
 
 use anyhow::anyhow;
 use axum::{
+    Json, Router,
     extract::{Query, State},
     routing::get,
-    Json, Router,
 };
 use ndarray::{Array2, Axis};
 use serde::{Deserialize, Serialize};

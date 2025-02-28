@@ -2,7 +2,7 @@ use std::iter;
 
 use futures::{StreamExt, TryStreamExt};
 use serde::Serialize;
-use sqlx::{postgres::PgQueryResult, PgExecutor};
+use sqlx::{PgExecutor, postgres::PgQueryResult};
 
 #[derive(Serialize)]
 pub struct Dataset {

@@ -23,7 +23,7 @@ use thiserror::Error;
 use tracing::info;
 
 use self::{
-    count::{count_segmented_records, count_single_records, Context, Counts},
+    count::{Context, Counts, count_segmented_records, count_single_records},
     filter::Filter,
     specification::LibraryLayout,
 };

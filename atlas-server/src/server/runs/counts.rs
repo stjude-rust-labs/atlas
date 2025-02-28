@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
 use axum::{
+    Json, Router,
     extract::{Path, Query, State},
     routing::get,
-    Json, Router,
 };
 use serde::{Deserialize, Serialize};
 
@@ -161,7 +161,7 @@ mod tests {
         http::{Request, StatusCode},
     };
     use http_body_util::BodyExt;
-    use serde_json::{json, Value};
+    use serde_json::{Value, json};
     use sqlx::PgPool;
     use tower::ServiceExt;
 

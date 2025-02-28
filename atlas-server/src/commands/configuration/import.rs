@@ -1,6 +1,6 @@
 use std::{collections::HashMap, path::Path};
 
-use atlas_core::features::{calculate_feature_lengths, Feature};
+use atlas_core::features::{Feature, calculate_feature_lengths};
 use sqlx::postgres::PgPoolOptions;
 use tokio::io;
 use tracing::info;

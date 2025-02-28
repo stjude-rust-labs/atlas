@@ -3,7 +3,7 @@ pub mod task;
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
-use sqlx::{types::Json, PgPool};
+use sqlx::{PgPool, types::Json};
 use time::OffsetDateTime;
 use uuid::Uuid;
 

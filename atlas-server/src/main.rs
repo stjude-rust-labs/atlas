@@ -1,6 +1,6 @@
 use std::io;
 
-use atlas_server::{cli::Commands, commands, Cli};
+use atlas_server::{Cli, cli::Commands, commands};
 use clap::Parser;
 
 #[tokio::main]

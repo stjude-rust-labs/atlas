@@ -5,7 +5,7 @@ use tracing::{info, info_span};
 
 use crate::{
     cli::WorkerConfig,
-    queue::{task::plot, Message, PlotMessage, Queue},
+    queue::{Message, PlotMessage, Queue, task::plot},
 };
 
 #[derive(Serialize)]

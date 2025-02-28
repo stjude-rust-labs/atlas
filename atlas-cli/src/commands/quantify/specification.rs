@@ -5,7 +5,7 @@ use noodles::{
     bam,
     core::Position,
     gff,
-    sam::alignment::{record::Flags, Record as _},
+    sam::alignment::{Record as _, record::Flags},
 };
 
 use super::{Entry, IntervalTrees};

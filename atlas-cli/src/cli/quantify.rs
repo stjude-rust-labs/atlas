@@ -21,6 +21,12 @@ pub struct Args {
     #[arg(long, value_parser = parse_mapping_quality, default_value = "10")]
     pub min_mapping_quality: MappingQuality,
 
+    /// Output destination.
+    ///
+    /// If not set, output is written to stdout.
+    #[arg(long)]
+    pub output: Option<PathBuf>,
+
     /// Source input (BAM).
     pub src: PathBuf,
 }

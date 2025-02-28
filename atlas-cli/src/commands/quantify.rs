@@ -102,8 +102,12 @@ pub fn quantify(args: quantify::Args) -> Result<(), QuantifyError> {
         }
     };
 
-    let stdout = io::stdout().lock();
-    let mut writer = BufWriter::new(stdout);
+    let mut writer: Box<dyn Write> = if let Some(dst) = args.output {
+        File::create(dst).map(BufWriter::new).map(Box::new)?
+    } else {
+        let stdout = io::stdout().lock();
+        Box::new(BufWriter::new(stdout))
+    };
 
     let mut feature_names: Vec<_> = features.keys().collect();
     feature_names.sort();

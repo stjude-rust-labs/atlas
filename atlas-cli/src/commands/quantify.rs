@@ -88,10 +88,9 @@ pub fn quantify(args: quantify::Args) -> Result<(), QuantifyError> {
     let min_mapping_quality = args.min_mapping_quality;
     let filter = Filter::new(min_mapping_quality);
 
-    let decoder = File::open(src).map(|f| {
-        let worker_count = thread::available_parallelism().unwrap_or(NonZeroUsize::MIN);
-        bgzf::MultithreadedReader::with_worker_count(worker_count, f)
-    })?;
+    let worker_count = thread::available_parallelism().unwrap_or(NonZeroUsize::MIN);
+    let decoder =
+        File::open(src).map(|f| bgzf::MultithreadedReader::with_worker_count(worker_count, f))?;
 
     let mut reader = bam::io::Reader::from(decoder);
     reader.read_header()?;
@@ -102,9 +101,13 @@ pub fn quantify(args: quantify::Args) -> Result<(), QuantifyError> {
         LibraryLayout::Single => {
             count_single_records(&interval_trees, &filter, strand_specification, reader)?
         }
-        LibraryLayout::Multiple => {
-            count_segmented_records(&interval_trees, &filter, strand_specification, reader)?
-        }
+        LibraryLayout::Multiple => count_segmented_records(
+            &interval_trees,
+            &filter,
+            strand_specification,
+            reader,
+            worker_count,
+        )?,
     };
 
     let mut writer: Box<dyn Write> = if let Some(dst) = args.output {

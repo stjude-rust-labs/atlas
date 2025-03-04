@@ -121,13 +121,12 @@ pub(super) fn count_segmented_records<'f, R>(
     filter: &'f Filter,
     strand_specification: StrandSpecification,
     reader: bam::io::Reader<R>,
+    worker_count: NonZero<usize>,
 ) -> io::Result<Context<'f>>
 where
     R: Read + Send,
 {
     const CHUNK_SIZE: usize = 8192;
-
-    let worker_count = thread::available_parallelism().unwrap_or(NonZero::<usize>::MIN);
 
     let (mut ctx, reads) = thread::scope(move |scope| {
         let (tx, rx) = crossbeam_channel::bounded(worker_count.get());

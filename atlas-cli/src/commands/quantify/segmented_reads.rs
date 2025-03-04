@@ -69,7 +69,7 @@ where
         self.cache.into_values()
     }
 
-    pub(super) fn try_next(&mut self) -> io::Result<Option<(bam::Record, bam::Record)>> {
+    fn try_next(&mut self) -> io::Result<Option<(bam::Record, bam::Record)>> {
         use std::collections::hash_map::Entry;
 
         loop {
@@ -105,6 +105,21 @@ where
                     entry.insert(record);
                 }
             }
+        }
+    }
+}
+
+impl<R> Iterator for SegmentedReads<R>
+where
+    R: Read,
+{
+    type Item = io::Result<(bam::Record, bam::Record)>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.try_next() {
+            Ok(Some(segments)) => Some(Ok(segments)),
+            Ok(None) => None,
+            Err(e) => Some(Err(e)),
         }
     }
 }

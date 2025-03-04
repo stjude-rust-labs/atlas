@@ -139,7 +139,7 @@ where
                 let mut chunk = Vec::with_capacity(CHUNK_SIZE);
 
                 for _ in 0..CHUNK_SIZE {
-                    match reads.try_next()? {
+                    match reads.next().transpose()? {
                         Some(segments) => chunk.push(segments),
                         None => break,
                     }

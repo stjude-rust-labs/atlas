@@ -136,14 +136,7 @@ where
             let mut reads = SegmentedReads::new(reader);
 
             loop {
-                let mut chunk = Vec::with_capacity(CHUNK_SIZE);
-
-                for _ in 0..CHUNK_SIZE {
-                    match reads.next().transpose()? {
-                        Some(segments) => chunk.push(segments),
-                        None => break,
-                    }
-                }
+                let chunk: Vec<_> = reads.by_ref().take(CHUNK_SIZE).collect::<io::Result<_>>()?;
 
                 if chunk.is_empty() {
                     drop(tx);

@@ -1,5 +1,6 @@
 mod cli;
 mod commands;
+mod fs;
 
 use std::io;
 

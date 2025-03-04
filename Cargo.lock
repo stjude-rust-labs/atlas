@@ -86,6 +86,7 @@ dependencies = [
  "anyhow",
  "atlas-core",
  "clap",
+ "flate2",
  "indexmap",
  "noodles",
  "thiserror",

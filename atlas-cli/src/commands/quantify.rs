@@ -141,7 +141,7 @@ where
 {
     use atlas_core::features::read_features;
 
-    let mut reader = File::open(src).map(BufReader::new)?;
+    let mut reader = crate::fs::open(src).map(BufReader::new)?;
     let (reference_sequence_names, features) =
         read_features(&mut reader, feature_type, feature_id)?;
     Ok((reference_sequence_names, features))

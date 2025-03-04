@@ -59,6 +59,8 @@ pub struct Args {
     pub feature_id: String,
 
     /// Input annotations file (GFF3).
+    ///
+    /// This can be uncompressed or (b)gzip-compressed.
     #[arg(long)]
     pub annotations: PathBuf,
 

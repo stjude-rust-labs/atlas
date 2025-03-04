@@ -86,6 +86,7 @@ dependencies = [
  "anyhow",
  "atlas-core",
  "clap",
+ "crossbeam-channel",
  "flate2",
  "indexmap",
  "noodles",

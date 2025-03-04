@@ -1,6 +1,8 @@
 use std::{
     collections::{HashMap, HashSet},
     io::{self, Read},
+    num::NonZero,
+    thread,
 };
 
 use atlas_core::collections::IntervalTree;
@@ -35,6 +37,19 @@ pub struct Context<'f> {
 }
 
 impl<'f> Context<'f> {
+    fn add_assign(&mut self, other: &Self) {
+        for (name, count) in &other.hits {
+            let n = self.hits.entry(name).or_insert(0);
+            *n += count;
+        }
+
+        self.miss += other.miss;
+        self.ambiguous += other.ambiguous;
+        self.low_quality += other.low_quality;
+        self.unmapped += other.unmapped;
+        self.nonunique += other.nonunique;
+    }
+
     fn add_event(&mut self, event: Event<'f>) {
         match event {
             Event::Hit(name) => {
@@ -108,17 +123,76 @@ pub(super) fn count_segmented_records<'f, R>(
     reader: bam::io::Reader<R>,
 ) -> io::Result<Context<'f>>
 where
-    R: Read,
+    R: Read + Send,
 {
-    let mut ctx = Context::default();
-    let mut reads = SegmentedReads::new(reader);
+    const CHUNK_SIZE: usize = 8192;
 
-    while let Some((r1, r2)) = reads.try_next()? {
-        let event =
-            count_segmented_records_inner(interval_trees, filter, strand_specification, &r1, &r2)?;
+    let worker_count = thread::available_parallelism().unwrap_or(NonZero::<usize>::MIN);
 
-        ctx.add_event(event);
-    }
+    let (mut ctx, reads) = thread::scope(move |scope| {
+        let (tx, rx) = crossbeam_channel::bounded(worker_count.get());
+
+        let reader_handle = scope.spawn(move || {
+            let mut reads = SegmentedReads::new(reader);
+
+            loop {
+                let mut chunk = Vec::with_capacity(CHUNK_SIZE);
+
+                for _ in 0..CHUNK_SIZE {
+                    match reads.try_next()? {
+                        Some(segments) => chunk.push(segments),
+                        None => break,
+                    }
+                }
+
+                if chunk.is_empty() {
+                    drop(tx);
+                    break;
+                } else {
+                    tx.send(chunk).unwrap();
+                }
+            }
+
+            Ok::<_, io::Error>(reads)
+        });
+
+        let handles: Vec<_> = (0..worker_count.get())
+            .map(|_| {
+                let rx = rx.clone();
+
+                scope.spawn(move || {
+                    let mut ctx = Context::default();
+
+                    while let Ok(chunk) = rx.recv() {
+                        for (r1, r2) in chunk {
+                            let event = count_segmented_records_inner(
+                                interval_trees,
+                                filter,
+                                strand_specification,
+                                &r1,
+                                &r2,
+                            )?;
+
+                            ctx.add_event(event);
+                        }
+                    }
+
+                    Ok::<_, io::Error>(ctx)
+                })
+            })
+            .collect();
+
+        let mut ctx = Context::default();
+
+        for handle in handles {
+            let c = handle.join().unwrap()?;
+            ctx.add_assign(&c);
+        }
+
+        let reads = reader_handle.join().unwrap()?;
+
+        Ok::<_, io::Error>((ctx, reads))
+    })?;
 
     let unmatched_records = reads.unmatched_records();
     let unmatched_record_count = unmatched_records.len();

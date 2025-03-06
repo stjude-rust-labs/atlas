@@ -101,9 +101,13 @@ pub fn quantify(args: quantify::Args) -> Result<(), QuantifyError> {
     info!("counting features");
 
     let ctx = match library_layout {
-        LibraryLayout::Single => {
-            count_single_records(&interval_trees, &filter, strand_specification, reader)?
-        }
+        LibraryLayout::Single => count_single_records(
+            &interval_trees,
+            &filter,
+            strand_specification,
+            reader,
+            worker_count,
+        )?,
         LibraryLayout::Multiple => count_segmented_records(
             &interval_trees,
             &filter,

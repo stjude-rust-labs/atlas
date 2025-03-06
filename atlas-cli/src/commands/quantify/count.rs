@@ -14,6 +14,8 @@ use super::{
     specification::StrandSpecification,
 };
 
+const CHUNK_SIZE: usize = 8192;
+
 pub(super) enum Event<'f> {
     Hit(&'f str),
     Miss,
@@ -71,19 +73,70 @@ pub(super) fn count_single_records<'f, R>(
     filter: &'f Filter,
     strand_specification: StrandSpecification,
     mut reader: bam::io::Reader<R>,
+    worker_count: NonZero<usize>,
 ) -> io::Result<Context<'f>>
 where
-    R: Read,
+    R: Read + Send,
 {
-    let mut ctx = Context::default();
-    let mut record = bam::Record::default();
+    thread::scope(move |scope| {
+        let (tx, rx) = crossbeam_channel::bounded(worker_count.get());
 
-    while reader.read_record(&mut record)? != 0 {
-        let event = count_single_record(interval_trees, filter, strand_specification, &record)?;
-        ctx.add_event(event);
-    }
+        let reader_handle = scope.spawn(move || {
+            let mut records = reader.records();
 
-    Ok(ctx)
+            loop {
+                let chunk: Vec<_> = records
+                    .by_ref()
+                    .take(CHUNK_SIZE)
+                    .collect::<io::Result<_>>()?;
+
+                if chunk.is_empty() {
+                    drop(tx);
+                    break;
+                } else {
+                    tx.send(chunk).unwrap();
+                }
+            }
+
+            Ok::<_, io::Error>(())
+        });
+
+        let handles: Vec<_> = (0..worker_count.get())
+            .map(|_| {
+                let rx = rx.clone();
+
+                scope.spawn(move || {
+                    let mut ctx = Context::default();
+
+                    while let Ok(chunk) = rx.recv() {
+                        for record in chunk {
+                            let event = count_single_record(
+                                interval_trees,
+                                filter,
+                                strand_specification,
+                                &record,
+                            )?;
+
+                            ctx.add_event(event);
+                        }
+                    }
+
+                    Ok::<_, io::Error>(ctx)
+                })
+            })
+            .collect();
+
+        let mut ctx = Context::default();
+
+        for handle in handles {
+            let c = handle.join().unwrap()?;
+            ctx.add_assign(&c);
+        }
+
+        reader_handle.join().unwrap()?;
+
+        Ok(ctx)
+    })
 }
 
 fn count_single_record<'f>(
@@ -126,8 +179,6 @@ pub(super) fn count_segmented_records<'f, R>(
 where
     R: Read + Send,
 {
-    const CHUNK_SIZE: usize = 8192;
-
     let (mut ctx, reads) = thread::scope(move |scope| {
         let (tx, rx) = crossbeam_channel::bounded(worker_count.get());
 

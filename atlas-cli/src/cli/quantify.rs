@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{num::NonZero, path::PathBuf};
 
 use clap::{Parser, ValueEnum};
 use noodles::sam::alignment::record::MappingQuality;
@@ -40,6 +40,11 @@ pub struct Args {
     /// If not set, output is written to stdout.
     #[arg(long)]
     pub output: Option<PathBuf>,
+
+    /// The number of workers to spawn.
+    ///
+    /// By default, this (usually) uses the number of available CPUs.
+    pub worker_count: Option<NonZero<usize>>,
 
     /// Source input (BAM).
     pub src: PathBuf,

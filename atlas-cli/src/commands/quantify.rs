@@ -88,7 +88,10 @@ pub fn quantify(args: quantify::Args) -> Result<(), QuantifyError> {
     let min_mapping_quality = args.min_mapping_quality;
     let filter = Filter::new(min_mapping_quality);
 
-    let worker_count = thread::available_parallelism().unwrap_or(NonZeroUsize::MIN);
+    let worker_count = args
+        .worker_count
+        .unwrap_or_else(|| thread::available_parallelism().unwrap_or(NonZeroUsize::MIN));
+
     let decoder =
         File::open(src).map(|f| bgzf::MultithreadedReader::with_worker_count(worker_count, f))?;
 

@@ -24,10 +24,13 @@ cargo run -- server
 
 ## Legal
 
-Please see [the disclaimer](https://github.com/stjude-rust-labs#disclaimer) that
-applies to all crates and command line tools made available by St. Jude Rust
-Labs.
+This project is licensed as either [Apache 2.0][license-apache] or [MIT][license-mit] at
+your discretion. Additionally, please see
+[the disclaimer](https://github.com/stjude-rust-labs#disclaimer) that applies to all
+crates and command line tools made available by St. Jude Rust Labs.
 
 [GitHub Codespaces]: https://github.com/features/codespaces
 [Visual Studio Code]: https://code.visualstudio.com/
 [Dev Containers extension]: https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers
+[license-apache]: ./LICENSE-APACHE
+[license-mit]: ./LICENSE-MIT

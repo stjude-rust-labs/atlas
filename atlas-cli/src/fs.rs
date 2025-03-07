@@ -25,7 +25,7 @@ where
 {
     src.as_ref()
         .extension()
-        .map(|ext| ext == "gz")
+        .map(|ext| ext == "gz" || ext == "bgz")
         .unwrap_or(false)
 }
 
@@ -36,6 +36,7 @@ mod tests {
     #[test]
     fn test_is_gzip() {
         assert!(is_gzip("in.txt.gz"));
+        assert!(is_gzip("in.txt.bgz"));
         assert!(!is_gzip("in.txt"));
     }
 }

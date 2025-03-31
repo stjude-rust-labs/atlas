@@ -6,8 +6,6 @@ use std::{
 use noodles::{bam, sam::alignment::record::Flags};
 use thiserror::Error;
 
-const FILTERS: Flags = Flags::SECONDARY.union(Flags::SUPPLEMENTARY);
-
 #[derive(Clone, Copy, Eq, Hash, PartialEq)]
 enum SegmentPosition {
     First,
@@ -81,7 +79,7 @@ where
 
             let flags = record.flags();
 
-            if flags.intersects(FILTERS) {
+            if !is_primary(flags) {
                 continue;
             }
 
@@ -122,6 +120,11 @@ where
             Err(e) => Some(Err(e)),
         }
     }
+}
+
+fn is_primary(flags: Flags) -> bool {
+    const FILTERS: Flags = Flags::SECONDARY.union(Flags::SUPPLEMENTARY);
+    !flags.intersects(FILTERS)
 }
 
 fn is_mate(a: &bam::Record, b: &bam::Record) -> io::Result<bool> {
@@ -255,5 +258,13 @@ mod tests {
         assert!(reads.try_next()?.is_none());
 
         Ok(())
+    }
+
+    #[test]
+    fn test_is_primary() {
+        assert!(is_primary(Flags::default()));
+        assert!(!is_primary(Flags::SECONDARY));
+        assert!(!is_primary(Flags::SUPPLEMENTARY));
+        assert!(!is_primary(Flags::SECONDARY | Flags::SUPPLEMENTARY));
     }
 }

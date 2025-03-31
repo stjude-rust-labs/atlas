@@ -47,13 +47,13 @@ impl From<Flags> for Strand {
     }
 }
 
-impl TryFrom<gff::record::Strand> for Strand {
+impl TryFrom<gff::feature::record::Strand> for Strand {
     type Error = ();
 
-    fn try_from(strand: gff::record::Strand) -> Result<Self, Self::Error> {
+    fn try_from(strand: gff::feature::record::Strand) -> Result<Self, Self::Error> {
         match strand {
-            gff::record::Strand::Forward => Ok(Self::Forward),
-            gff::record::Strand::Reverse => Ok(Self::Reverse),
+            gff::feature::record::Strand::Forward => Ok(Self::Forward),
+            gff::feature::record::Strand::Reverse => Ok(Self::Reverse),
             _ => Err(()),
         }
     }

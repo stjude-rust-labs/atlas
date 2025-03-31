@@ -129,7 +129,7 @@ pub fn calculate_feature_lengths(
 
 #[cfg(test)]
 mod tests {
-    use noodles::{core::Position, gff::record::Strand};
+    use noodles::{core::Position, gff::feature::record::Strand};
 
     use super::*;
 

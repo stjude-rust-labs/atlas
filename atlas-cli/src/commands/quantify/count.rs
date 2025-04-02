@@ -7,7 +7,6 @@ use std::{
 
 use atlas_core::collections::IntervalTree;
 use noodles::{bam, core::Position};
-use tracing::warn;
 
 use super::{
     Entry, Filter, IntervalTrees, match_intervals::MatchIntervals, segmented_reads::SegmentedReads,
@@ -237,16 +236,9 @@ where
         Ok::<_, io::Error>((ctx, reads))
     })?;
 
-    let unmatched_records = reads.unmatched_records();
-    let unmatched_record_count = unmatched_records.len();
-
-    if unmatched_record_count > 0 {
-        warn!(unmatched_record_count, "found unmatched records");
-
-        for record in unmatched_records {
-            let event = count_single_record(interval_trees, filter, strand_specification, &record)?;
-            ctx.add_event(event);
-        }
+    for record in reads.unmatched_records() {
+        let event = count_single_record(interval_trees, filter, strand_specification, &record)?;
+        ctx.add_event(event);
     }
 
     Ok(ctx)

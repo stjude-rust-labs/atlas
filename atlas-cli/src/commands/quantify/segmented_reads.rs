@@ -49,7 +49,7 @@ impl TryFrom<Flags> for SegmentPosition {
 
 pub(super) struct SegmentedReads<R> {
     reader: bam::io::Reader<R>,
-    cache: HashMap<Vec<u8>, bam::Record>,
+    cache: HashMap<Vec<u8>, Vec<bam::Record>>,
 }
 
 impl<R> SegmentedReads<R>
@@ -63,8 +63,8 @@ where
         }
     }
 
-    pub(super) fn unmatched_records(self) -> impl ExactSizeIterator<Item = bam::Record> {
-        self.cache.into_values()
+    pub(super) fn unmatched_records(self) -> impl Iterator<Item = bam::Record> {
+        self.cache.into_values().flatten()
     }
 
     fn try_next(&mut self) -> io::Result<Option<(bam::Record, bam::Record)>> {
@@ -83,24 +83,33 @@ where
                 continue;
             }
 
-            let name = record.name().unwrap_or_default();
+            let name = record.name().unwrap();
 
             match self.cache.entry(name.to_vec()) {
-                Entry::Occupied(entry) => {
-                    if is_mate(&record, entry.get())? {
-                        let mate = entry.remove();
+                Entry::Occupied(mut entry) => {
+                    let records = entry.get_mut();
 
-                        let segment_position = SegmentPosition::try_from(flags)
-                            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+                    let Some(i) = find_mate(records, &record)? else {
+                        records.push(record);
+                        continue;
+                    };
 
-                        return match segment_position {
-                            SegmentPosition::First => Ok(Some((record, mate))),
-                            SegmentPosition::Last => Ok(Some((mate, record))),
-                        };
+                    let mate = records.swap_remove(i);
+
+                    if records.is_empty() {
+                        entry.remove();
                     }
+
+                    let segment_position = SegmentPosition::try_from(flags)
+                        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+
+                    return match segment_position {
+                        SegmentPosition::First => Ok(Some((record, mate))),
+                        SegmentPosition::Last => Ok(Some((mate, record))),
+                    };
                 }
                 Entry::Vacant(entry) => {
-                    entry.insert(record);
+                    entry.insert(vec![record]);
                 }
             }
         }
@@ -125,6 +134,16 @@ where
 fn is_primary(flags: Flags) -> bool {
     const FILTERS: Flags = Flags::SECONDARY.union(Flags::SUPPLEMENTARY);
     !flags.intersects(FILTERS)
+}
+
+fn find_mate(records: &[bam::Record], record: &bam::Record) -> io::Result<Option<usize>> {
+    for (i, mate) in records.iter().enumerate() {
+        if is_mate(record, mate)? {
+            return Ok(Some(i));
+        }
+    }
+
+    Ok(None)
 }
 
 fn is_mate(a: &bam::Record, b: &bam::Record) -> io::Result<bool> {

@@ -7,7 +7,7 @@ use noodles::{
 
 pub struct MatchIntervals<'r> {
     ops: &'r mut dyn Iterator<Item = io::Result<Op>>,
-    prev_alignment_start: Position,
+    reference_position: Position,
 }
 
 impl<'r> MatchIntervals<'r> {
@@ -17,8 +17,15 @@ impl<'r> MatchIntervals<'r> {
     ) -> Self {
         Self {
             ops,
-            prev_alignment_start: initial_alignment_start,
+            reference_position: initial_alignment_start,
         }
+    }
+
+    fn consume_reference(&mut self, len: usize) {
+        self.reference_position = self
+            .reference_position
+            .checked_add(len)
+            .expect("attempt to add with overflow");
     }
 }
 
@@ -40,26 +47,18 @@ impl Iterator for MatchIntervals<'_> {
 
             match op.kind() {
                 Kind::Match | Kind::SequenceMatch | Kind::SequenceMismatch => {
-                    let start = self.prev_alignment_start;
+                    let start = self.reference_position;
 
                     let end = start
                         // SAFETY: `len` is non-zero.
                         .checked_add(len - 1)
                         .expect("attempt to add with overflow");
 
-                    self.prev_alignment_start = self
-                        .prev_alignment_start
-                        .checked_add(len)
-                        .expect("attempt to add with overflow");
+                    self.consume_reference(len);
 
                     return Some(Ok(start..=end));
                 }
-                Kind::Deletion | Kind::Skip => {
-                    self.prev_alignment_start = self
-                        .prev_alignment_start
-                        .checked_add(len)
-                        .expect("attempt to add with overflow");
-                }
+                Kind::Deletion | Kind::Skip => self.consume_reference(len),
                 _ => continue,
             }
         }

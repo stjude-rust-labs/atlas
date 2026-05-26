@@ -6,7 +6,7 @@ ENV PATH=/home/vscode/.cargo/bin:${PATH}
 
 RUN bash -e <<EOS
 apt-get update
-apt-get install --yes ca-certificates libssl-dev pkg-config postgresql-client
+apt-get install --yes ca-certificates postgresql-client
 rm -rf /var/lib/apt/lists/*
 EOS
 
@@ -20,6 +20,6 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- \
 
 RUN cargo install \
     --no-default-features \
-    --features native-tls,postgres \
+    --features postgres,rustls \
     --version 0.8.3 \
     sqlx-cli

@@ -21,5 +21,5 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- \
 RUN cargo install \
     --no-default-features \
     --features postgres,rustls \
-    --version 0.8.6 \
+    --version 0.9.0 \
     sqlx-cli

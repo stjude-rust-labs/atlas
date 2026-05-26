@@ -142,7 +142,7 @@ async fn show(State(ctx): State<Context>, Path(task_id): Path<Uuid>) -> server::
         select
             tasks.id,
             status as "status: queue::Status",
-            results.body as "body: Option<sqlx::types::Json<Body>>"
+            results.body as "body: sqlx::types::Json<Body>"
         from tasks
         left join results
             on tasks.id  = results.id

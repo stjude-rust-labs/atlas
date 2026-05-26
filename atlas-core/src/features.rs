@@ -3,6 +3,7 @@ mod feature;
 use std::{
     collections::HashMap,
     io::{self, BufRead},
+    str,
 };
 
 use indexmap::IndexSet;
@@ -14,10 +15,14 @@ pub use self::feature::Feature;
 pub enum ReadFeaturesError {
     #[error("I/O error")]
     Io(#[from] io::Error),
+    #[error("invalid reference sequence name")]
+    InvalidReferenceSequenceName(#[source] str::Utf8Error),
     #[error("missing attribute")]
     MissingAttribute,
     #[error("invalid attribute")]
     InvalidAttribute,
+    #[error("invalid ID")]
+    InvalidId(#[source] str::Utf8Error),
 }
 
 #[allow(clippy::type_complexity)]
@@ -46,7 +51,8 @@ where
             continue;
         }
 
-        let reference_sequence_name = record.reference_sequence_name();
+        let reference_sequence_name = str::from_utf8(record.reference_sequence_name())
+            .map_err(ReadFeaturesError::InvalidReferenceSequenceName)?;
 
         let reference_sequence_id = match reference_sequence_names
             .get_index_of(reference_sequence_name)
@@ -65,15 +71,17 @@ where
 
         let attributes = record.attributes();
         let id = attributes
-            .get(feature_id)
+            .get(feature_id.as_bytes())
             .ok_or(ReadFeaturesError::MissingAttribute)?
             .map_err(|_| ReadFeaturesError::InvalidAttribute)
             .and_then(|value| match value {
-                Value::String(s) => Ok(s),
+                Value::String(s) => str::from_utf8(&s)
+                    .map(String::from)
+                    .map_err(ReadFeaturesError::InvalidId),
                 Value::Array(_) => Err(ReadFeaturesError::InvalidAttribute),
             })?;
 
-        let segments = features.entry(id.into()).or_default();
+        let segments = features.entry(id).or_default();
         segments.push(feature);
     }
 

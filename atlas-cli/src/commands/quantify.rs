@@ -92,8 +92,8 @@ pub fn quantify(args: quantify::Args) -> Result<(), QuantifyError> {
         .worker_count
         .unwrap_or_else(|| thread::available_parallelism().unwrap_or(NonZeroUsize::MIN));
 
-    let decoder =
-        File::open(src).map(|f| bgzf::MultithreadedReader::with_worker_count(worker_count, f))?;
+    let decoder = File::open(src)
+        .map(|f| bgzf::io::MultithreadedReader::with_worker_count(worker_count, f))?;
 
     let mut reader = bam::io::Reader::from(decoder);
     reader.read_header()?;

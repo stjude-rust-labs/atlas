@@ -1,5 +1,3 @@
-use std::iter;
-
 use futures::{StreamExt, TryStreamExt};
 use serde::Serialize;
 use sqlx::{PgExecutor, postgres::PgQueryResult};
@@ -41,7 +39,7 @@ pub async fn create_runs<'a, E>(executor: E, dataset_id: i32, run_ids: &[i32]) -
 where
     E: PgExecutor<'a>,
 {
-    let dataset_ids: Vec<_> = iter::repeat(dataset_id).take(run_ids.len()).collect();
+    let dataset_ids = vec![dataset_id; run_ids.len()];
 
     sqlx::query!(
         "

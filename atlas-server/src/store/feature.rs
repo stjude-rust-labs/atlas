@@ -44,9 +44,7 @@ pub async fn create_features(
     names: &[String],
     lengths: &[i32],
 ) -> sqlx::Result<Vec<(i32, String)>> {
-    use std::iter;
-
-    let configuration_ids: Vec<_> = iter::repeat(configuration_id).take(names.len()).collect();
+    let configuration_ids = vec![configuration_id; names.len()];
 
     let mut rows = sqlx::query!(
         "

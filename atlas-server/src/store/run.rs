@@ -135,17 +135,11 @@ pub async fn create_runs(
     strand_specification: StrandSpecification,
     data_type: &str,
 ) -> sqlx::Result<Vec<i32>> {
-    use std::iter;
-
     let sample_count = sample_ids.len();
-    let configuration_ids: Vec<_> = iter::repeat(configuration_id).take(sample_count).collect();
-    let strand_specifications: Vec<_> = iter::repeat(strand_specification)
-        .take(sample_count)
-        .collect();
-    let data_types: Vec<_> = iter::repeat(data_type)
-        .map(String::from)
-        .take(sample_count)
-        .collect();
+
+    let configuration_ids = vec![configuration_id; sample_count];
+    let strand_specifications = vec![strand_specification; sample_count];
+    let data_types = vec![String::from(data_type); sample_count];
 
     let records = sqlx::query!(
         "

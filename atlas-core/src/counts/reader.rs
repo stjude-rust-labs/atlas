@@ -20,14 +20,14 @@ where
 {
     let detected_format = detect_format(reader)?;
 
-    if let Some(expected_format) = format {
-        if detected_format != expected_format {
-            warn!(
-                expected = ?expected_format,
-                actual = ?detected_format,
-                "format mismatch"
-            );
-        }
+    if let Some(expected_format) = format
+        && detected_format != expected_format
+    {
+        warn!(
+            expected = ?expected_format,
+            actual = ?detected_format,
+            "format mismatch"
+        );
     }
 
     let format = format.unwrap_or(detected_format);
@@ -51,14 +51,14 @@ where
 {
     let detected_format = detect_format(reader)?;
 
-    if let Some(expected_format) = format {
-        if detected_format != expected_format {
-            warn!(
-                expected = ?expected_format,
-                actual = ?detected_format,
-                "format mismatch"
-            );
-        }
+    if let Some(expected_format) = format
+        && detected_format != expected_format
+    {
+        warn!(
+            expected = ?expected_format,
+            actual = ?detected_format,
+            "format mismatch"
+        );
     }
 
     let format = format.unwrap_or(detected_format);

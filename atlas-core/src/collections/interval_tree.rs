@@ -69,16 +69,16 @@ where
 {
     root.max = root.key.end().clone();
 
-    if let Some(ref left) = root.left {
-        if left.max > root.max {
-            root.max = left.max.clone();
-        }
+    if let Some(ref left) = root.left
+        && left.max > root.max
+    {
+        root.max = left.max.clone();
     }
 
-    if let Some(ref right) = root.right {
-        if right.max > root.max {
-            root.max = right.max.clone();
-        }
+    if let Some(ref right) = root.right
+        && right.max > root.max
+    {
+        root.max = right.max.clone();
     }
 }
 

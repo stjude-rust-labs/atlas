@@ -82,7 +82,7 @@ pub fn normalize(data: Array2<u32>) -> Array2<f64> {
 fn median(values: &[f64]) -> f64 {
     let i = values.len() / 2;
 
-    if values.len() % 2 == 0 {
+    if values.len().is_multiple_of(2) {
         (values[i - 1] + values[i]) / 2.0
     } else {
         values[i]

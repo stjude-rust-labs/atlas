@@ -1,18 +1,15 @@
-use std::path::PathBuf;
+pub mod tsne;
 
-use clap::Parser;
+use clap::{Parser, Subcommand};
+
+#[derive(Subcommand)]
+pub enum Command {
+    /// Dimension reduction using t-distributed Stochastic Neighbor Embedding (t-SNE).
+    Tsne(tsne::Args),
+}
 
 #[derive(Parser)]
 pub struct Args {
-    /// Perplexity of the conditional distribution.
-    #[arg(long, default_value_t = 30.0)]
-    pub perplexity: f64,
-
-    /// Barnes-Hut angular size (θ).
-    #[arg(long, default_value_t = 0.5)]
-    pub theta: f64,
-
-    /// Input sources.
-    #[arg(required = true)]
-    pub srcs: Vec<PathBuf>,
+    #[command(subcommand)]
+    pub command: Command,
 }

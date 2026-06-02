@@ -1,5 +1,5 @@
 mod normalize;
 mod quantify;
-mod transform;
+pub mod transform;
 
 pub use self::{normalize::normalize, quantify::quantify, transform::transform};

@@ -5,6 +5,7 @@ edition.workspace = true
 
 [dependencies]
 bhtsne = { version = "0.5.2", default-features = false }
+faer = "0.24.0"
 indexmap.workspace = true
 ndarray = "0.17.2"
 noodles = { workspace = true, features = ["core", "gff"] }

@@ -5,11 +5,14 @@ use std::{
 };
 
 use anyhow::bail;
+use atlas_core::counts::transforms::vst;
 
 use crate::cli;
 
 pub fn run(args: cli::transform::vst::Args) -> anyhow::Result<()> {
-    let (_sample_names, _feature_names, _counts) = import(&args.src)?;
+    let (sample_names, feature_names, counts) = import(&args.src)?;
+
+    let _stabilized_counts = vst::transform(counts, sample_names.len(), feature_names.len());
 
     todo!()
 }

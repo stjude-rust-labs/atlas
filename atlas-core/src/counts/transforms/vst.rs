@@ -1,4 +1,9 @@
-use faer::{Col, Mat, MatRef, RowRef, diag::Diag};
+use faer::{
+    Col, ColRef, Mat, MatRef, RowRef,
+    diag::Diag,
+    prelude::Solve,
+    stats::{NanHandling, col_mean},
+};
 use statrs::function::gamma::{digamma, ln_gamma};
 
 pub fn transform(raw_counts: Vec<u32>, feature_count: usize, sample_count: usize) -> Vec<f64> {
@@ -8,8 +13,10 @@ pub fn transform(raw_counts: Vec<u32>, feature_count: usize, sample_count: usize
     let size_factors = calculate_size_factors(counts);
     let normalized_counts = normalize(counts, &size_factors);
 
-    let _dispersions =
+    let dispersions =
         estimate_feature_dispersions(counts, normalized_counts.as_ref(), &size_factors);
+
+    let (_a0, _a1) = estimate_dispersions_fit(normalized_counts.as_ref(), &dispersions);
 
     todo!()
 }
@@ -328,6 +335,136 @@ fn d_log_posterior(counts: RowRef<'_, f64>, mus: &[f64], log_alpha: f64) -> f64 
     let cr_term = -0.5 * trace;
 
     (ll_part + cr_term) * alpha
+}
+
+fn estimate_dispersions_fit(normalized_counts: MatRef<'_, f64>, dispersions: &[f64]) -> (f64, f64) {
+    let (feature_count, _) = normalized_counts.shape();
+
+    let mut means = Col::zeros(feature_count);
+    col_mean(means.as_mut(), normalized_counts, NanHandling::Propagate);
+
+    parametric_dispersion_fit(means.as_ref(), dispersions)
+}
+
+fn parametric_dispersion_fit(means: ColRef<'_, f64>, dispersions: &[f64]) -> (f64, f64) {
+    let feature_count = dispersions.len();
+
+    let mut filtered_means = Vec::with_capacity(feature_count);
+    let mut filtered_dispersions = Vec::with_capacity(feature_count);
+
+    for (&m, &d) in means.iter().zip(dispersions) {
+        if m > 0.0 && d > 1e-6 && d.is_finite() {
+            filtered_means.push(m);
+            filtered_dispersions.push(d);
+        }
+    }
+
+    assert!(filtered_dispersions.len() >= 3);
+
+    find_parametric_coeffs(&filtered_means, &filtered_dispersions)
+}
+
+fn find_parametric_coeffs(means: &[f64], dispersions: &[f64]) -> (f64, f64) {
+    const MIN_RESIDUAL: f64 = 1e-4;
+    const MAX_RESIDUAL: f64 = 15.0;
+
+    const MAX_ITERATIONS: usize = 11;
+    const TOL: f64 = 1e-6;
+
+    let (mut a0, mut a1) = (0.1, 1.0);
+
+    for _ in 0..MAX_ITERATIONS {
+        let (prev_a0, prev_a1) = (a0, a1);
+
+        let mut filtered_means = Vec::with_capacity(means.len());
+        let mut filtered_dispersions = Vec::with_capacity(dispersions.len());
+
+        for (&mean, &disp) in means.iter().zip(dispersions) {
+            let residual = disp / (a0 + a1 / mean);
+
+            if MIN_RESIDUAL < residual && residual < MAX_RESIDUAL {
+                filtered_means.push(mean);
+                filtered_dispersions.push(disp);
+            }
+        }
+
+        let (next_a0, next_a1, did_converge) =
+            fit_gamma_glm_identity(&filtered_means, &filtered_dispersions, a0, a1);
+
+        a0 = next_a0;
+        a1 = next_a1;
+
+        if a0 <= 0.0 || a1 <= 0.0 {
+            panic!("unexpected negative coeffs");
+        }
+
+        let log_change = (a0 / prev_a0).ln().powi(2) + (a1 / prev_a1).ln().powi(2);
+
+        if log_change < TOL && did_converge {
+            return (a0, a1);
+        }
+    }
+
+    panic!("unexpected nonconvergence")
+}
+
+fn fit_gamma_glm_identity(
+    means: &[f64],
+    dispersions: &[f64],
+    mut a0: f64,
+    mut a1: f64,
+) -> (f64, f64, bool) {
+    const MAX_ITERATIONS: usize = 100;
+    const MIN_DEVIANCE_DELTA: f64 = 1e-8;
+
+    fn deviance(means: &[f64], dispersions: &[f64], a0: f64, a1: f64) -> f64 {
+        let mut dev = 0.0;
+
+        for (mean, x) in means.iter().zip(dispersions) {
+            let mu = a0 + a1 / mean;
+            dev += (x / mu).ln() - ((x - mu) / mu);
+        }
+
+        -2.0 * dev
+    }
+
+    let feature_count = dispersions.len();
+
+    let means_inv = Mat::from_fn(feature_count, 1, |i, _| 1.0 / means[i]);
+
+    let x = Mat::from_fn(feature_count, 2, |i, j| {
+        if j == 0 { 1.0 } else { means_inv[(i, 0)] }
+    });
+
+    let mut w = Diag::zeros(feature_count);
+    let y = MatRef::from_column_major_slice(dispersions, feature_count, 1);
+
+    let mut prev_dev = deviance(means, dispersions, a0, a1);
+    let mut did_converge = false;
+
+    for _ in 0..MAX_ITERATIONS {
+        for (i, mean) in means.iter().enumerate() {
+            let mu = a0 + a1 / mean;
+            w[i] = 1.0 / (mu * mu);
+        }
+
+        let xp = x.transpose() * &w * &x;
+        let beta = xp.partial_piv_lu().solve(x.transpose() * &w * y);
+        a0 = beta[(0, 0)];
+        a1 = beta[(1, 0)];
+
+        let dev = deviance(means, dispersions, a0, a1);
+        let dev_delta = (prev_dev - dev).abs() / dev.abs();
+
+        if dev_delta < MIN_DEVIANCE_DELTA {
+            did_converge = true;
+            break;
+        }
+
+        prev_dev = dev;
+    }
+
+    (a0, a1, did_converge)
 }
 
 fn row_mean(row: RowRef<'_, f64>) -> f64 {

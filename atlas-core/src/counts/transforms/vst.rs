@@ -1,11 +1,15 @@
-use faer::{Col, Mat, MatRef};
+use faer::{Col, Mat, MatRef, RowRef, diag::Diag};
+use statrs::function::gamma::{digamma, ln_gamma};
 
 pub fn transform(raw_counts: Vec<u32>, feature_count: usize, sample_count: usize) -> Vec<f64> {
     let raw_counts: Vec<_> = raw_counts.into_iter().map(|n| n as f64).collect();
     let counts = MatRef::from_row_major_slice(&raw_counts, feature_count, sample_count);
 
     let size_factors = calculate_size_factors(counts);
-    let _normalized_counts = normalize(counts, &size_factors);
+    let normalized_counts = normalize(counts, &size_factors);
+
+    let _dispersions =
+        estimate_feature_dispersions(counts, normalized_counts.as_ref(), &size_factors);
 
     todo!()
 }
@@ -53,6 +57,293 @@ fn normalize(counts: MatRef<'_, f64>, size_factors: &[f64]) -> Mat<f64> {
     }
 
     normalized_counts
+}
+
+fn estimate_feature_dispersions(
+    counts: MatRef<'_, f64>,
+    normalized_counts: MatRef<'_, f64>,
+    size_factors: &[f64],
+) -> Vec<f64> {
+    let (feature_count, _) = counts.shape();
+
+    (0..feature_count)
+        .map(|i| {
+            let row = counts.row(i);
+            let normalized_row = normalized_counts.row(i);
+            estimate_feature_dispersions_inner(row, normalized_row, size_factors)
+        })
+        .collect()
+}
+
+fn estimate_feature_dispersions_inner(
+    counts: RowRef<'_, f64>,
+    normalized_counts: RowRef<'_, f64>,
+    size_factors: &[f64],
+) -> f64 {
+    const MIN_DISPERSION: f64 = 1e-8;
+    const MIN_SAMPLE_COUNT: usize = 10;
+    const MIN_MU: f64 = 0.5;
+
+    let rough_dispersion = estimate_rough_dispersion(normalized_counts);
+    let moments_dispersions = estimate_moments_dispersion(normalized_counts, size_factors);
+
+    let (_, sample_count) = counts.shape();
+    let max_dispersion = sample_count.max(MIN_SAMPLE_COUNT) as f64;
+
+    let alpha_init = rough_dispersion
+        .min(moments_dispersions)
+        .clamp(MIN_DISPERSION, max_dispersion);
+
+    let mut mus = build_normalized_mean_linear_model(normalized_counts, size_factors);
+
+    for m in &mut mus {
+        *m = m.max(MIN_MU);
+    }
+
+    let (alpha_mle, initial_lp, last_lp, did_converge) =
+        fit_dispersion(counts, &mus, alpha_init, MIN_DISPERSION, max_dispersion);
+
+    let did_not_increase = last_lp < initial_lp + initial_lp.abs() / 1e6;
+
+    let result = if did_not_increase {
+        alpha_init
+    } else {
+        alpha_mle
+    };
+
+    let needs_refit = !did_converge && result > MIN_DISPERSION * 10.0;
+
+    if needs_refit {
+        todo!("fit_dispersions_grid");
+    }
+
+    result.clamp(MIN_DISPERSION, max_dispersion)
+}
+
+fn estimate_rough_dispersion(normalized_counts: RowRef<'_, f64>) -> f64 {
+    const MIN_MEAN: f64 = 1.0;
+    const PARAMETER_COUNT: usize = 1;
+    const MIN_ALPHA: f64 = 0.0;
+
+    let (_, sample_count) = normalized_counts.shape();
+
+    let mus = build_mean_linear_model(normalized_counts);
+
+    let n: f64 = mus
+        .iter()
+        .zip(normalized_counts.iter())
+        .map(|(mean, y)| {
+            let mu = mean.max(MIN_MEAN);
+            (((y - mu) * (y - mu)) - mu) / (mu * mu)
+        })
+        .sum();
+
+    let alpha = n / (sample_count - PARAMETER_COUNT) as f64;
+    alpha.max(MIN_ALPHA)
+}
+
+fn build_mean_linear_model(normalized_counts: RowRef<'_, f64>) -> Vec<f64> {
+    let mu = row_mean(normalized_counts);
+    let (_, sample_count) = normalized_counts.shape();
+    vec![mu; sample_count]
+}
+
+fn estimate_moments_dispersion(normalized_counts: RowRef<'_, f64>, size_factors: &[f64]) -> f64 {
+    let mean = row_mean(normalized_counts);
+
+    if mean <= 1e-10 {
+        return f64::INFINITY;
+    }
+
+    let (_, sample_count) = normalized_counts.shape();
+
+    let sum: f64 = size_factors.iter().map(|n| 1.0 / n).sum();
+    let xim = sum / (sample_count as f64);
+
+    let var = if sample_count > 1 {
+        row_var(normalized_counts, mean)
+    } else {
+        0.0
+    };
+
+    (var - xim * mean) / (mean * mean)
+}
+
+fn build_normalized_mean_linear_model(
+    normalized_counts: RowRef<'_, f64>,
+    size_factors: &[f64],
+) -> Vec<f64> {
+    let mut mus = build_mean_linear_model(normalized_counts);
+
+    for (mu, size_factor) in mus.iter_mut().zip(size_factors) {
+        *mu *= size_factor;
+    }
+
+    mus
+}
+
+fn fit_dispersion(
+    counts: RowRef<'_, f64>,
+    mus: &[f64],
+    alpha_init: f64,
+    min_disp: f64,
+    max_disp: f64,
+) -> (f64, f64, f64, bool) {
+    const EPSILON: f64 = 1e-4;
+    const MAX_ITERATIONS: usize = 100;
+    const MIN_LOG_ALPHA: f64 = -30.0;
+    const MAX_LOG_ALPHA: f64 = 10.0;
+    const CONVERGENCE_TOLERANCE: f64 = 1e-6;
+    const KAPPA_0: f64 = 1.0;
+
+    let min_log_alpha = (min_disp / 10.0).ln();
+    let max_log_alpha = max_disp.ln();
+    let mut log_alpha = alpha_init
+        .max(1e-10)
+        .ln()
+        .clamp(MIN_LOG_ALPHA, max_log_alpha);
+
+    let inital_lp = log_posterior(counts, mus, log_alpha);
+    let mut lp = inital_lp;
+
+    let mut dlp = d_log_posterior(counts, mus, log_alpha);
+
+    let mut kappa = KAPPA_0;
+    let mut iteration_count = 0;
+    let mut accepted_count = 0;
+
+    for _ in 0..MAX_ITERATIONS {
+        iteration_count += 1;
+
+        let a_propose = log_alpha + kappa * dlp;
+
+        if a_propose < MIN_LOG_ALPHA {
+            kappa = (MIN_LOG_ALPHA - log_alpha) / dlp;
+        }
+
+        if a_propose > MAX_LOG_ALPHA {
+            kappa = (MAX_LOG_ALPHA - log_alpha) / dlp;
+        }
+
+        let theta_kappa = -log_posterior(counts, mus, log_alpha + kappa * dlp);
+        let theta_hat_kappa = -lp - kappa * EPSILON * dlp * dlp;
+
+        if theta_kappa <= theta_hat_kappa {
+            accepted_count += 1;
+
+            log_alpha += kappa * dlp;
+
+            let lp_new = log_posterior(counts, mus, log_alpha);
+            let change = lp_new - lp;
+
+            if change < CONVERGENCE_TOLERANCE {
+                lp = lp_new;
+                break;
+            }
+
+            if log_alpha < min_log_alpha {
+                break;
+            }
+
+            lp = lp_new;
+            dlp = d_log_posterior(counts, mus, log_alpha);
+
+            kappa = (kappa * 1.1).min(KAPPA_0);
+
+            if accepted_count % 5 == 0 {
+                kappa /= 2.0;
+            }
+        } else {
+            kappa /= 2.0;
+        }
+    }
+
+    let alpha_mle = log_alpha.exp().max(min_disp);
+    let did_converge = 0 < iteration_count && iteration_count < MAX_ITERATIONS;
+
+    (alpha_mle, inital_lp, lp, did_converge)
+}
+
+fn log_posterior(counts: RowRef<'_, f64>, mus: &[f64], log_alpha: f64) -> f64 {
+    let (_, n) = counts.shape();
+
+    let alpha = log_alpha.exp();
+    let alpha_inv = 1.0 / alpha;
+
+    let mut ll_part = 0.0;
+    let mut weights = Diag::zeros(n);
+
+    for (i, (y, mu)) in counts.iter().zip(mus).enumerate() {
+        ll_part += ln_gamma(y + alpha_inv)
+            - ln_gamma(alpha_inv)
+            - y * (mu + alpha_inv).ln()
+            - alpha_inv * (1.0 + mu * alpha).ln();
+
+        weights[i] = 1.0 / (1.0 / mu + alpha);
+    }
+
+    let b = weights.column_vector().sum();
+    let log_det = b.ln();
+
+    let cr_term = if log_det.is_finite() {
+        -0.5 * log_det
+    } else {
+        0.0
+    };
+
+    ll_part + cr_term
+}
+
+fn d_log_posterior(counts: RowRef<'_, f64>, mus: &[f64], log_alpha: f64) -> f64 {
+    let (_, n) = counts.shape();
+
+    let alpha = log_alpha.exp();
+    let alpha_inv = 1.0 / alpha;
+
+    let mut ll_sum = 0.0;
+
+    for i in 0..n {
+        let y = counts[i];
+        let mu = mus[i].max(1e-10);
+
+        ll_sum += digamma(alpha_inv) + (1.0 + mu * alpha).ln()
+            - mu * alpha * (1.0 / (1.0 + mu * alpha))
+            - digamma(y + (alpha_inv))
+            + y * (1.0 / (mu + (alpha_inv)));
+    }
+
+    let ll_part = ll_sum / (alpha * alpha);
+
+    let mut b = 0.0;
+    let mut db = 0.0;
+
+    for m in mus {
+        let mu = m.max(1e-10);
+        let den = 1.0 / mu + alpha;
+        b += 1.0 / den;
+        db += -1.0 / (den * den);
+    }
+
+    let trace = db / b;
+    let cr_term = -0.5 * trace;
+
+    (ll_part + cr_term) * alpha
+}
+
+fn row_mean(row: RowRef<'_, f64>) -> f64 {
+    let sum: f64 = row.iter().sum();
+    let (_, n) = row.shape();
+    sum / (n as f64)
+}
+
+// sample variance
+fn row_var(row: RowRef<'_, f64>, mean: f64) -> f64 {
+    let a: f64 = row.iter().map(|n| (n - mean).powi(2)).sum();
+
+    let (_, n) = row.shape();
+    let b = (n - 1) as f64;
+
+    a / b
 }
 
 fn median(values: &mut [f64]) -> f64 {

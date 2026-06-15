@@ -9,5 +9,6 @@ faer = "0.24.0"
 indexmap.workspace = true
 ndarray = "0.17.2"
 noodles = { workspace = true, features = ["core", "gff"] }
+statrs = { version = "0.18.0", default-features = false }
 thiserror.workspace = true
 tracing.workspace = true

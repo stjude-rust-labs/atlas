@@ -1,10 +1,11 @@
-use faer::{Col, MatRef};
+use faer::{Col, Mat, MatRef};
 
 pub fn transform(raw_counts: Vec<u32>, feature_count: usize, sample_count: usize) -> Vec<f64> {
     let raw_counts: Vec<_> = raw_counts.into_iter().map(|n| n as f64).collect();
     let counts = MatRef::from_row_major_slice(&raw_counts, feature_count, sample_count);
 
-    let _size_factors = calculate_size_factors(counts);
+    let size_factors = calculate_size_factors(counts);
+    let _normalized_counts = normalize(counts, &size_factors);
 
     todo!()
 }
@@ -40,6 +41,18 @@ fn calculate_size_factors(counts: MatRef<'_, f64>) -> Vec<f64> {
     }
 
     size_factors
+}
+
+fn normalize(counts: MatRef<'_, f64>, size_factors: &[f64]) -> Mat<f64> {
+    let mut normalized_counts = counts.to_owned();
+
+    for (col, size_factor) in normalized_counts.col_iter_mut().zip(size_factors) {
+        for n in col.iter_mut() {
+            *n /= size_factor;
+        }
+    }
+
+    normalized_counts
 }
 
 fn median(values: &mut [f64]) -> f64 {

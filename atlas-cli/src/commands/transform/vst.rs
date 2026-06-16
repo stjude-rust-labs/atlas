@@ -1,6 +1,6 @@
 use std::{
     fs::File,
-    io::{self, BufRead, BufReader},
+    io::{self, BufRead, BufReader, Write},
     path::Path,
 };
 
@@ -12,9 +12,30 @@ use crate::cli;
 pub fn run(args: cli::transform::vst::Args) -> anyhow::Result<()> {
     let (sample_names, feature_names, counts) = import(&args.src)?;
 
-    let _stabilized_counts = vst::transform(counts, sample_names.len(), feature_names.len());
+    let stabilized_counts = vst::transform(counts, sample_names.len(), feature_names.len());
 
-    todo!()
+    let mut writer = io::stdout().lock();
+
+    for sample_name in &sample_names {
+        write!(writer, "\t{sample_name}")?;
+    }
+
+    writeln!(writer)?;
+
+    for (feature_name, row) in feature_names
+        .iter()
+        .zip(stabilized_counts.chunks_exact(sample_names.len()))
+    {
+        write!(writer, "{feature_name}")?;
+
+        for n in row {
+            write!(writer, "\t{n}")?;
+        }
+
+        writeln!(writer)?;
+    }
+
+    Ok(())
 }
 
 fn import<P>(src: P) -> anyhow::Result<(Vec<String>, Vec<String>, Vec<u32>)>

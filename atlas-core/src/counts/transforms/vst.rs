@@ -1,3 +1,5 @@
+use std::f64::consts::LN_2;
+
 use faer::{
     Col, ColRef, Mat, MatRef, RowRef,
     diag::Diag,
@@ -16,9 +18,14 @@ pub fn transform(raw_counts: Vec<u32>, feature_count: usize, sample_count: usize
     let dispersions =
         estimate_feature_dispersions(counts, normalized_counts.as_ref(), &size_factors);
 
-    let (_a0, _a1) = estimate_dispersions_fit(normalized_counts.as_ref(), &dispersions);
+    let (a0, a1) = estimate_dispersions_fit(normalized_counts.as_ref(), &dispersions);
 
-    todo!()
+    let stabilized_counts = stabilize_counts(normalized_counts.as_ref(), a0, a1);
+
+    stabilized_counts
+        .row_iter()
+        .flat_map(|row| row.iter().copied())
+        .collect()
 }
 
 fn calculate_size_factors(counts: MatRef<'_, f64>) -> Vec<f64> {
@@ -465,6 +472,14 @@ fn fit_gamma_glm_identity(
     }
 
     (a0, a1, did_converge)
+}
+
+fn stabilize_counts(normalized_counts: MatRef<'_, f64>, a0: f64, a1: f64) -> Mat<f64> {
+    normalized_counts.map(|q| {
+        let a = 1.0 + a1 + 2.0 * a0 * q + 2.0 * (a0 * q * (1.0 + a1 + a0 * q)).sqrt();
+        let b = 4.0 * a0;
+        (a / b).ln() / LN_2
+    })
 }
 
 fn row_mean(row: RowRef<'_, f64>) -> f64 {

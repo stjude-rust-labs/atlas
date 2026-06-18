@@ -4,7 +4,6 @@ use std::{
     path::Path,
 };
 
-use anyhow::bail;
 use atlas_core::counts::transforms::vst;
 
 use crate::cli;
@@ -50,65 +49,34 @@ fn import_inner<R>(reader: &mut R) -> anyhow::Result<(Vec<String>, Vec<String>, 
 where
     R: BufRead,
 {
-    const SEPARATOR: char = '\t';
+    const SEPARATOR: u8 = b'\t';
 
-    let mut line = String::new();
-    let n = read_line(reader, &mut line)?;
+    let mut reader = csv::ReaderBuilder::new()
+        .delimiter(SEPARATOR)
+        .from_reader(reader);
 
-    if n == 0 {
-        bail!("input unexpectedly empty");
-    }
-
-    let sample_names: Vec<_> = line.split(SEPARATOR).skip(1).map(String::from).collect();
+    let sample_names: Vec<_> = reader.headers()?.iter().skip(1).map(String::from).collect();
     let mut feature_names = Vec::new();
     let mut counts = Vec::new();
 
-    loop {
-        line.clear();
-        let n = read_line(reader, &mut line)?;
+    for result in reader.records() {
+        let row = result?;
 
-        if n == 0 {
-            break;
-        }
+        let mut fields = row.iter();
 
-        let mut row = line.split(SEPARATOR);
-
-        let feature_name = row
+        let feature_name = fields
             .next()
             .ok_or_else(|| anyhow::anyhow!("missing feature name"))?;
 
         feature_names.push(feature_name.into());
 
-        for field in row {
+        for field in fields {
             let n = field.parse()?;
             counts.push(n);
         }
     }
 
     Ok((sample_names, feature_names, counts))
-}
-
-fn read_line<R>(reader: &mut R, dst: &mut String) -> io::Result<usize>
-where
-    R: BufRead,
-{
-    const LINE_FEED: char = '\n';
-    const CARRIAGE_RETURN: char = '\r';
-
-    match reader.read_line(dst)? {
-        0 => Ok(0),
-        n => {
-            if dst.ends_with(LINE_FEED) {
-                dst.pop();
-
-                if dst.ends_with(CARRIAGE_RETURN) {
-                    dst.pop();
-                }
-            }
-
-            Ok(n)
-        }
-    }
 }
 
 #[cfg(test)]

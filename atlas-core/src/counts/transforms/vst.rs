@@ -119,7 +119,7 @@ fn estimate_feature_dispersions_inner(
 
     let did_not_increase = last_lp < initial_lp + initial_lp.abs() / 1e6;
 
-    let result = if did_not_increase {
+    let mut result = if did_not_increase {
         alpha_init
     } else {
         alpha_mle
@@ -128,7 +128,7 @@ fn estimate_feature_dispersions_inner(
     let needs_refit = !did_converge && result > MIN_DISPERSION * 10.0;
 
     if needs_refit {
-        todo!("fit_dispersions_grid");
+        result = fit_dispersion_grid(counts, &mus, MIN_DISPERSION, max_dispersion);
     }
 
     result.clamp(MIN_DISPERSION, max_dispersion)
@@ -342,6 +342,63 @@ fn d_log_posterior(counts: RowRef<'_, f64>, mus: &[f64], log_alpha: f64) -> f64 
     let cr_term = -0.5 * trace;
 
     (ll_part + cr_term) * alpha
+}
+
+fn fit_dispersion_grid(
+    counts: RowRef<'_, f64>,
+    mus: &[f64],
+    min_dispersion: f64,
+    max_dispersion: f64,
+) -> f64 {
+    let min_log_alpha = min_dispersion.ln();
+    let max_log_alpha = max_dispersion.ln();
+
+    let (best_course_log_alpha, delta) = grid_search(counts, mus, min_log_alpha, max_log_alpha);
+    let fine_start = best_course_log_alpha - delta;
+    let fine_end = best_course_log_alpha + delta;
+
+    let (best_fine_log_alpha, _) = grid_search(counts, mus, fine_start, fine_end);
+
+    best_fine_log_alpha.exp()
+}
+
+fn grid_search(counts: RowRef<'_, f64>, mus: &[f64], start: f64, end: f64) -> (f64, f64) {
+    const GRID_SIZE: usize = 20;
+
+    let (grid, delta) = linspace(start, end, GRID_SIZE);
+    let mut lps = vec![0.0; GRID_SIZE];
+
+    for (lp, &log_alpha) in lps.iter_mut().zip(&grid) {
+        *lp = log_posterior(counts, mus, log_alpha);
+    }
+
+    let i = argmax(&lps);
+    (grid[i], delta)
+}
+
+fn linspace(start: f64, end: f64, n: usize) -> (Vec<f64>, f64) {
+    assert!(n > 1);
+
+    let delta = (end - start) / ((n - 1) as f64);
+    let grid = (0..n).map(|i| start + (i as f64) * delta).collect();
+
+    (grid, delta)
+}
+
+fn argmax(values: &[f64]) -> usize {
+    assert!(!values.is_empty());
+
+    let mut max_i = 0;
+    let mut max_value = values[0];
+
+    for (i, &n) in values.iter().enumerate().skip(1) {
+        if n > max_value {
+            max_i = i;
+            max_value = n;
+        }
+    }
+
+    max_i
 }
 
 fn estimate_dispersions_fit(normalized_counts: MatRef<'_, f64>, dispersions: &[f64]) -> (f64, f64) {

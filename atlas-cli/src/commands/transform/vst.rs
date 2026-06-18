@@ -11,7 +11,7 @@ use crate::cli;
 pub fn run(args: cli::transform::vst::Args) -> anyhow::Result<()> {
     let (sample_names, feature_names, counts) = import(&args.src)?;
 
-    let stabilized_counts = vst::transform(counts, sample_names.len(), feature_names.len());
+    let stabilized_counts = vst::transform(counts, feature_names.len(), sample_names.len());
 
     let mut writer = io::stdout().lock();
 

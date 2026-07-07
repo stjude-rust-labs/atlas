@@ -13,7 +13,7 @@ use clap::Parser;
 
 use self::{
     cli::{Cli, Command},
-    commands::{normalize, quantify, transform},
+    commands::{correct, normalize, quantify, transform},
 };
 
 fn main() -> anyhow::Result<()> {
@@ -22,6 +22,7 @@ fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
+        Command::Correct(args) => correct(args)?,
         Command::Normalize(args) => normalize(args)?,
         Command::Quantify(args) => quantify(args)?,
         Command::Transform(args) => transform(args)?,

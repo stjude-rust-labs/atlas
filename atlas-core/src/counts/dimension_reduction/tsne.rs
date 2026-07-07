@@ -16,7 +16,7 @@ pub fn transform(perplexity: f64, theta: f64, counts: Vec<i32>, feature_count: u
 
     let data: Vec<_> = normalized_counts.chunks(feature_count).collect();
 
-    bhtsne::tSNE::new(&data)
+    bhtsne::tSNE::<f64, &[f64], 2>::new(&data)
         .perplexity(perplexity)
         .barnes_hut(theta, euclidean_distance)
         .embedding()

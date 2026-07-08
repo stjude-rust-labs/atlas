@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use faer::{MatRef, RowRef};
+use faer::{MatRef, RowRef, linalg::solvers::SolveLstsq};
 use indexmap::IndexSet;
 
 pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
@@ -19,7 +19,7 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
         }
     }
 
-    let _filtered_counts = if zero_rows.is_empty() {
+    let filtered_counts = if zero_rows.is_empty() {
         counts.cloned()
     } else {
         let mut filtered_rows: Vec<f64> = Vec::new();
@@ -48,9 +48,19 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
         raw_design.extend(row);
     }
 
-    let _design = MatRef::from_row_major_slice(&raw_design, sample_count, group_count);
+    let design = MatRef::from_row_major_slice(&raw_design, sample_count, group_count);
 
-    let _group_frequency_table = build_group_frequency_table(groups, &group_names);
+    let group_frequency_table = build_group_frequency_table(groups, &group_names);
+    let group_frequencies_sum: u32 = group_frequency_table.iter().sum();
+
+    let raw_weights: Vec<_> = group_frequency_table
+        .iter()
+        .map(|n| (*n as f64) / (group_frequencies_sum as f64))
+        .collect();
+
+    let weights = MatRef::from_row_major_slice(&raw_weights, group_count, 1);
+    let b_hat = design.qr().solve_lstsq(filtered_counts.transpose());
+    let _grand_mean = weights.transpose() * &b_hat;
 
     todo!()
 }

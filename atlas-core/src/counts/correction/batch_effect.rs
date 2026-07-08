@@ -62,7 +62,19 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
     let b_hat = design.qr().solve_lstsq(filtered_counts.transpose());
     let _grand_mean = weights.transpose() * &b_hat;
 
+    let x = design * b_hat;
+    let residuals = &filtered_counts - x.transpose();
+
+    let rr = residuals.map(|n| n * n);
+    let _pooled_var: Vec<f64> = rr.row_iter().map(row_mean).collect();
+
     todo!()
+}
+
+fn row_mean(row: RowRef<'_, f64>) -> f64 {
+    let sum: f64 = row.iter().sum();
+    let (_, n) = row.shape();
+    sum / (n as f64)
 }
 
 fn group_row_var(row: RowRef<'_, f64>, groups: &[String], group_name: &str) -> f64 {

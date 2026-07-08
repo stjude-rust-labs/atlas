@@ -38,6 +38,18 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
             .to_owned()
     };
 
+    let group_count = group_names.len();
+    let mut raw_design = Vec::with_capacity(sample_count);
+
+    for g in groups {
+        let mut row = vec![0.0; group_count];
+        let i = group_names.get_index_of(g).unwrap();
+        row[i] = 1.0;
+        raw_design.extend(row);
+    }
+
+    let _design = MatRef::from_row_major_slice(&raw_design, sample_count, group_count);
+
     todo!()
 }
 

@@ -50,6 +50,8 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
 
     let _design = MatRef::from_row_major_slice(&raw_design, sample_count, group_count);
 
+    let _group_frequency_table = build_group_frequency_table(groups, &group_names);
+
     todo!()
 }
 
@@ -79,4 +81,15 @@ fn group_row_var(row: RowRef<'_, f64>, groups: &[String], group_name: &str) -> f
     let b = (count - 1) as f64;
 
     a / b
+}
+
+fn build_group_frequency_table(groups: &[String], group_names: &IndexSet<&String>) -> Vec<u32> {
+    let mut table = vec![0; group_names.len()];
+
+    for g in groups {
+        let i = group_names.get_index_of(g).unwrap();
+        table[i] += 1;
+    }
+
+    table
 }

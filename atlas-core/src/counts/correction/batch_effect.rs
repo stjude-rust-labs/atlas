@@ -92,7 +92,10 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
     }
 
     let (filtered_feature_count, _) = filtered_counts.shape();
-    let _delta_hat = MatRef::from_row_major_slice(&group_vars, group_count, filtered_feature_count);
+    let delta_hat = MatRef::from_row_major_slice(&group_vars, group_count, filtered_feature_count);
+
+    let _a_prior: Vec<_> = delta_hat.row_iter().map(row_a_prior).collect();
+    let _b_prior: Vec<_> = delta_hat.row_iter().map(row_b_prior).collect();
 
     let mut t2 = Vec::new();
 
@@ -199,4 +202,16 @@ fn build_group_indices(groups: &[String], group_names: &IndexSet<&String>) -> Ve
     }
 
     indices
+}
+
+fn row_a_prior(gamma_hat: RowRef<'_, f64>) -> f64 {
+    let m = row_mean(gamma_hat);
+    let s2 = row_var(gamma_hat);
+    (2.0 * s2 + m.powi(2)) / s2
+}
+
+fn row_b_prior(gamma_hat: RowRef<'_, f64>) -> f64 {
+    let m = row_mean(gamma_hat);
+    let s2 = row_var(gamma_hat);
+    (m * s2 + m.powi(3)) / s2
 }

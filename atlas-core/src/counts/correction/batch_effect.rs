@@ -60,13 +60,25 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
 
     let weights = MatRef::from_row_major_slice(&raw_weights, group_count, 1);
     let b_hat = design.qr().solve_lstsq(filtered_counts.transpose());
-    let _grand_mean = weights.transpose() * &b_hat;
+    let grand_mean = weights.transpose() * &b_hat;
 
     let x = design * b_hat;
     let residuals = &filtered_counts - x.transpose();
 
     let rr = residuals.map(|n| n * n);
-    let _pooled_var: Vec<f64> = rr.row_iter().map(row_mean).collect();
+    let pooled_var: Vec<f64> = rr.row_iter().map(row_mean).collect();
+
+    let mut standardized_counts = filtered_counts.cloned();
+
+    for ((row, mean), var) in standardized_counts
+        .row_iter_mut()
+        .zip(grand_mean.row(0).iter())
+        .zip(&pooled_var)
+    {
+        for n in row.iter_mut() {
+            *n = (*n - mean) / var.sqrt();
+        }
+    }
 
     todo!()
 }

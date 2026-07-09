@@ -94,15 +94,48 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
     let (filtered_feature_count, _) = filtered_counts.shape();
     let delta_hat = MatRef::from_row_major_slice(&group_vars, group_count, filtered_feature_count);
 
-    let _a_prior: Vec<_> = delta_hat.row_iter().map(row_a_prior).collect();
-    let _b_prior: Vec<_> = delta_hat.row_iter().map(row_b_prior).collect();
+    let a_prior: Vec<_> = delta_hat.row_iter().map(row_a_prior).collect();
+    let b_prior: Vec<_> = delta_hat.row_iter().map(row_b_prior).collect();
 
+    let mut gamma_bar = Vec::new();
     let mut t2 = Vec::new();
 
     let gamma_hat = design.qr().solve_lstsq(standardized_counts.transpose());
 
     for row in gamma_hat.row_iter() {
+        gamma_bar.push(row_mean(row));
         t2.push(row_var(row));
+    }
+
+    let mut gamma_star = vec![Vec::new(); group_count];
+    let mut delta_star = vec![Vec::new(); group_count];
+
+    for (j, is) in group_indices.iter().enumerate() {
+        let mut raw_group_standardized_counts = Vec::new();
+
+        for &i in is {
+            raw_group_standardized_counts.extend(standardized_counts.col(i).iter());
+        }
+
+        let group_count = is.len();
+        let group_standardized_counts = MatRef::from_column_major_slice(
+            &raw_group_standardized_counts,
+            filtered_feature_count,
+            group_count,
+        );
+
+        let (g_s, d_s) = solve(
+            group_standardized_counts,
+            gamma_hat.row(j),
+            delta_hat.row(j),
+            gamma_bar[j],
+            t2[j],
+            a_prior[j],
+            b_prior[j],
+        );
+
+        gamma_star[j] = g_s;
+        delta_star[j] = d_s;
     }
 
     todo!()
@@ -214,4 +247,95 @@ fn row_b_prior(gamma_hat: RowRef<'_, f64>) -> f64 {
     let m = row_mean(gamma_hat);
     let s2 = row_var(gamma_hat);
     (m * s2 + m.powi(3)) / s2
+}
+
+fn solve(
+    group_standardized_counts: MatRef<'_, f64>,
+    g_hat: RowRef<'_, f64>,
+    d_hat: RowRef<'_, f64>,
+    g_bar: f64,
+    t2: f64,
+    a: f64,
+    b: f64,
+) -> (Vec<f64>, Vec<f64>) {
+    const MIN_DELTA: f64 = 0.0001;
+
+    let (feature_count, sample_count) = group_standardized_counts.shape();
+    let n = vec![sample_count as f64; feature_count];
+
+    let mut g_old: Vec<_> = g_hat.iter().copied().collect();
+    let mut d_old: Vec<_> = d_hat.iter().copied().collect();
+
+    let mut delta = 1.0;
+
+    while delta > MIN_DELTA {
+        let g_new = posterior_mean(g_hat, g_bar, &n, &d_old, t2);
+
+        let mut residuals = group_standardized_counts.cloned();
+
+        for col in residuals.col_iter_mut() {
+            for (n, m) in col.iter_mut().zip(&g_new) {
+                *n -= m;
+            }
+        }
+
+        let sum2: Vec<_> = residuals
+            .row_iter()
+            .map(|row| row.iter().map(|n| n.powi(2)).sum())
+            .collect();
+
+        let d_new = posterior_var(&sum2, &n, a, b);
+
+        let rel_g = calculate_relative_change(&g_new, &g_old);
+        let rel_d = calculate_relative_change(&d_new, &d_old);
+
+        let max_g = maxf(&rel_g);
+        let max_d = maxf(&rel_d);
+        delta = max_g.max(max_d);
+
+        g_old = g_new;
+        d_old = d_new;
+    }
+
+    (g_old, d_old)
+}
+
+fn posterior_mean(
+    g_hat: RowRef<'_, f64>,
+    g_bar: f64,
+    n: &[f64],
+    d_old: &[f64],
+    t2: f64,
+) -> Vec<f64> {
+    n.iter()
+        .zip(g_hat.iter())
+        .zip(d_old)
+        .map(|((m, g), d)| (t2 * m * g + d * g_bar) / (t2 * m + d))
+        .collect()
+}
+
+fn posterior_var(sum2: &[f64], n: &[f64], a: f64, b: f64) -> Vec<f64> {
+    n.iter()
+        .zip(sum2)
+        .map(|(m, s)| (0.5 * s + b) / (m / 2.0 + a - 1.0))
+        .collect()
+}
+
+fn calculate_relative_change(new: &[f64], old: &[f64]) -> Vec<f64> {
+    new.iter()
+        .zip(old)
+        .map(|(n, o)| (n - o).abs() / o)
+        .collect()
+}
+
+fn maxf(values: &[f64]) -> f64 {
+    assert!(!values.is_empty());
+
+    let mut max = values[0];
+
+    for n in values {
+        max = n.max(max);
+    }
+
+    max
 }

@@ -80,6 +80,8 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
         }
     }
 
+    let _group_indices = build_group_indices(groups, &group_names);
+
     todo!()
 }
 
@@ -126,4 +128,15 @@ fn build_group_frequency_table(groups: &[String], group_names: &IndexSet<&String
     }
 
     table
+}
+
+fn build_group_indices(groups: &[String], group_names: &IndexSet<&String>) -> Vec<Vec<usize>> {
+    let mut indices = vec![Vec::new(); group_names.len()];
+
+    for (i, g) in groups.iter().enumerate() {
+        let j = group_names.get_index_of(g).unwrap();
+        indices[j].push(i);
+    }
+
+    indices
 }

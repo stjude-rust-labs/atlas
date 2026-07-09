@@ -80,7 +80,19 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
         }
     }
 
-    let _group_indices = build_group_indices(groups, &group_names);
+    let group_indices = build_group_indices(groups, &group_names);
+
+    let mut group_vars = Vec::new();
+
+    for is in &group_indices {
+        for row in standardized_counts.row_iter() {
+            let var = group_row_var_with_indices(row, is);
+            group_vars.push(var);
+        }
+    }
+
+    let (filtered_feature_count, _) = filtered_counts.shape();
+    let _delta_hat = MatRef::from_row_major_slice(&group_vars, group_count, filtered_feature_count);
 
     todo!()
 }
@@ -112,6 +124,31 @@ fn group_row_var(row: RowRef<'_, f64>, groups: &[String], group_name: &str) -> f
         if g == group_name {
             a += (n - mean).powi(2);
         }
+    }
+
+    let b = (count - 1) as f64;
+
+    a / b
+}
+
+fn group_row_var_with_indices(row: RowRef<'_, f64>, is: &[usize]) -> f64 {
+    let count = is.len();
+
+    assert!(count > 0);
+
+    let mut sum = 0.0;
+
+    for &i in is {
+        sum += row.get(i);
+    }
+
+    let mean = sum / (count as f64);
+
+    let mut a = 0.0;
+
+    for &i in is {
+        let n = *row.get(i);
+        a += (n - mean).powi(2);
     }
 
     let b = (count - 1) as f64;

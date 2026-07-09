@@ -94,6 +94,14 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
     let (filtered_feature_count, _) = filtered_counts.shape();
     let _delta_hat = MatRef::from_row_major_slice(&group_vars, group_count, filtered_feature_count);
 
+    let mut t2 = Vec::new();
+
+    let gamma_hat = design.qr().solve_lstsq(standardized_counts.transpose());
+
+    for row in gamma_hat.row_iter() {
+        t2.push(row_var(row));
+    }
+
     todo!()
 }
 
@@ -101,6 +109,21 @@ fn row_mean(row: RowRef<'_, f64>) -> f64 {
     let sum: f64 = row.iter().sum();
     let (_, n) = row.shape();
     sum / (n as f64)
+}
+
+fn row_var(row: RowRef<'_, f64>) -> f64 {
+    let mean = row_mean(row);
+
+    let mut a = 0.0;
+
+    for n in row.iter() {
+        a += (n - mean).powi(2);
+    }
+
+    let (_, n) = row.shape();
+    let b = (n - 1) as f64;
+
+    a / b
 }
 
 fn group_row_var(row: RowRef<'_, f64>, groups: &[String], group_name: &str) -> f64 {

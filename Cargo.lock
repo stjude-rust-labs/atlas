@@ -116,6 +116,7 @@ dependencies = [
  "indexmap",
  "ndarray",
  "noodles",
+ "rayon",
  "statrs",
  "thiserror 2.0.19",
  "tracing",

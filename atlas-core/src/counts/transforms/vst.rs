@@ -6,6 +6,7 @@ use faer::{
     prelude::Solve,
     stats::{NanHandling, col_mean},
 };
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use statrs::function::gamma::{digamma, ln_gamma};
 
 pub fn transform(raw_counts: Vec<u32>, feature_count: usize, sample_count: usize) -> Vec<f64> {
@@ -81,6 +82,7 @@ fn estimate_feature_dispersions(
     let (feature_count, _) = counts.shape();
 
     (0..feature_count)
+        .into_par_iter()
         .map(|i| {
             let row = counts.row(i);
             let normalized_row = normalized_counts.row(i);

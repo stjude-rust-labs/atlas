@@ -138,7 +138,69 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
         delta_star[j] = d_s;
     }
 
-    todo!()
+    let raw_gamma_star: Vec<_> = gamma_star.into_iter().flatten().collect();
+    let gamma_star =
+        MatRef::from_column_major_slice(&raw_gamma_star, filtered_feature_count, group_count);
+
+    let raw_delta_star: Vec<_> = delta_star.into_iter().flatten().collect();
+    let delta_star =
+        MatRef::from_column_major_slice(&raw_delta_star, filtered_feature_count, group_count);
+
+    let mut grouped_corrected_counts = Vec::new();
+
+    for (j, is) in group_indices.iter().enumerate() {
+        let mut raw_group_counts: Vec<f64> = Vec::new();
+
+        for &i in is {
+            raw_group_counts.extend(filtered_counts.col(i).iter());
+        }
+
+        let mut group_counts =
+            MatRef::from_column_major_slice(&raw_group_counts, filtered_feature_count, is.len())
+                .cloned();
+
+        let g_s = gamma_star.col(j);
+        let d_s = delta_star.col(j);
+
+        for (row, (g, d)) in group_counts.row_iter_mut().zip(g_s.iter().zip(d_s.iter())) {
+            for n in row.iter_mut() {
+                *n = (*n - g) / d.sqrt();
+            }
+        }
+
+        grouped_corrected_counts.push(group_counts);
+    }
+
+    for group_counts in &mut grouped_corrected_counts {
+        for (row, (var, mean)) in group_counts
+            .row_iter_mut()
+            .zip(pooled_var.iter().zip(grand_mean.row(0).iter()))
+        {
+            for n in row.iter_mut() {
+                *n = *n * var.sqrt() + mean;
+            }
+        }
+    }
+
+    let mut row_iters: Vec<_> = grouped_corrected_counts
+        .iter()
+        .map(|group_counts| group_counts.row_iter())
+        .collect();
+
+    let mut raw_corrected_counts = Vec::new();
+
+    for i in 0..feature_count {
+        if zero_rows.contains(&i) {
+            raw_corrected_counts.extend(counts.row(i).iter());
+        } else {
+            for iter in &mut row_iters {
+                let row = iter.next().unwrap();
+                raw_corrected_counts.extend(row.iter());
+            }
+        }
+    }
+
+    raw_corrected_counts
 }
 
 fn row_mean(row: RowRef<'_, f64>) -> f64 {

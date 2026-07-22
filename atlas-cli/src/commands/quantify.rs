@@ -92,8 +92,12 @@ pub fn quantify(args: quantify::Args) -> Result<(), QuantifyError> {
         .worker_count
         .unwrap_or_else(|| thread::available_parallelism().unwrap_or(NonZeroUsize::MIN));
 
-    let decoder = File::open(src)
-        .map(|f| bgzf::io::MultithreadedReader::with_worker_count(worker_count, f))?;
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(worker_count.get())
+        .build_global()
+        .unwrap();
+
+    let decoder = File::open(src).map(bgzf::io::MultithreadedReader::new)?;
 
     let mut reader = bam::io::Reader::from(decoder);
     reader.read_header()?;

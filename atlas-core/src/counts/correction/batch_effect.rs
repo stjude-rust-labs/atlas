@@ -3,6 +3,16 @@ use std::collections::HashSet;
 use faer::{MatRef, RowRef, linalg::solvers::SolveLstsq};
 use indexmap::IndexSet;
 
+pub fn correct_raw(
+    counts: &[f64],
+    feature_count: usize,
+    sample_count: usize,
+    groups: &[String],
+) -> Vec<f64> {
+    let counts_mat = MatRef::from_row_major_slice(counts, feature_count, sample_count);
+    correct(counts_mat, groups)
+}
+
 pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
     let (feature_count, sample_count) = counts.shape();
 

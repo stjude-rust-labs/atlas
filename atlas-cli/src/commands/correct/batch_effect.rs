@@ -4,13 +4,20 @@ use std::{
     path::Path,
 };
 
+use atlas_core::counts::correction::batch_effect;
+
 use crate::cli;
 
 const SEPARATOR: u8 = b'\t';
 
 pub fn run(args: cli::correct::batch_effect::Args) -> anyhow::Result<()> {
-    let (_sample_names, _feature_names, _counts) = import(&args.src)?;
-    let _metadata = read_metadata(&args.metadata)?;
+    let (sample_names, feature_names, counts) = import(&args.src)?;
+    let metadata = read_metadata(&args.metadata)?;
+
+    let sample_count = sample_names.len();
+    let feature_count = feature_names.len();
+    let _raw_corrected_counts =
+        batch_effect::correct_raw(&counts, feature_count, sample_count, &metadata);
 
     todo!()
 }

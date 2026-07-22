@@ -162,7 +162,7 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
         let mut raw_group_counts: Vec<f64> = Vec::new();
 
         for &i in is {
-            raw_group_counts.extend(filtered_counts.col(i).iter());
+            raw_group_counts.extend(standardized_counts.col(i).iter());
         }
 
         let mut group_counts =

@@ -1,6 +1,6 @@
 use std::{
     fs::File,
-    io::{BufRead, BufReader},
+    io::{self, BufRead, BufReader, Write},
     path::Path,
 };
 
@@ -16,10 +16,19 @@ pub fn run(args: cli::correct::batch_effect::Args) -> anyhow::Result<()> {
 
     let sample_count = sample_names.len();
     let feature_count = feature_names.len();
-    let _raw_corrected_counts =
+    let raw_corrected_counts =
         batch_effect::correct_raw(&counts, feature_count, sample_count, &metadata);
 
-    todo!()
+    let mut writer = io::stdout().lock();
+
+    export(
+        &mut writer,
+        &sample_names,
+        &feature_names,
+        &raw_corrected_counts,
+    )?;
+
+    Ok(())
 }
 
 fn import<P>(src: P) -> anyhow::Result<(Vec<String>, Vec<String>, Vec<f64>)>
@@ -79,4 +88,54 @@ where
     }
 
     Ok(metadata)
+}
+
+fn export<W>(
+    writer: &mut W,
+    sample_names: &[String],
+    feature_names: &[String],
+    counts: &[f64],
+) -> io::Result<()>
+where
+    W: Write,
+{
+    for sample_name in sample_names {
+        write!(writer, "\t{sample_name}")?;
+    }
+
+    writeln!(writer)?;
+
+    let sample_count = sample_names.len();
+
+    for (feature_name, row) in feature_names.iter().zip(counts.chunks_exact(sample_count)) {
+        write!(writer, "{feature_name}")?;
+
+        for n in row {
+            write!(writer, "\t{n}")?;
+        }
+
+        writeln!(writer)?;
+    }
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_export() -> io::Result<()> {
+        let mut buf = Vec::new();
+
+        let sample_names = [String::from("s0"), String::from("s1")];
+        let feature_names = [String::from("f0"), String::from("f1"), String::from("f2")];
+        let counts = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
+        export(&mut buf, &sample_names, &feature_names, &counts)?;
+
+        let expected = b"\ts0\ts1\nf0\t0\t1\nf1\t2\t3\nf2\t4\t5\n";
+        assert_eq!(buf, expected);
+
+        Ok(())
+    }
 }

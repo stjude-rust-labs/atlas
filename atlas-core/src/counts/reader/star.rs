@@ -82,7 +82,7 @@ where
     line.clear();
 
     while read_line(reader, &mut line)? != 0 {
-        let (actual_name, count) = dbg!(parse_line(&line, name_index, count_index))?;
+        let (actual_name, count) = parse_line(&line, name_index, count_index)?;
 
         if let Some(expected_name) = expected_names.next() {
             if actual_name != expected_name {

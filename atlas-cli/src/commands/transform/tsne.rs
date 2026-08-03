@@ -1,16 +1,11 @@
-use std::{
-    fs::File,
-    io::{BufRead, BufReader},
-    path::Path,
-};
+use std::{fs::File, io::Read, path::Path};
 
-use anyhow::bail;
 use atlas_core::counts::dimension_reduction::tsne;
 
 use crate::cli;
 
 pub fn run(args: cli::transform::tsne::Args) -> anyhow::Result<()> {
-    let (labels, data, feature_count) = import(&args.srcs)?;
+    let (labels, data, feature_count) = import(&args.src)?;
 
     let embedding = tsne::transform(args.perplexity, args.theta, data, feature_count);
 
@@ -22,65 +17,66 @@ pub fn run(args: cli::transform::tsne::Args) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn import<P>(srcs: &[P]) -> anyhow::Result<(Vec<String>, Vec<i32>, usize)>
+fn import<P>(src: P) -> anyhow::Result<(Vec<String>, Vec<i32>, usize)>
 where
     P: AsRef<Path>,
 {
-    const LINE_FEED: char = '\n';
-    const CARRIAGE_RETURN: char = '\r';
+    let mut reader = File::open(src)?;
+    import_inner(&mut reader)
+}
 
-    const SEPARATOR: char = '\t';
+fn import_inner<R>(reader: &mut R) -> anyhow::Result<(Vec<String>, Vec<i32>, usize)>
+where
+    R: Read,
+{
+    const SEPARATOR: u8 = b'\t';
     const META_PREFIX: &str = "__";
 
-    let mut labels = Vec::new();
+    let mut reader = csv::ReaderBuilder::new()
+        .delimiter(SEPARATOR)
+        .from_reader(reader);
+
+    let labels: Vec<_> = reader.headers()?.iter().skip(1).map(String::from).collect();
     let mut data = Vec::new();
     let mut feature_count = 0;
 
-    let mut line = String::new();
+    for result in reader.records() {
+        let row = result?;
 
-    for (i, src) in srcs.iter().enumerate() {
-        let src = src.as_ref();
+        let mut fields = row.iter();
 
-        match src.file_name().and_then(|s| s.to_str()) {
-            Some(filename) => match filename.split_once('.') {
-                Some((sample_name, _)) => labels.push(sample_name.into()),
-                None => bail!("invalid filename"),
-            },
-            None => bail!("invalid filename"),
+        let feature_name = fields
+            .next()
+            .ok_or_else(|| anyhow::anyhow!("missing feature name"))?;
+
+        if feature_name.starts_with(META_PREFIX) {
+            break;
         }
 
-        let mut reader = File::open(src).map(BufReader::new)?;
-
-        line.clear();
-
-        while reader.read_line(&mut line)? != 0 {
-            if line.ends_with(LINE_FEED) {
-                line.pop();
-
-                if line.ends_with(CARRIAGE_RETURN) {
-                    line.pop();
-                }
-            }
-
-            let Some((name, raw_count)) = line.split_once(SEPARATOR) else {
-                bail!("invalid row");
-            };
-
-            if name.starts_with(META_PREFIX) {
-                break;
-            }
-
-            let n = raw_count.parse()?;
-
+        for field in fields {
+            let n = field.parse()?;
             data.push(n);
-
-            line.clear();
         }
 
-        if i == 0 {
-            feature_count = data.len();
-        }
+        feature_count += 1;
     }
 
     Ok((labels, data, feature_count))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_import_inner() -> anyhow::Result<()> {
+        let src = b"\ts0\ts1\nf0\t0\t1\nf1\t2\t3\nf2\t4\t5\n";
+        let (labels, data, feature_count) = import_inner(&mut &src[..])?;
+
+        assert_eq!(labels, [String::from("s0"), String::from("s1")]);
+        assert_eq!(data, [0, 1, 2, 3, 4, 5]);
+        assert_eq!(feature_count, 3);
+
+        Ok(())
+    }
 }

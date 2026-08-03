@@ -12,7 +12,6 @@ pub struct Args {
     #[arg(long, default_value_t = 0.5)]
     pub theta: f64,
 
-    /// Input sources.
-    #[arg(required = true)]
-    pub srcs: Vec<PathBuf>,
+    /// Input source.
+    pub src: PathBuf,
 }

@@ -1,6 +1,6 @@
 use std::{
     fs::File,
-    io::{self, BufRead, BufReader, Write},
+    io::{self, Read, Write},
     path::Path,
 };
 
@@ -35,13 +35,13 @@ fn import<P>(src: P) -> anyhow::Result<(Vec<String>, Vec<String>, Vec<f64>)>
 where
     P: AsRef<Path>,
 {
-    let mut reader = File::open(src).map(BufReader::new)?;
+    let mut reader = File::open(src)?;
     import_inner(&mut reader)
 }
 
 fn import_inner<R>(reader: &mut R) -> anyhow::Result<(Vec<String>, Vec<String>, Vec<f64>)>
 where
-    R: BufRead,
+    R: Read,
 {
     let mut reader = csv::ReaderBuilder::new()
         .delimiter(SEPARATOR)

@@ -7,7 +7,6 @@ use crate::cli;
 pub fn run(args: cli::transform::tsne::Args) -> anyhow::Result<()> {
     let (labels, data, feature_count) = import(&args.src)?;
 
-    let data = data.into_iter().map(|n| n as f64).collect();
     let embedding = tsne::transform(args.perplexity, args.theta, data, feature_count);
 
     for (label, point) in labels.iter().zip(embedding.chunks_exact(2)) {
@@ -18,7 +17,7 @@ pub fn run(args: cli::transform::tsne::Args) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn import<P>(src: P) -> anyhow::Result<(Vec<String>, Vec<i32>, usize)>
+fn import<P>(src: P) -> anyhow::Result<(Vec<String>, Vec<f64>, usize)>
 where
     P: AsRef<Path>,
 {
@@ -26,7 +25,7 @@ where
     import_inner(&mut reader)
 }
 
-fn import_inner<R>(reader: &mut R) -> anyhow::Result<(Vec<String>, Vec<i32>, usize)>
+fn import_inner<R>(reader: &mut R) -> anyhow::Result<(Vec<String>, Vec<f64>, usize)>
 where
     R: Read,
 {
@@ -75,7 +74,7 @@ mod tests {
         let (labels, data, feature_count) = import_inner(&mut &src[..])?;
 
         assert_eq!(labels, [String::from("s0"), String::from("s1")]);
-        assert_eq!(data, [0, 1, 2, 3, 4, 5]);
+        assert_eq!(data, [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]);
         assert_eq!(feature_count, 3);
 
         Ok(())

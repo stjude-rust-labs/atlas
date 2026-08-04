@@ -7,6 +7,7 @@ use crate::cli;
 pub fn run(args: cli::transform::tsne::Args) -> anyhow::Result<()> {
     let (labels, data, feature_count) = import(&args.src)?;
 
+    let data = data.into_iter().map(|n| n as f64).collect();
     let embedding = tsne::transform(args.perplexity, args.theta, data, feature_count);
 
     for (label, point) in labels.iter().zip(embedding.chunks_exact(2)) {

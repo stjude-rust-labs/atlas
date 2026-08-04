@@ -69,10 +69,16 @@ pub async fn plot(
         .map(|count| count.feature_name.clone())
         .collect();
 
-    let mut raw_counts: Vec<_> = rows.into_iter().map(|count| count.count).collect();
+    let mut raw_counts: Vec<_> = rows.into_iter().map(|count| count.count as f64).collect();
 
     for (sample_name, counts) in additional_runs {
-        raw_counts.extend(feature_names.iter().map(|name| counts[name]));
+        raw_counts.extend(
+            feature_names
+                .iter()
+                .map(|name| counts[name])
+                .map(|n| n as f64),
+        );
+
         sample_names.push(sample_name.into());
     }
 

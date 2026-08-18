@@ -58,6 +58,8 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
             .to_owned()
     };
 
+    let (filtered_feature_count, _) = filtered_counts.shape();
+
     let mut raw_design = vec![0.0; sample_count * group_count];
 
     for (i, id) in group_ids.iter().enumerate() {
@@ -81,7 +83,7 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
     let rr = residuals.map(|n| n * n);
     let pooled_var: Vec<f64> = rr.row_iter().map(row_mean).collect();
 
-    let mut standardized_counts = filtered_counts.cloned();
+    let mut standardized_counts = filtered_counts;
 
     for ((row, mean), var) in standardized_counts
         .row_iter_mut()
@@ -102,7 +104,6 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
         }
     }
 
-    let (filtered_feature_count, _) = filtered_counts.shape();
     let delta_hat = MatRef::from_row_major_slice(&group_vars, group_count, filtered_feature_count);
 
     let a_prior: Vec<_> = delta_hat.row_iter().map(row_a_prior).collect();

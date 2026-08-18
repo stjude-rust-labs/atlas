@@ -1,4 +1,4 @@
-use faer::{MatMut, MatRef, RowRef, linalg::solvers::SolveLstsq};
+use faer::{MatMut, MatRef, RowRef};
 use indexmap::IndexSet;
 
 pub fn correct_raw(
@@ -60,36 +60,50 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
 
     let (filtered_feature_count, _) = filtered_counts.shape();
 
-    let mut raw_design = vec![0.0; sample_count * group_count];
+    let mut b_hat = vec![0.0; group_count * filtered_feature_count];
 
-    for (i, id) in group_ids.iter().enumerate() {
-        raw_design[i * group_count + id] = 1.0;
+    for (j, is) in group_indices.iter().enumerate() {
+        for (k, row) in filtered_counts.row_iter().enumerate() {
+            let mut sum = 0.0;
+
+            for &i in is {
+                sum += *row.get(i);
+            }
+
+            b_hat[j * filtered_feature_count + k] = sum / (is.len() as f64);
+        }
     }
 
-    let design = MatRef::from_row_major_slice(&raw_design, sample_count, group_count);
+    let mut grand_mean = vec![0.0; filtered_feature_count];
 
-    let raw_weights: Vec<_> = group_indices
-        .iter()
-        .map(|is| (is.len() as f64) / (sample_count as f64))
-        .collect();
+    for (j, is) in group_indices.iter().enumerate() {
+        let w = (is.len() as f64) / (sample_count as f64);
 
-    let weights = MatRef::from_row_major_slice(&raw_weights, group_count, 1);
-    let b_hat = design.qr().solve_lstsq(filtered_counts.transpose());
-    let grand_mean = weights.transpose() * &b_hat;
+        for k in 0..filtered_feature_count {
+            grand_mean[k] += w * b_hat[j * filtered_feature_count + k];
+        }
+    }
 
-    let x = design * b_hat;
-    let residuals = &filtered_counts - x.transpose();
+    let mut residuals = vec![0.0; filtered_feature_count * sample_count];
 
-    let pooled_var: Vec<_> = residuals
-        .row_iter()
-        .map(|row| row.iter().map(|n| n * n).sum::<f64>() / (sample_count as f64))
-        .collect();
+    for (i, row) in filtered_counts.row_iter().enumerate() {
+        for j in 0..sample_count {
+            residuals[i * sample_count + j] =
+                *row.get(j) - b_hat[group_ids[j] * filtered_feature_count + i];
+        }
+    }
+
+    let pooled_var: Vec<_> =
+        MatRef::from_row_major_slice(&residuals, filtered_feature_count, sample_count)
+            .row_iter()
+            .map(|row| row.iter().map(|n| n * n).sum::<f64>() / (sample_count as f64))
+            .collect();
 
     let mut standardized_counts = filtered_counts;
 
     for ((row, mean), var) in standardized_counts
         .row_iter_mut()
-        .zip(grand_mean.row(0).iter())
+        .zip(grand_mean.iter())
         .zip(&pooled_var)
     {
         for n in row.iter_mut() {
@@ -114,7 +128,22 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
     let mut gamma_bar = Vec::new();
     let mut t2 = Vec::new();
 
-    let gamma_hat = design.qr().solve_lstsq(standardized_counts.transpose());
+    let mut raw_gamma_hat = vec![0.0; group_count * filtered_feature_count];
+
+    for (j, is) in group_indices.iter().enumerate() {
+        for (k, row) in standardized_counts.row_iter().enumerate() {
+            let mut sum = 0.0;
+
+            for &i in is {
+                sum += *row.get(i);
+            }
+
+            raw_gamma_hat[j * filtered_feature_count + k] = sum / (is.len() as f64);
+        }
+    }
+
+    let gamma_hat =
+        MatRef::from_row_major_slice(&raw_gamma_hat, group_count, filtered_feature_count);
 
     for row in gamma_hat.row_iter() {
         gamma_bar.push(row_mean(row));
@@ -180,7 +209,7 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
 
         for (row, (var, mean)) in group_counts
             .row_iter_mut()
-            .zip(pooled_var.iter().zip(grand_mean.row(0).iter()))
+            .zip(pooled_var.iter().zip(grand_mean.iter()))
         {
             for n in row.iter_mut() {
                 *n = *n * var.sqrt() + mean;

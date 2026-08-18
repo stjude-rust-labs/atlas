@@ -113,14 +113,15 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
 
     let mut group_vars = Vec::new();
 
-    for is in &group_indices {
-        for row in standardized_counts.row_iter() {
+    for row in standardized_counts.row_iter() {
+        for is in &group_indices {
             let var = group_row_var_with_indices(row, is);
             group_vars.push(var);
         }
     }
 
-    let delta_hat = MatRef::from_row_major_slice(&group_vars, group_count, filtered_feature_count);
+    let delta_hat =
+        MatRef::from_column_major_slice(&group_vars, group_count, filtered_feature_count);
 
     let a_prior: Vec<_> = delta_hat.row_iter().map(row_a_prior).collect();
     let b_prior: Vec<_> = delta_hat.row_iter().map(row_b_prior).collect();

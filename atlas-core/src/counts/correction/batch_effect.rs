@@ -49,23 +49,27 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
     };
 
     let group_count = group_names.len();
-    let mut raw_design = Vec::with_capacity(sample_count);
 
-    for g in groups {
-        let mut row = vec![0.0; group_count];
-        let i = group_names.get_index_of(g).unwrap();
-        row[i] = 1.0;
-        raw_design.extend(row);
+    let mut group_ids = Vec::with_capacity(sample_count);
+    let mut group_indices = vec![Vec::new(); group_count];
+
+    for (i, g) in groups.iter().enumerate() {
+        let j = group_names.get_index_of(g).unwrap();
+        group_ids.push(j);
+        group_indices[j].push(i);
+    }
+
+    let mut raw_design = vec![0.0; sample_count * group_count];
+
+    for (i, id) in group_ids.iter().enumerate() {
+        raw_design[i * group_count + id] = 1.0;
     }
 
     let design = MatRef::from_row_major_slice(&raw_design, sample_count, group_count);
 
-    let group_frequency_table = build_group_frequency_table(groups, &group_names);
-    let group_frequencies_sum: u32 = group_frequency_table.iter().sum();
-
-    let raw_weights: Vec<_> = group_frequency_table
+    let raw_weights: Vec<_> = group_indices
         .iter()
-        .map(|n| (*n as f64) / (group_frequencies_sum as f64))
+        .map(|is| (is.len() as f64) / (sample_count as f64))
         .collect();
 
     let weights = MatRef::from_row_major_slice(&raw_weights, group_count, 1);
@@ -89,8 +93,6 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
             *n = (*n - mean) / var.sqrt();
         }
     }
-
-    let group_indices = build_group_indices(groups, &group_names);
 
     let mut group_vars = Vec::new();
 
@@ -285,28 +287,6 @@ fn group_row_var_with_indices(row: RowRef<'_, f64>, is: &[usize]) -> f64 {
     let b = (count - 1) as f64;
 
     a / b
-}
-
-fn build_group_frequency_table(groups: &[String], group_names: &IndexSet<&String>) -> Vec<u32> {
-    let mut table = vec![0; group_names.len()];
-
-    for g in groups {
-        let i = group_names.get_index_of(g).unwrap();
-        table[i] += 1;
-    }
-
-    table
-}
-
-fn build_group_indices(groups: &[String], group_names: &IndexSet<&String>) -> Vec<Vec<usize>> {
-    let mut indices = vec![Vec::new(); group_names.len()];
-
-    for (i, g) in groups.iter().enumerate() {
-        let j = group_names.get_index_of(g).unwrap();
-        indices[j].push(i);
-    }
-
-    indices
 }
 
 fn row_a_prior(gamma_hat: RowRef<'_, f64>) -> f64 {

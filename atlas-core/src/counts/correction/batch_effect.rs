@@ -313,6 +313,22 @@ fn solve(
     let (feature_count, sample_count) = group_standardized_counts.shape();
     let n = vec![sample_count as f64; feature_count];
 
+    let mut col_sum = vec![0.0; feature_count];
+    let mut col_sum_sq = vec![0.0; feature_count];
+
+    for (i, row) in group_standardized_counts.row_iter().enumerate() {
+        let mut sum = 0.0;
+        let mut sum_sq = 0.0;
+
+        for n in row.iter() {
+            sum += n;
+            sum_sq += n * n;
+        }
+
+        col_sum[i] = sum;
+        col_sum_sq[i] = sum_sq;
+    }
+
     let mut g_old: Vec<_> = g_hat.iter().copied().collect();
     let mut d_old: Vec<_> = d_hat.iter().copied().collect();
 
@@ -321,27 +337,25 @@ fn solve(
     while delta > MIN_DELTA {
         let g_new = posterior_mean(g_hat, g_bar, &n, &d_old, t2);
 
-        let mut residuals = group_standardized_counts.cloned();
-
-        for col in residuals.col_iter_mut() {
-            for (n, m) in col.iter_mut().zip(&g_new) {
-                *n -= m;
-            }
-        }
-
-        let sum2: Vec<_> = residuals
-            .row_iter()
-            .map(|row| row.iter().map(|n| n.powi(2)).sum())
+        let sum2: Vec<_> = g_new
+            .iter()
+            .zip(&n)
+            .zip(&col_sum)
+            .zip(&col_sum_sq)
+            .map(|(((g, m), s), ss)| *ss - 2.0 * g * s + m * g * g)
             .collect();
 
         let d_new = posterior_var(&sum2, &n, a, b);
 
-        let rel_g = calculate_relative_change(&g_new, &g_old);
-        let rel_d = calculate_relative_change(&d_new, &d_old);
+        delta = 0.0;
 
-        let max_g = maxf(&rel_g);
-        let max_d = maxf(&rel_d);
-        delta = max_g.max(max_d);
+        for (ng, og) in g_new.iter().zip(&g_old) {
+            delta = delta.max((ng - og).abs() / og);
+        }
+
+        for (nd, od) in d_new.iter().zip(&d_old) {
+            delta = delta.max((nd - od).abs() / od);
+        }
 
         g_old = g_new;
         d_old = d_new;
@@ -369,23 +383,4 @@ fn posterior_var(sum2: &[f64], n: &[f64], a: f64, b: f64) -> Vec<f64> {
         .zip(sum2)
         .map(|(m, s)| (0.5 * s + b) / (m / 2.0 + a - 1.0))
         .collect()
-}
-
-fn calculate_relative_change(new: &[f64], old: &[f64]) -> Vec<f64> {
-    new.iter()
-        .zip(old)
-        .map(|(n, o)| (n - o).abs() / o)
-        .collect()
-}
-
-fn maxf(values: &[f64]) -> f64 {
-    assert!(!values.is_empty());
-
-    let mut max = values[0];
-
-    for n in values {
-        max = n.max(max);
-    }
-
-    max
 }

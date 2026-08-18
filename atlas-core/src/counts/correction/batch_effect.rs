@@ -153,8 +153,9 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
         MatRef::from_row_major_slice(&raw_gamma_hat, group_count, filtered_feature_count);
 
     for row in gamma_hat.row_iter() {
-        gamma_bar.push(row_mean(row));
-        t2.push(row_var(row));
+        let (m, v) = row_mean_var(row);
+        gamma_bar.push(m);
+        t2.push(v);
     }
 
     let mut group_buffers = Vec::with_capacity(group_count);
@@ -254,7 +255,7 @@ fn row_mean(row: RowRef<'_, f64>) -> f64 {
     sum / (n as f64)
 }
 
-fn row_var(row: RowRef<'_, f64>) -> f64 {
+fn row_mean_var(row: RowRef<'_, f64>) -> (f64, f64) {
     let mean = row_mean(row);
 
     let mut a = 0.0;
@@ -266,7 +267,9 @@ fn row_var(row: RowRef<'_, f64>) -> f64 {
     let (_, n) = row.shape();
     let b = (n - 1) as f64;
 
-    a / b
+    let var = a / b;
+
+    (mean, var)
 }
 
 fn group_row_var_with_indices(row: RowRef<'_, f64>, is: &[usize]) -> f64 {
@@ -295,8 +298,7 @@ fn group_row_var_with_indices(row: RowRef<'_, f64>, is: &[usize]) -> f64 {
 }
 
 fn row_ab_prior(row: RowRef<'_, f64>) -> (f64, f64) {
-    let m = row_mean(row);
-    let s2 = row_var(row);
+    let (m, s2) = row_mean_var(row);
 
     let a = (2.0 * s2 + m.powi(2)) / s2;
     let b = (m * s2 + m.powi(3)) / s2;

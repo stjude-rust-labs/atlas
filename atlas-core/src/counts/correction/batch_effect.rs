@@ -80,8 +80,10 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
     let x = design * b_hat;
     let residuals = &filtered_counts - x.transpose();
 
-    let rr = residuals.map(|n| n * n);
-    let pooled_var: Vec<f64> = rr.row_iter().map(row_mean).collect();
+    let pooled_var: Vec<_> = residuals
+        .row_iter()
+        .map(|row| row.iter().map(|n| n * n).sum::<f64>() / (sample_count as f64))
+        .collect();
 
     let mut standardized_counts = filtered_counts;
 

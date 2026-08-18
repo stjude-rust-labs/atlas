@@ -1,4 +1,4 @@
-use faer::{MatRef, RowRef, linalg::solvers::SolveLstsq};
+use faer::{MatMut, MatRef, RowRef, linalg::solvers::SolveLstsq};
 use indexmap::IndexSet;
 
 pub fn correct_raw(
@@ -121,22 +121,24 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
         t2.push(row_var(row));
     }
 
+    let mut group_buffers = Vec::with_capacity(group_count);
+
+    for is in &group_indices {
+        let mut buf: Vec<f64> = Vec::new();
+
+        for &i in is {
+            buf.extend(standardized_counts.col(i).iter());
+        }
+
+        group_buffers.push(buf);
+    }
+
     let mut gamma_star = vec![Vec::new(); group_count];
     let mut delta_star = vec![Vec::new(); group_count];
 
     for (j, is) in group_indices.iter().enumerate() {
-        let mut raw_group_standardized_counts = Vec::new();
-
-        for &i in is {
-            raw_group_standardized_counts.extend(standardized_counts.col(i).iter());
-        }
-
-        let group_count = is.len();
-        let group_standardized_counts = MatRef::from_column_major_slice(
-            &raw_group_standardized_counts,
-            filtered_feature_count,
-            group_count,
-        );
+        let group_standardized_counts =
+            MatRef::from_column_major_slice(&group_buffers[j], filtered_feature_count, is.len());
 
         let (g_s, d_s) = solve(
             group_standardized_counts,
@@ -152,40 +154,30 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
         delta_star[j] = d_s;
     }
 
-    let raw_gamma_star: Vec<_> = gamma_star.into_iter().flatten().collect();
-    let gamma_star =
-        MatRef::from_column_major_slice(&raw_gamma_star, filtered_feature_count, group_count);
-
-    let raw_delta_star: Vec<_> = delta_star.into_iter().flatten().collect();
-    let delta_star =
-        MatRef::from_column_major_slice(&raw_delta_star, filtered_feature_count, group_count);
-
-    let mut grouped_corrected_counts = Vec::new();
-
     for (j, is) in group_indices.iter().enumerate() {
-        let mut raw_group_counts: Vec<f64> = Vec::new();
+        let group_counts = MatMut::from_column_major_slice_mut(
+            &mut group_buffers[j],
+            filtered_feature_count,
+            is.len(),
+        );
 
-        for &i in is {
-            raw_group_counts.extend(standardized_counts.col(i).iter());
-        }
-
-        let mut group_counts =
-            MatRef::from_column_major_slice(&raw_group_counts, filtered_feature_count, is.len())
-                .cloned();
-
-        let g_s = gamma_star.col(j);
-        let d_s = delta_star.col(j);
+        let g_s = &gamma_star[j];
+        let d_s = &delta_star[j];
 
         for (row, (g, d)) in group_counts.row_iter_mut().zip(g_s.iter().zip(d_s.iter())) {
             for n in row.iter_mut() {
                 *n = (*n - g) / d.sqrt();
             }
         }
-
-        grouped_corrected_counts.push(group_counts);
     }
 
-    for group_counts in &mut grouped_corrected_counts {
+    for (j, is) in group_indices.iter().enumerate() {
+        let group_counts = MatMut::from_column_major_slice_mut(
+            &mut group_buffers[j],
+            filtered_feature_count,
+            is.len(),
+        );
+
         for (row, (var, mean)) in group_counts
             .row_iter_mut()
             .zip(pooled_var.iter().zip(grand_mean.row(0).iter()))
@@ -196,10 +188,13 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
         }
     }
 
-    let mut row_iters: Vec<_> = grouped_corrected_counts
+    let group_views: Vec<_> = group_buffers
         .iter()
-        .map(|group_counts| group_counts.row_iter())
+        .zip(&group_indices)
+        .map(|(buf, is)| MatRef::from_column_major_slice(buf, filtered_feature_count, is.len()))
         .collect();
+
+    let mut row_iters: Vec<_> = group_views.iter().map(|mat| mat.row_iter()).collect();
 
     let mut raw_corrected_counts = Vec::new();
 

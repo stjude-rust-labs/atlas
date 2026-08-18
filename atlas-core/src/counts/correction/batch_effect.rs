@@ -123,8 +123,14 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
     let delta_hat =
         MatRef::from_column_major_slice(&group_vars, group_count, filtered_feature_count);
 
-    let a_prior: Vec<_> = delta_hat.row_iter().map(row_a_prior).collect();
-    let b_prior: Vec<_> = delta_hat.row_iter().map(row_b_prior).collect();
+    let mut a_prior = Vec::with_capacity(group_count);
+    let mut b_prior = Vec::with_capacity(group_count);
+
+    for row in delta_hat.row_iter() {
+        let (a, b) = row_ab_prior(row);
+        a_prior.push(a);
+        b_prior.push(b);
+    }
 
     let mut gamma_bar = Vec::new();
     let mut t2 = Vec::new();
@@ -288,16 +294,14 @@ fn group_row_var_with_indices(row: RowRef<'_, f64>, is: &[usize]) -> f64 {
     a / b
 }
 
-fn row_a_prior(gamma_hat: RowRef<'_, f64>) -> f64 {
-    let m = row_mean(gamma_hat);
-    let s2 = row_var(gamma_hat);
-    (2.0 * s2 + m.powi(2)) / s2
-}
+fn row_ab_prior(row: RowRef<'_, f64>) -> (f64, f64) {
+    let m = row_mean(row);
+    let s2 = row_var(row);
 
-fn row_b_prior(gamma_hat: RowRef<'_, f64>) -> f64 {
-    let m = row_mean(gamma_hat);
-    let s2 = row_var(gamma_hat);
-    (m * s2 + m.powi(3)) / s2
+    let a = (2.0 * s2 + m.powi(2)) / s2;
+    let b = (m * s2 + m.powi(3)) / s2;
+
+    (a, b)
 }
 
 fn solve(

@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use faer::{MatRef, RowRef, linalg::solvers::SolveLstsq};
 use indexmap::IndexSet;
 
@@ -17,37 +15,6 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
     let (feature_count, sample_count) = counts.shape();
 
     let group_names: IndexSet<_> = groups.iter().collect();
-    let mut zero_rows = HashSet::new();
-
-    for (i, row) in counts.row_iter().enumerate() {
-        for group_name in &group_names {
-            let var = group_row_var(row, groups, group_name);
-
-            if var == 0.0 {
-                zero_rows.insert(i);
-            }
-        }
-    }
-
-    let filtered_counts = if zero_rows.is_empty() {
-        counts.cloned()
-    } else {
-        let mut filtered_rows: Vec<f64> = Vec::new();
-
-        for (i, row) in counts.row_iter().enumerate() {
-            if zero_rows.contains(&i) {
-                continue;
-            } else {
-                filtered_rows.extend(row.iter());
-            }
-        }
-
-        let filtered_feature_count = feature_count - zero_rows.len();
-
-        MatRef::from_row_major_slice(&filtered_rows, filtered_feature_count, sample_count)
-            .to_owned()
-    };
-
     let group_count = group_names.len();
 
     let mut group_ids = Vec::with_capacity(sample_count);
@@ -58,6 +25,38 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
         group_ids.push(j);
         group_indices[j].push(i);
     }
+
+    let mut zero_rows = vec![false; feature_count];
+    let mut zero_row_count = 0;
+
+    for (i, row) in counts.row_iter().enumerate() {
+        for is in &group_indices {
+            if group_row_var_with_indices(row, is) == 0.0 {
+                zero_rows[i] = true;
+                zero_row_count += 1;
+                break;
+            }
+        }
+    }
+
+    let filtered_counts = if zero_row_count == 0 {
+        counts.cloned()
+    } else {
+        let mut filtered_rows: Vec<f64> = Vec::new();
+
+        for (i, row) in counts.row_iter().enumerate() {
+            if zero_rows[i] {
+                continue;
+            } else {
+                filtered_rows.extend(row.iter());
+            }
+        }
+
+        let filtered_feature_count = feature_count - zero_row_count;
+
+        MatRef::from_row_major_slice(&filtered_rows, filtered_feature_count, sample_count)
+            .to_owned()
+    };
 
     let mut raw_design = vec![0.0; sample_count * group_count];
 
@@ -201,8 +200,8 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
 
     let mut raw_corrected_counts = Vec::new();
 
-    for i in 0..feature_count {
-        if zero_rows.contains(&i) {
+    for (i, &is_zero) in zero_rows.iter().enumerate() {
+        if is_zero {
             raw_corrected_counts.extend(counts.row(i).iter());
         } else {
             for iter in &mut row_iters {
@@ -232,34 +231,6 @@ fn row_var(row: RowRef<'_, f64>) -> f64 {
 
     let (_, n) = row.shape();
     let b = (n - 1) as f64;
-
-    a / b
-}
-
-fn group_row_var(row: RowRef<'_, f64>, groups: &[String], group_name: &str) -> f64 {
-    let mut sum = 0.0;
-    let mut count = 0;
-
-    for (n, g) in row.iter().zip(groups) {
-        if g == group_name {
-            sum += n;
-            count += 1;
-        }
-    }
-
-    assert!(count > 0);
-
-    let mean = sum / (count as f64);
-
-    let mut a = 0.0;
-
-    for (n, g) in row.iter().zip(groups) {
-        if g == group_name {
-            a += (n - mean).powi(2);
-        }
-    }
-
-    let b = (count - 1) as f64;
 
     a / b
 }

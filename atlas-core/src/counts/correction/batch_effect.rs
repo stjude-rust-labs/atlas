@@ -230,24 +230,31 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
         }
     }
 
-    let group_views: Vec<_> = group_buffers
+    let mut raw_corrected_counts = vec![0.0; feature_count * sample_count];
+    let mut k = 0;
+
+    for (i, (&is_zero, dst)) in zero_rows
         .iter()
-        .zip(&group_indices)
-        .map(|(buf, is)| MatRef::from_row_major_slice(buf, filtered_feature_count, is.len()))
-        .collect();
-
-    let mut row_iters: Vec<_> = group_views.iter().map(|mat| mat.row_iter()).collect();
-
-    let mut raw_corrected_counts = Vec::new();
-
-    for (i, &is_zero) in zero_rows.iter().enumerate() {
+        .zip(raw_corrected_counts.chunks_exact_mut(sample_count))
+        .enumerate()
+    {
         if is_zero {
-            raw_corrected_counts.extend(counts.row(i).iter());
-        } else {
-            for iter in &mut row_iters {
-                let row = iter.next().unwrap();
-                raw_corrected_counts.extend(row.iter());
+            let src = counts.row(i);
+
+            for (&s, d) in src.iter().zip(dst) {
+                *d = s;
             }
+        } else {
+            for (j, is) in group_indices.iter().enumerate() {
+                let len = is.len();
+                let src = &group_buffers[j][k * len..(k + 1) * len];
+
+                for (s_i, &d_i) in is.iter().enumerate() {
+                    dst[d_i] = src[s_i];
+                }
+            }
+
+            k += 1;
         }
     }
 
@@ -395,4 +402,53 @@ fn posterior_var(sum2: &[f64], n: &[f64], a: f64, b: f64) -> Vec<f64> {
         .zip(sum2)
         .map(|(m, s)| (0.5 * s + b) / (m / 2.0 + a - 1.0))
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_correct_output_sample_order() {
+        let raw_counts = [
+            1.0, 3.0, 2.0, 4.0, // f0
+            5.0, 5.0, 7.0, 7.0, // f1 (0 row)
+            2.0, 6.0, 4.0, 8.0, // f2
+            3.0, 5.0, 1.0, 2.0, // f3
+        ];
+        let counts = MatRef::from_row_major_slice(&raw_counts, 4, 4);
+        let groups = [
+            String::from("A"),
+            String::from("A"),
+            String::from("B"),
+            String::from("B"),
+        ];
+        let actual_contiguous = correct(counts, &groups);
+
+        let raw_counts = [
+            1.0, 2.0, 3.0, 4.0, // f0
+            5.0, 7.0, 5.0, 7.0, // f1 (0 row)
+            2.0, 4.0, 6.0, 8.0, // f2
+            3.0, 1.0, 5.0, 2.0, // f3
+        ];
+        let counts = MatRef::from_row_major_slice(&raw_counts, 4, 4);
+        let groups = [
+            String::from("A"),
+            String::from("B"),
+            String::from("A"),
+            String::from("B"),
+        ];
+        let actual_interleaved = correct(counts, &groups);
+
+        let map = [0, 2, 1, 3];
+
+        for i in 0..4 {
+            for j in 0..4 {
+                assert_eq!(
+                    actual_contiguous[i * 4 + map[j]],
+                    actual_interleaved[i * 4 + j]
+                );
+            }
+        }
+    }
 }

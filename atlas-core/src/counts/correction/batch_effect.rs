@@ -161,10 +161,15 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
     let mut group_buffers = Vec::with_capacity(group_count);
 
     for is in &group_indices {
-        let mut buf: Vec<f64> = Vec::new();
+        let mut buf = vec![0.0; filtered_feature_count * is.len()];
 
-        for &i in is {
-            buf.extend(standardized_counts.col(i).iter());
+        for (row, dst) in standardized_counts
+            .row_iter()
+            .zip(buf.chunks_exact_mut(is.len()))
+        {
+            for (j, &i) in is.iter().enumerate() {
+                dst[j] = *row.get(i);
+            }
         }
 
         group_buffers.push(buf);
@@ -175,7 +180,7 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
 
     for (j, is) in group_indices.iter().enumerate() {
         let group_standardized_counts =
-            MatRef::from_column_major_slice(&group_buffers[j], filtered_feature_count, is.len());
+            MatRef::from_row_major_slice(&group_buffers[j], filtered_feature_count, is.len());
 
         let (g_s, d_s) = solve(
             group_standardized_counts,
@@ -192,7 +197,7 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
     }
 
     for (j, is) in group_indices.iter().enumerate() {
-        let group_counts = MatMut::from_column_major_slice_mut(
+        let group_counts = MatMut::from_row_major_slice_mut(
             &mut group_buffers[j],
             filtered_feature_count,
             is.len(),
@@ -209,7 +214,7 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
     }
 
     for (j, is) in group_indices.iter().enumerate() {
-        let group_counts = MatMut::from_column_major_slice_mut(
+        let group_counts = MatMut::from_row_major_slice_mut(
             &mut group_buffers[j],
             filtered_feature_count,
             is.len(),
@@ -228,7 +233,7 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
     let group_views: Vec<_> = group_buffers
         .iter()
         .zip(&group_indices)
-        .map(|(buf, is)| MatRef::from_column_major_slice(buf, filtered_feature_count, is.len()))
+        .map(|(buf, is)| MatRef::from_row_major_slice(buf, filtered_feature_count, is.len()))
         .collect();
 
     let mut row_iters: Vec<_> = group_views.iter().map(|mat| mat.row_iter()).collect();

@@ -1,3 +1,5 @@
+use std::{error, fmt};
+
 use faer::{MatMut, MatRef, RowRef};
 use indexmap::IndexSet;
 
@@ -6,12 +8,14 @@ pub fn correct_raw(
     feature_count: usize,
     sample_count: usize,
     groups: &[String],
-) -> Vec<f64> {
+) -> Result<Vec<f64>, CorrectError> {
     let counts_mat = MatRef::from_row_major_slice(counts, feature_count, sample_count);
     correct(counts_mat, groups)
 }
 
-pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
+pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Result<Vec<f64>, CorrectError> {
+    const MIN_GROUP_SIZE: usize = 2;
+
     let (feature_count, sample_count) = counts.shape();
 
     let group_names: IndexSet<_> = groups.iter().collect();
@@ -24,6 +28,12 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
         let j = group_names.get_index_of(g).unwrap();
         group_ids.push(j);
         group_indices[j].push(i);
+    }
+
+    for (&name, is) in group_names.iter().zip(&group_indices) {
+        if is.len() < MIN_GROUP_SIZE {
+            return Err(CorrectError::InvalidGroupSize(name.into()));
+        }
     }
 
     let mut zero_rows = vec![false; feature_count];
@@ -258,7 +268,7 @@ pub fn correct(counts: MatRef<'_, f64>, groups: &[String]) -> Vec<f64> {
         }
     }
 
-    raw_corrected_counts
+    Ok(raw_corrected_counts)
 }
 
 fn row_mean(row: RowRef<'_, f64>) -> f64 {
@@ -404,12 +414,39 @@ fn posterior_var(sum2: &[f64], n: &[f64], a: f64, b: f64) -> Vec<f64> {
         .collect()
 }
 
+#[derive(Debug)]
+pub enum CorrectError {
+    InvalidGroupSize(String),
+}
+
+impl error::Error for CorrectError {}
+
+impl fmt::Display for CorrectError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InvalidGroupSize(name) => write!(f, "invalid group size for {name}"),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_correct_output_sample_order() {
+    fn test_correct_with_group_size_of_1() {
+        let raw_counts = [1.0, 5.0, 2.0, 3.0];
+        let counts = MatRef::from_row_major_slice(&raw_counts, 4, 1);
+        let groups = [String::from("A")];
+
+        assert!(matches!(
+            correct(counts, &groups),
+            Err(CorrectError::InvalidGroupSize(name)) if name == "A"
+        ));
+    }
+
+    #[test]
+    fn test_correct_output_sample_order() -> Result<(), CorrectError> {
         let raw_counts = [
             1.0, 3.0, 2.0, 4.0, // f0
             5.0, 5.0, 7.0, 7.0, // f1 (0 row)
@@ -423,7 +460,7 @@ mod tests {
             String::from("B"),
             String::from("B"),
         ];
-        let actual_contiguous = correct(counts, &groups);
+        let actual_contiguous = correct(counts, &groups)?;
 
         let raw_counts = [
             1.0, 2.0, 3.0, 4.0, // f0
@@ -438,7 +475,7 @@ mod tests {
             String::from("A"),
             String::from("B"),
         ];
-        let actual_interleaved = correct(counts, &groups);
+        let actual_interleaved = correct(counts, &groups)?;
 
         let map = [0, 2, 1, 3];
 
@@ -450,5 +487,7 @@ mod tests {
                 );
             }
         }
+
+        Ok(())
     }
 }

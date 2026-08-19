@@ -17,7 +17,7 @@ pub fn run(args: cli::correct::batch_effect::Args) -> anyhow::Result<()> {
     let sample_count = sample_names.len();
     let feature_count = feature_names.len();
     let raw_corrected_counts =
-        batch_effect::correct_raw(&counts, feature_count, sample_count, &metadata);
+        batch_effect::correct_raw(&counts, feature_count, sample_count, &metadata)?;
 
     let mut writer = io::stdout().lock();
 

@@ -44,6 +44,7 @@ pub struct Args {
     /// The number of workers to spawn.
     ///
     /// By default, this (usually) uses the number of available CPUs.
+    #[arg(long)]
     pub worker_count: Option<NonZero<usize>>,
 
     /// Source input (BAM).

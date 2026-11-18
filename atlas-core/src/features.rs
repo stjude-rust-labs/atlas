@@ -47,11 +47,12 @@ where
             continue;
         };
 
-        if record.ty() != feature_type {
+        if record.ty().as_ref() != feature_type {
             continue;
         }
 
-        let reference_sequence_name = str::from_utf8(record.reference_sequence_name())
+        let raw_reference_sequence_name = record.reference_sequence_name();
+        let reference_sequence_name = str::from_utf8(raw_reference_sequence_name.as_ref())
             .map_err(ReadFeaturesError::InvalidReferenceSequenceName)?;
 
         let reference_sequence_id = match reference_sequence_names

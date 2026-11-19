@@ -1,3 +1,4 @@
+pub mod analyze;
 pub mod correct;
 pub mod normalize;
 pub mod quantify;
@@ -7,6 +8,8 @@ use clap::{Parser, Subcommand};
 
 #[derive(Subcommand)]
 pub enum Command {
+    /// Analyze feature counts.
+    Analyze(analyze::Args),
     /// Correct technical variations.
     Correct(correct::Args),
     /// Normalize feature counts.

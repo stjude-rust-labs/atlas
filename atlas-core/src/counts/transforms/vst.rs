@@ -16,8 +16,14 @@ pub fn transform(raw_counts: Vec<u32>, feature_count: usize, sample_count: usize
     let size_factors = calculate_size_factors(counts);
     let normalized_counts = normalize(counts, &size_factors);
 
-    let dispersions =
-        estimate_feature_dispersions(counts, normalized_counts.as_ref(), &size_factors);
+    let group_ids = vec![0; sample_count];
+    let dispersions = estimate_feature_dispersions(
+        counts,
+        normalized_counts.as_ref(),
+        &size_factors,
+        &group_ids,
+        1,
+    );
 
     let (a0, a1) = estimate_dispersions_fit(normalized_counts.as_ref(), &dispersions);
 
@@ -29,7 +35,7 @@ pub fn transform(raw_counts: Vec<u32>, feature_count: usize, sample_count: usize
         .collect()
 }
 
-fn calculate_size_factors(counts: MatRef<'_, f64>) -> Vec<f64> {
+pub fn calculate_size_factors(counts: MatRef<'_, f64>) -> Vec<f64> {
     use faer::stats::{NanHandling, col_mean};
 
     let (feature_count, sample_count) = counts.shape();
@@ -62,7 +68,7 @@ fn calculate_size_factors(counts: MatRef<'_, f64>) -> Vec<f64> {
     size_factors
 }
 
-fn normalize(counts: MatRef<'_, f64>, size_factors: &[f64]) -> Mat<f64> {
+pub fn normalize(counts: MatRef<'_, f64>, size_factors: &[f64]) -> Mat<f64> {
     let mut normalized_counts = counts.to_owned();
 
     for (col, size_factor) in normalized_counts.col_iter_mut().zip(size_factors) {
@@ -74,10 +80,12 @@ fn normalize(counts: MatRef<'_, f64>, size_factors: &[f64]) -> Mat<f64> {
     normalized_counts
 }
 
-fn estimate_feature_dispersions(
+pub fn estimate_feature_dispersions(
     counts: MatRef<'_, f64>,
     normalized_counts: MatRef<'_, f64>,
     size_factors: &[f64],
+    group_ids: &[usize],
+    group_count: usize,
 ) -> Vec<f64> {
     let (feature_count, _) = counts.shape();
 
@@ -86,7 +94,13 @@ fn estimate_feature_dispersions(
         .map(|i| {
             let row = counts.row(i);
             let normalized_row = normalized_counts.row(i);
-            estimate_feature_dispersions_inner(row, normalized_row, size_factors)
+            estimate_feature_dispersions_inner(
+                row,
+                normalized_row,
+                size_factors,
+                group_ids,
+                group_count,
+            )
         })
         .collect()
 }
@@ -95,12 +109,14 @@ fn estimate_feature_dispersions_inner(
     counts: RowRef<'_, f64>,
     normalized_counts: RowRef<'_, f64>,
     size_factors: &[f64],
+    group_ids: &[usize],
+    group_count: usize,
 ) -> f64 {
     const MIN_DISPERSION: f64 = 1e-8;
     const MIN_SAMPLE_COUNT: usize = 10;
     const MIN_MU: f64 = 0.5;
 
-    let rough_dispersion = estimate_rough_dispersion(normalized_counts);
+    let rough_dispersion = estimate_rough_dispersion(normalized_counts, group_ids, group_count);
     let moments_dispersions = estimate_moments_dispersion(normalized_counts, size_factors);
 
     let (_, sample_count) = counts.shape();
@@ -110,14 +126,23 @@ fn estimate_feature_dispersions_inner(
         .min(moments_dispersions)
         .clamp(MIN_DISPERSION, max_dispersion);
 
-    let mut mus = build_normalized_mean_linear_model(normalized_counts, size_factors);
+    let mut mus =
+        build_normalized_mean_linear_model(normalized_counts, size_factors, group_ids, group_count);
 
     for m in &mut mus {
         *m = m.max(MIN_MU);
     }
 
-    let (alpha_mle, initial_lp, last_lp, did_converge) =
-        fit_dispersion(counts, &mus, alpha_init, MIN_DISPERSION, max_dispersion);
+    let (alpha_mle, initial_lp, last_lp, did_converge) = fit_dispersion(
+        counts,
+        &mus,
+        group_ids,
+        group_count,
+        alpha_init,
+        MIN_DISPERSION,
+        max_dispersion,
+        None,
+    );
 
     let did_not_increase = last_lp < initial_lp + initial_lp.abs() / 1e6;
 
@@ -130,20 +155,31 @@ fn estimate_feature_dispersions_inner(
     let needs_refit = !did_converge && result > MIN_DISPERSION * 10.0;
 
     if needs_refit {
-        result = fit_dispersion_grid(counts, &mus, MIN_DISPERSION, max_dispersion);
+        result = fit_dispersion_grid(
+            counts,
+            &mus,
+            group_ids,
+            group_count,
+            MIN_DISPERSION,
+            max_dispersion,
+            None,
+        );
     }
 
     result.clamp(MIN_DISPERSION, max_dispersion)
 }
 
-fn estimate_rough_dispersion(normalized_counts: RowRef<'_, f64>) -> f64 {
+fn estimate_rough_dispersion(
+    normalized_counts: RowRef<'_, f64>,
+    group_ids: &[usize],
+    group_count: usize,
+) -> f64 {
     const MIN_MEAN: f64 = 1.0;
-    const PARAMETER_COUNT: usize = 1;
     const MIN_ALPHA: f64 = 0.0;
 
     let (_, sample_count) = normalized_counts.shape();
 
-    let mus = build_mean_linear_model(normalized_counts);
+    let mus = build_mean_linear_model(normalized_counts, group_ids, group_count);
 
     let n: f64 = mus
         .iter()
@@ -154,14 +190,36 @@ fn estimate_rough_dispersion(normalized_counts: RowRef<'_, f64>) -> f64 {
         })
         .sum();
 
-    let alpha = n / (sample_count - PARAMETER_COUNT) as f64;
+    let alpha = n / (sample_count - group_count) as f64;
     alpha.max(MIN_ALPHA)
 }
 
-fn build_mean_linear_model(normalized_counts: RowRef<'_, f64>) -> Vec<f64> {
-    let mu = row_mean(normalized_counts);
-    let (_, sample_count) = normalized_counts.shape();
-    vec![mu; sample_count]
+fn build_mean_linear_model(
+    normalized_counts: RowRef<'_, f64>,
+    group_ids: &[usize],
+    group_count: usize,
+) -> Vec<f64> {
+    if group_count == 1 {
+        let mu = row_mean(normalized_counts);
+        let (_, sample_count) = normalized_counts.shape();
+        return vec![mu; sample_count];
+    }
+
+    let mut sums = vec![0.0; group_count];
+    let mut counts = vec![0usize; group_count];
+
+    for (&y, &g) in normalized_counts.iter().zip(group_ids) {
+        sums[g] += y;
+        counts[g] += 1;
+    }
+
+    let means: Vec<_> = sums
+        .iter()
+        .zip(&counts)
+        .map(|(&sum, &count)| sum / (count as f64))
+        .collect();
+
+    group_ids.iter().map(|&g| means[g]).collect()
 }
 
 fn estimate_moments_dispersion(normalized_counts: RowRef<'_, f64>, size_factors: &[f64]) -> f64 {
@@ -185,11 +243,13 @@ fn estimate_moments_dispersion(normalized_counts: RowRef<'_, f64>, size_factors:
     (var - xim * mean) / (mean * mean)
 }
 
-fn build_normalized_mean_linear_model(
+pub fn build_normalized_mean_linear_model(
     normalized_counts: RowRef<'_, f64>,
     size_factors: &[f64],
+    group_ids: &[usize],
+    group_count: usize,
 ) -> Vec<f64> {
-    let mut mus = build_mean_linear_model(normalized_counts);
+    let mut mus = build_mean_linear_model(normalized_counts, group_ids, group_count);
 
     for (mu, size_factor) in mus.iter_mut().zip(size_factors) {
         *mu *= size_factor;
@@ -198,12 +258,16 @@ fn build_normalized_mean_linear_model(
     mus
 }
 
-fn fit_dispersion(
+#[allow(clippy::too_many_arguments)]
+pub fn fit_dispersion(
     counts: RowRef<'_, f64>,
     mus: &[f64],
+    group_ids: &[usize],
+    group_count: usize,
     alpha_init: f64,
     min_disp: f64,
     max_disp: f64,
+    prior: Option<(f64, f64)>,
 ) -> (f64, f64, f64, bool) {
     const EPSILON: f64 = 1e-4;
     const MAX_ITERATIONS: usize = 100;
@@ -219,10 +283,10 @@ fn fit_dispersion(
         .ln()
         .clamp(MIN_LOG_ALPHA, max_log_alpha);
 
-    let inital_lp = log_posterior(counts, mus, log_alpha);
+    let inital_lp = log_posterior(counts, mus, group_ids, group_count, log_alpha, prior);
     let mut lp = inital_lp;
 
-    let mut dlp = d_log_posterior(counts, mus, log_alpha);
+    let mut dlp = d_log_posterior(counts, mus, group_ids, group_count, log_alpha, prior);
 
     let mut kappa = KAPPA_0;
     let mut iteration_count = 0;
@@ -241,7 +305,14 @@ fn fit_dispersion(
             kappa = (MAX_LOG_ALPHA - log_alpha) / dlp;
         }
 
-        let theta_kappa = -log_posterior(counts, mus, log_alpha + kappa * dlp);
+        let theta_kappa = -log_posterior(
+            counts,
+            mus,
+            group_ids,
+            group_count,
+            log_alpha + kappa * dlp,
+            prior,
+        );
         let theta_hat_kappa = -lp - kappa * EPSILON * dlp * dlp;
 
         if theta_kappa <= theta_hat_kappa {
@@ -249,7 +320,7 @@ fn fit_dispersion(
 
             log_alpha += kappa * dlp;
 
-            let lp_new = log_posterior(counts, mus, log_alpha);
+            let lp_new = log_posterior(counts, mus, group_ids, group_count, log_alpha, prior);
             let change = lp_new - lp;
 
             if change < CONVERGENCE_TOLERANCE {
@@ -262,7 +333,7 @@ fn fit_dispersion(
             }
 
             lp = lp_new;
-            dlp = d_log_posterior(counts, mus, log_alpha);
+            dlp = d_log_posterior(counts, mus, group_ids, group_count, log_alpha, prior);
 
             kappa = (kappa * 1.1).min(KAPPA_0);
 
@@ -280,37 +351,61 @@ fn fit_dispersion(
     (alpha_mle, inital_lp, lp, did_converge)
 }
 
-fn log_posterior(counts: RowRef<'_, f64>, mus: &[f64], log_alpha: f64) -> f64 {
-    let (_, n) = counts.shape();
-
+fn log_posterior(
+    counts: RowRef<'_, f64>,
+    mus: &[f64],
+    group_ids: &[usize],
+    group_count: usize,
+    log_alpha: f64,
+    prior: Option<(f64, f64)>,
+) -> f64 {
     let alpha = log_alpha.exp();
     let alpha_inv = 1.0 / alpha;
 
     let mut ll_part = 0.0;
-    let mut weights = Diag::zeros(n);
+    let mut group_weights = vec![0.0; group_count];
 
-    for (i, (y, mu)) in counts.iter().zip(mus).enumerate() {
+    for ((y, mu), &group_id) in counts.iter().zip(mus).zip(group_ids) {
         ll_part += ln_gamma(y + alpha_inv)
             - ln_gamma(alpha_inv)
             - y * (mu + alpha_inv).ln()
             - alpha_inv * (1.0 + mu * alpha).ln();
 
-        weights[i] = 1.0 / (1.0 / mu + alpha);
+        group_weights[group_id] += 1.0 / (1.0 / mu + alpha);
     }
 
-    let b = weights.column_vector().sum();
-    let log_det = b.ln();
+    let cr_term: f64 = group_weights
+        .iter()
+        .map(|&b| {
+            let log_det = b.ln();
 
-    let cr_term = if log_det.is_finite() {
-        -0.5 * log_det
-    } else {
-        0.0
+            if log_det.is_finite() {
+                -0.5 * log_det
+            } else {
+                0.0
+            }
+        })
+        .sum();
+
+    let prior_term = match prior {
+        Some((log_disp_fit, prior_var)) => {
+            let diff = log_alpha - log_disp_fit;
+            -0.5 * diff * diff / prior_var
+        }
+        None => 0.0,
     };
 
-    ll_part + cr_term
+    ll_part + cr_term + prior_term
 }
 
-fn d_log_posterior(counts: RowRef<'_, f64>, mus: &[f64], log_alpha: f64) -> f64 {
+fn d_log_posterior(
+    counts: RowRef<'_, f64>,
+    mus: &[f64],
+    group_ids: &[usize],
+    group_count: usize,
+    log_alpha: f64,
+    prior: Option<(f64, f64)>,
+) -> f64 {
     let (_, n) = counts.shape();
 
     let alpha = log_alpha.exp();
@@ -330,48 +425,85 @@ fn d_log_posterior(counts: RowRef<'_, f64>, mus: &[f64], log_alpha: f64) -> f64 
 
     let ll_part = ll_sum / (alpha * alpha);
 
-    let mut b = 0.0;
-    let mut db = 0.0;
+    let mut group_b = vec![0.0; group_count];
+    let mut group_db = vec![0.0; group_count];
 
-    for m in mus {
+    for (m, &group_id) in mus.iter().zip(group_ids) {
         let mu = m.max(1e-10);
         let den = 1.0 / mu + alpha;
-        b += 1.0 / den;
-        db += -1.0 / (den * den);
+        group_b[group_id] += 1.0 / den;
+        group_db[group_id] += -1.0 / (den * den);
     }
 
-    let trace = db / b;
+    let trace: f64 = group_b
+        .iter()
+        .zip(&group_db)
+        .filter(|&(&b, _)| b > 0.0)
+        .map(|(&b, &db)| db / b)
+        .sum();
     let cr_term = -0.5 * trace;
 
-    (ll_part + cr_term) * alpha
+    let prior_term = match prior {
+        Some((log_disp_fit, prior_var)) => -(log_alpha - log_disp_fit) / prior_var,
+        None => 0.0,
+    };
+
+    (ll_part + cr_term) * alpha + prior_term
 }
 
-fn fit_dispersion_grid(
+pub fn fit_dispersion_grid(
     counts: RowRef<'_, f64>,
     mus: &[f64],
+    group_ids: &[usize],
+    group_count: usize,
     min_dispersion: f64,
     max_dispersion: f64,
+    prior: Option<(f64, f64)>,
 ) -> f64 {
     let min_log_alpha = min_dispersion.ln();
     let max_log_alpha = max_dispersion.ln();
 
-    let (best_course_log_alpha, delta) = grid_search(counts, mus, min_log_alpha, max_log_alpha);
+    let (best_course_log_alpha, delta) = grid_search(
+        counts,
+        mus,
+        group_ids,
+        group_count,
+        min_log_alpha,
+        max_log_alpha,
+        prior,
+    );
     let fine_start = best_course_log_alpha - delta;
     let fine_end = best_course_log_alpha + delta;
 
-    let (best_fine_log_alpha, _) = grid_search(counts, mus, fine_start, fine_end);
+    let (best_fine_log_alpha, _) = grid_search(
+        counts,
+        mus,
+        group_ids,
+        group_count,
+        fine_start,
+        fine_end,
+        prior,
+    );
 
     best_fine_log_alpha.exp()
 }
 
-fn grid_search(counts: RowRef<'_, f64>, mus: &[f64], start: f64, end: f64) -> (f64, f64) {
+fn grid_search(
+    counts: RowRef<'_, f64>,
+    mus: &[f64],
+    group_ids: &[usize],
+    group_count: usize,
+    start: f64,
+    end: f64,
+    prior: Option<(f64, f64)>,
+) -> (f64, f64) {
     const GRID_SIZE: usize = 20;
 
     let (grid, delta) = linspace(start, end, GRID_SIZE);
     let mut lps = vec![0.0; GRID_SIZE];
 
     for (lp, &log_alpha) in lps.iter_mut().zip(&grid) {
-        *lp = log_posterior(counts, mus, log_alpha);
+        *lp = log_posterior(counts, mus, group_ids, group_count, log_alpha, prior);
     }
 
     let i = argmax(&lps);
@@ -403,7 +535,10 @@ fn argmax(values: &[f64]) -> usize {
     max_i
 }
 
-fn estimate_dispersions_fit(normalized_counts: MatRef<'_, f64>, dispersions: &[f64]) -> (f64, f64) {
+pub fn estimate_dispersions_fit(
+    normalized_counts: MatRef<'_, f64>,
+    dispersions: &[f64],
+) -> (f64, f64) {
     let (feature_count, _) = normalized_counts.shape();
 
     let mut means = Col::zeros(feature_count);
@@ -557,7 +692,7 @@ fn row_var(row: RowRef<'_, f64>, mean: f64) -> f64 {
     a / b
 }
 
-fn median(values: &mut [f64]) -> f64 {
+pub fn median(values: &mut [f64]) -> f64 {
     // Assume all values are finite.
     values.sort_unstable_by(|a, b| a.total_cmp(b));
 

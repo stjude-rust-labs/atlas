@@ -96,9 +96,13 @@ pub async fn plot(
     let mut xs = Vec::with_capacity(sample_count);
     let mut ys = Vec::with_capacity(sample_count);
 
-    for chunk in embedding.chunks_exact(2) {
-        xs.push(chunk[0]);
-        ys.push(chunk[1]);
+    let (chunks, []) = embedding.as_chunks() else {
+        unreachable!();
+    };
+
+    for &[x, y] in chunks {
+        xs.push(x);
+        ys.push(y);
     }
 
     Ok((sample_names, xs, ys))

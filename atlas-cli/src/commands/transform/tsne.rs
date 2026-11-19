@@ -9,8 +9,11 @@ pub fn run(args: cli::transform::tsne::Args) -> anyhow::Result<()> {
 
     let embedding = tsne::transform(args.perplexity, args.theta, data, feature_count);
 
-    for (label, point) in labels.iter().zip(embedding.chunks_exact(2)) {
-        let (x, y) = (point[0], point[1]);
+    let (chunks, []) = embedding.as_chunks() else {
+        unreachable!();
+    };
+
+    for (label, [x, y]) in labels.iter().zip(chunks) {
         println!("{label}\t{x}\t{y}");
     }
 
